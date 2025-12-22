@@ -1,0 +1,3 @@
+class SearchQuery {}
+
+class SearchResult {}
