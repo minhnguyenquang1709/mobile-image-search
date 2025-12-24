@@ -1,12 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_image_search/repository/app_repository.dart';
+import 'package:mobile_image_search/service/indexing_queue_service.dart';
 import 'package:mobile_image_search/service/photo_gallery_service.dart';
+import 'package:mobile_image_search/service/vector_store_service.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // init services
+  final photoGalleryService = PhotoGalleryService();
+  final vectorStoreService = VectorStoreService();
+  final indexingQueueService = IndexingQueueService();
+
+  // init app repository
+  final appRepo = AppRepository(
+    photoGalleryService: photoGalleryService,
+    vectorStoreService: vectorStoreService,
+    indexingQueueService: indexingQueueService,
+  );
+  runApp(MyApp(repository: appRepo));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final AppRepository repository;
+  const MyApp({super.key, required this.repository});
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +32,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'Local Image Search'),
     );
   }
 }
@@ -25,18 +42,16 @@ class MyHomePage extends StatefulWidget {
 
   final String title;
 
-  final Photogalleryservice photoGalleryService = Photogalleryservice();
+  final PhotoGalleryService photoGalleryService = PhotoGalleryService();
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
+  void requestPermission() {
+    widget.photoGalleryService.requestGalleryAccess().then((granted) {
+      setState(() {});
     });
   }
 
@@ -51,19 +66,24 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text('You have pushed the button this many times:'),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              "Access Granted: ${widget.photoGalleryService.isGalleryAccessGranted}",
+            ),
+            Builder(
+              builder: (context) {
+                if (widget.photoGalleryService.isGalleryAccessGranted) {
+                  return const Text("Permission already granted");
+                }
+                return TextButton(
+                  onPressed: requestPermission,
+                  style: TextButton.styleFrom(backgroundColor: Colors.blue),
+                  child: Text("Request Permission"),
+                );
+              },
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }

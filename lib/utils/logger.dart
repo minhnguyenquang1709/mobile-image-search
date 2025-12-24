@@ -22,3 +22,5 @@ class Logger {
     if (!mute) log(msg);
   }
 }
+
+final debugLogger = Logger('debug');
