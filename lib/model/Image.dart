@@ -1,5 +1,5 @@
 import 'package:objectbox/objectbox.dart';
-import '../config/model.dart';
+import '../config/ai_model.dart';
 
 @Entity()
 class Image {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_image_search/repository/app_repository.dart';
+import 'package:mobile_image_search/service/ai_inference_service.dart';
 import 'package:mobile_image_search/service/indexing_queue_service.dart';
 import 'package:mobile_image_search/service/photo_gallery_service.dart';
 import 'package:mobile_image_search/service/vector_store_service.dart';
@@ -11,12 +12,14 @@ void main() async {
   final photoGalleryService = PhotoGalleryService();
   final vectorStoreService = VectorStoreService();
   final indexingQueueService = IndexingQueueService();
+  final aiInferenceService = AiInferenceService();
 
   // init app repository
   final appRepo = AppRepository(
     photoGalleryService: photoGalleryService,
     vectorStoreService: vectorStoreService,
     indexingQueueService: indexingQueueService,
+    aiInferenceService: aiInferenceService,
   );
   try {
     await appRepo.init();
@@ -67,6 +70,12 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
+  // @override
+  // Future<void> dispose() {
+  //   super.dispose();
+  //   widget.repo.dispose();
+  // }
+
   @override
   Widget build(BuildContext context) {
     AppRepository repo = widget.repo;
@@ -101,8 +110,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 return Column(
                   children: repo.assets
                       .map(
-                        (assetEntity) =>
-                            Text("Image path: ${assetEntity.relativePath}${assetEntity.title}"),
+                        (assetEntity) => Text(
+                          "Image path: ${assetEntity.relativePath}${assetEntity.title}",
+                        ),
                       )
                       .toList(),
                 );

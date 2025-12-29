@@ -67,7 +67,6 @@ class PhotoGalleryService {
         this._assets = [];
         debugLogger.printLog('No image found in the gallery.');
       }
-      debugLogger.printLog('Gallery synced with ${_assets.length} albums.');
     } catch (e) {
       debugLogger.printLog('Error syncing gallery: $e');
       rethrow;
