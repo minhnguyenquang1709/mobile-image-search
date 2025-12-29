@@ -1,0 +1,1 @@
+const dimensions = 768;

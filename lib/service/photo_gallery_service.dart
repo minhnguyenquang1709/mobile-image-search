@@ -11,11 +11,68 @@ class PhotoGalleryService {
   bool isGalleryAccessGranted = false;
   bool isGallerySynced = false;
 
+  List<AssetEntity> _assets = [];
+
+  List<AssetEntity> get assets => _assets;
+
   factory PhotoGalleryService() {
     return _instance;
   }
 
   PhotoGalleryService._internal();
+
+  Future<void> init() async {
+    try {
+      await requestGalleryAccess();
+    } catch (e) {
+      debugLogger.printLog('Error initializing PhotoGalleryService: $e');
+      rethrow;
+    }
+    if (isGalleryAccessGranted) {
+      try {
+        await syncGallery();
+      } catch (e) {
+        debugLogger.printLog('Error syncing gallery: $e');
+        rethrow;
+      }
+    }
+  }
+
+  /// read gallery albums and cache them in memory
+  ///
+  /// record the number of image files
+  Future<void> syncGallery() async {
+    try {
+      final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+        type: RequestType.image,
+        onlyAll: true,
+        filterOption: FilterOptionGroup(
+          orders: [
+            const OrderOption(type: OrderOptionType.updateDate, asc: false),
+          ],
+        ),
+      );
+      if (albums.isNotEmpty) {
+        final recentAlbum = albums.first;
+
+        final int assetCount = await recentAlbum.assetCountAsync;
+
+        this._assets = await recentAlbum.getAssetListRange(
+          start: 0,
+          end: assetCount,
+        );
+
+        debugLogger.printLog('Found $assetCount assets (images) in total.');
+      } else {
+        this._assets = [];
+        debugLogger.printLog('No image found in the gallery.');
+      }
+      debugLogger.printLog('Gallery synced with ${_assets.length} albums.');
+    } catch (e) {
+      debugLogger.printLog('Error syncing gallery: $e');
+      rethrow;
+    }
+  }
 
   Future<void> requestGalleryAccess() async {
     if (Platform.isAndroid) {
@@ -72,6 +129,4 @@ class PhotoGalleryService {
       }
     }
   }
-
-  void syncGallery() {}
 }

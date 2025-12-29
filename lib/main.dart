@@ -18,12 +18,23 @@ void main() async {
     vectorStoreService: vectorStoreService,
     indexingQueueService: indexingQueueService,
   );
-  runApp(MyApp(repository: appRepo));
+  try {
+    await appRepo.init();
+    runApp(MyApp(repo: appRepo));
+  } catch (e) {
+    runApp(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(child: Text("Error initializing app services")),
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
-  final AppRepository repository;
-  const MyApp({super.key, required this.repository});
+  final AppRepository repo;
+  const MyApp({super.key, required this.repo});
 
   @override
   Widget build(BuildContext context) {
@@ -32,13 +43,14 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: MyHomePage(title: 'Local Image Search'),
+      home: MyHomePage(title: 'Local Image Search', repo: repo),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({super.key, required this.title});
+  final AppRepository repo;
+  MyHomePage({super.key, required this.title, required this.repo});
 
   final String title;
 
@@ -57,6 +69,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    AppRepository repo = widget.repo;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -66,18 +80,31 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
-              "Access Granted: ${widget.photoGalleryService.isGalleryAccessGranted}",
-            ),
+            Text("Access Granted: ${repo.isPermissionGranted}"),
             Builder(
               builder: (context) {
-                if (widget.photoGalleryService.isGalleryAccessGranted) {
+                if (repo.isPermissionGranted) {
                   return const Text("Permission already granted");
                 }
                 return TextButton(
                   onPressed: requestPermission,
                   style: TextButton.styleFrom(backgroundColor: Colors.blue),
                   child: Text("Request Permission"),
+                );
+              },
+            ),
+            Builder(
+              builder: (context) {
+                if (repo.assets.isEmpty) {
+                  return const Text("No images cached");
+                }
+                return Column(
+                  children: repo.assets
+                      .map(
+                        (assetEntity) =>
+                            Text("Image path: ${assetEntity.relativePath}${assetEntity.title}"),
+                      )
+                      .toList(),
                 );
               },
             ),
