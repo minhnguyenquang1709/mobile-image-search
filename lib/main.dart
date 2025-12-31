@@ -102,19 +102,31 @@ class _MyHomePageState extends State<MyHomePage> {
                 );
               },
             ),
+            // Builder(
+            //   builder: (context) {
+            //     if (repo.assets.isEmpty) {
+            //       return const Text("No images cached");
+            //     }
+            //     return Column(
+            //       children: repo.assets
+            //           .map(
+            //             (assetEntity) => Text(
+            //               "Image path: ${assetEntity.relativePath}${assetEntity.title}",
+            //             ),
+            //           )
+            //           .toList(),
+            //     );
+            //   },
+            // ),
             Builder(
               builder: (context) {
-                if (repo.assets.isEmpty) {
-                  return const Text("No images cached");
-                }
-                return Column(
-                  children: repo.assets
-                      .map(
-                        (assetEntity) => Text(
-                          "Image path: ${assetEntity.relativePath}${assetEntity.title}",
-                        ),
-                      )
-                      .toList(),
+                return TextButton(
+                  onPressed: () async {
+                    await repo.syncGallery();
+                    setState(() {});
+                  },
+                  style: TextButton.styleFrom(backgroundColor: Colors.green),
+                  child: Text("Sync Gallery"),
                 );
               },
             ),

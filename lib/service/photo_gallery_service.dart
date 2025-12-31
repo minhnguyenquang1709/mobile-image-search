@@ -1,5 +1,6 @@
-import 'dart:io';
+// ignore_for_file: unnecessary_this
 
+import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:mobile_image_search/utils/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -10,6 +11,8 @@ class PhotoGalleryService {
 
   bool isGalleryAccessGranted = false;
   bool isGallerySynced = false;
+
+  final _logger = loggers['PhotoGalleryService']!;
 
   List<AssetEntity> _assets = [];
 
@@ -25,14 +28,14 @@ class PhotoGalleryService {
     try {
       await requestGalleryAccess();
     } catch (e) {
-      debugLogger.printLog('Error initializing PhotoGalleryService: $e');
+      _logger.printLog('Error initializing PhotoGalleryService: $e');
       rethrow;
     }
     if (isGalleryAccessGranted) {
       try {
         await syncGallery();
       } catch (e) {
-        debugLogger.printLog('Error syncing gallery: $e');
+        _logger.printLog('Error syncing gallery: $e');
         rethrow;
       }
     }
@@ -62,13 +65,13 @@ class PhotoGalleryService {
           end: assetCount,
         );
 
-        debugLogger.printLog('Found $assetCount assets (images) in total.');
+        _logger.printLog('Found $assetCount assets (images) in total.');
       } else {
         this._assets = [];
-        debugLogger.printLog('No image found in the gallery.');
+        _logger.printLog('No image found in the gallery.');
       }
     } catch (e) {
-      debugLogger.printLog('Error syncing gallery: $e');
+      _logger.printLog('Error syncing gallery: $e');
       rethrow;
     }
   }
@@ -87,9 +90,7 @@ class PhotoGalleryService {
           final status = await Permission.storage.request();
 
           isGalleryAccessGranted = status.isGranted;
-          debugLogger.printLog(
-            'Gallery access granted: $isGalleryAccessGranted',
-          );
+          _logger.printLog('Gallery access granted: $isGalleryAccessGranted');
         }
         if (storagePermission.isPermanentlyDenied ||
             storagePermission.isRestricted) {
@@ -105,9 +106,7 @@ class PhotoGalleryService {
         if (photoStorage.isDenied) {
           final status = await Permission.photos.request();
           isGalleryAccessGranted = status.isGranted;
-          debugLogger.printLog(
-            'Gallery access granted: $isGalleryAccessGranted',
-          );
+          _logger.printLog('Gallery access granted: $isGalleryAccessGranted');
         }
         if (photoStorage.isPermanentlyDenied || photoStorage.isRestricted) {
           await openAppSettings();
@@ -121,7 +120,7 @@ class PhotoGalleryService {
       if (photoStorage.isDenied) {
         final status = await Permission.photos.request();
         isGalleryAccessGranted = status.isGranted;
-        debugLogger.printLog('Gallery access granted: $isGalleryAccessGranted');
+        _logger.printLog('Gallery access granted: $isGalleryAccessGranted');
       }
       if (photoStorage.isPermanentlyDenied || photoStorage.isRestricted) {
         await openAppSettings();

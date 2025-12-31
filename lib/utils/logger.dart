@@ -3,7 +3,7 @@ import 'dart:io';
 
 class Logger {
   final String name;
-  bool mute = false;
+  bool muted = false;
 
   // _cache is library-private, thanks to
   // the _ in front of its name.
@@ -20,20 +20,26 @@ class Logger {
 
   Logger._internal(this.name);
 
-  void muteLogger(String name) {
+  void mute(String name) {
     final logger = Logger(name);
-    logger.mute = true;
+    logger.muted = true;
   }
 
-  void unmuteLogger(String name) {
+  void unmute(String name) {
     final logger = Logger(name);
-    logger.mute = false;
+    logger.muted = false;
   }
 
   void printLog(String msg) {
-    if (!mute) log('[Logger] $msg');
+    if (!muted) log('[Logger] $msg');
     print('[$name] $msg');
   }
 }
 
-final debugLogger = Logger('DebugLogger');
+final Map<String, Logger> loggers = {
+  'AppRepository': Logger('AppRepository'),
+  'PhotoGalleryService': Logger('PhotoGalleryService'),
+  'VectorStoreService': Logger('VectorStoreService'),
+  'AiInferenceService': Logger('AiInferenceService'),
+  'IndexingQueueService': Logger('IndexingQueueService'),
+};

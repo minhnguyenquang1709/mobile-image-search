@@ -1,0 +1,14 @@
+I/flutter (28910): [AiInferenceService] Producer: onnx.quantize
+I/flutter (28910): [AiInferenceService] Graph name: main_graph
+I/flutter (28910): [AiInferenceService] Domain: , Version: 9223372036854775807
+I/flutter (28910): [AiInferenceService] Description:
+I/flutter (28910): [AiInferenceService] Custom metadata map: {onnx.infer: onnxruntime.quant}
+I/flutter (28910): [AiInferenceService] Producer: onnx.quantize
+I/flutter (28910): [AiInferenceService] Graph name: main_graph
+I/flutter (28910): [AiInferenceService] Domain: , Version: 9223372036854775807
+I/flutter (28910): [AiInferenceService] Description: 
+I/flutter (28910): [AiInferenceService] Custom metadata map: {onnx.infer: onnxruntime.quant}
+I/flutter (28910): [AiInferenceService] Text Encoder Input - Name: text, Type: int64, Shape: [-1, 64]
+I/flutter (28910): [AiInferenceService] Text Encoder Output - Name: text_output, Type: float32, Shape: [1, 768]
+I/flutter (28910): [AiInferenceService] Image Encoder Input - Name: text, Type: int64, Shape: [-1, 64]
+I/flutter (28910): [AiInferenceService] Image Encoder Output - Name: text_output, Type: float32, Shape: [1, 768]

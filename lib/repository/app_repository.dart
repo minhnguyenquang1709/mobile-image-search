@@ -1,3 +1,8 @@
+// ignore_for_file: unnecessary_this
+
+import 'dart:collection';
+
+import 'package:mobile_image_search/model/indexing_job.dart';
 import 'package:mobile_image_search/service/ai_inference_service.dart';
 import 'package:mobile_image_search/service/indexing_queue_service.dart';
 import 'package:mobile_image_search/service/photo_gallery_service.dart';
@@ -21,17 +26,22 @@ class AppRepository {
        _indexingQueueService = indexingQueueService,
        _aiInferenceService = aiInferenceService;
 
-  get isPermissionGranted => _photoGalleryService.isGalleryAccessGranted;
+  final _logger = loggers['AppRepository']!;
+  bool _isIndexing = false;
 
   List<AssetEntity> get assets => _photoGalleryService.assets;
+  List<AssetEntity> _pendingAssets = [];
+  get isIndexing => _isIndexing;
+  get isPermissionGranted => _photoGalleryService.isGalleryAccessGranted;
+  ListQueue<IndexingJob> get indexingQueue => _indexingQueueService.queue;
 
   Future<void> init() async {
     try {
       await this._photoGalleryService.init();
-      await this._vectorStoreService.init();
+      await _vectorStoreService.init();
       await this._aiInferenceService.init();
     } catch (e) {
-      debugLogger.printLog('Error initializing AppRepository: $e');
+      _logger.printLog('Error initializing: $e');
       rethrow;
     }
   }
@@ -42,7 +52,81 @@ class AppRepository {
   ///
   /// create indexing jobs for the unindexed photos
   Future<void> syncGallery() async {
-    await _photoGalleryService.syncGallery();
+    try {
+      await _photoGalleryService.syncGallery();
+      if (!isPermissionGranted) {
+        _logger.printLog('Gallery access not granted');
+        return;
+      }
+
+      if (assets.isEmpty) {
+        _logger.printLog('No assets found in gallery');
+        return;
+      }
+
+      // TODO: implement check for existing indexed photos in vector store
+      _pendingAssets = assets; // placeholder for unindexed assets
+
+      for (final asset in _pendingAssets) {
+        final newIndexingJob = IndexingJob(
+          assetId: asset.id,
+          status: EIndexingStatus.pending,
+          attemptCount: 0,
+        );
+
+        _indexingQueueService.enqueue(newIndexingJob);
+      }
+
+      _startProcessingQueue();
+    } catch (e) {
+      _logger.printLog('Error syncing gallery: $e');
+      rethrow;
+    }
+  }
+
+  /// indexing queue consumer loop
+  /// constantly check the queue and process jobs
+  Future<void> _startProcessingQueue() async {
+    if (_isIndexing) {
+      return;
+    }
+
+    _isIndexing = true;
+    // TODO: notify listeners about indexing status change
+    _logger.printLog("Starting background processing loop...");
+
+    while (!_indexingQueueService.queue.isEmpty) {
+      final job = _indexingQueueService.dequeue();
+      if (job == null) break;
+
+      try {
+        final asset = _photoGalleryService.assets.firstWhere(
+          (asset) => asset.id == job.assetId,
+          orElse: () => throw Exception('Asset not found!'),
+        );
+
+        final file = await asset.file;
+        if (file == null) {
+          _logger.printLog("Unable to get file for asset ${asset.id}");
+          throw Exception('Unable to get file for asset ${asset.id}');
+        }
+
+        final imageEmbedding = await _aiInferenceService.encodeImage(file);
+
+        // TODO: save to vector store
+      } catch (e) {
+        _logger.printLog("Error processing job for asset ${job.assetId}: $e");
+      }
+
+      // notify UI about the progress
+      // TODO: implement notification to listeners
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    _isIndexing = false;
+    _logger.printLog("Processing queue finished.");
+
+    // TODO: notify listeners about indexing status change
   }
 
   /// search images by query string

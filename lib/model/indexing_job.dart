@@ -1,8 +1,8 @@
-enum IndexingStatus { pending, processing, failed }
+enum EIndexingStatus { pending, processing, failed }
 
 class IndexingJob {
   final String assetId;
-  final IndexingStatus status;
+  final EIndexingStatus status;
   final int attemptCount;
 
   IndexingJob({
