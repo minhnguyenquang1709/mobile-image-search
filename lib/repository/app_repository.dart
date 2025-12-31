@@ -111,14 +111,16 @@ class AppRepository {
           throw Exception('Unable to get file for asset ${asset.id}');
         }
 
-        final imageEmbedding = await _aiInferenceService.encodeImage(file);
+        final imageEmbedding = await _aiInferenceService.encodeImage(
+          file,
+        ); // await calls to C++, Dart will be free to render UI
 
         // TODO: save to vector store
       } catch (e) {
         _logger.printLog("Error processing job for asset ${job.assetId}: $e");
       }
 
-      // notify UI about the progress
+      // notify UI about the progress, allow rendering (Dart is single-threaded)
       // TODO: implement notification to listeners
       await Future.delayed(const Duration(milliseconds: 100));
     }
