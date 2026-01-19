@@ -1,16 +1,27 @@
+import 'dart:typed_data';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_image_search/repository/app_repository.dart';
 import 'package:mobile_image_search/service/ai_inference_service.dart';
 import 'package:mobile_image_search/service/indexing_queue_service.dart';
 import 'package:mobile_image_search/service/photo_gallery_service.dart';
-import 'package:mobile_image_search/service/vector_store_service.dart';
+import 'package:mobile_image_search/service/store_service.dart';
+import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
+
+class Config {
+  static const double gridViewGutter = 5;
+  static const int thumbnailWidth = 75;
+  static const int thumbnailHeight = 75;
+  static const int imagesPerRow = 4;
+  static const double gridViewCacheExtent = 500;
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // init services
   final photoGalleryService = PhotoGalleryService();
-  final vectorStoreService = VectorStoreService();
+  final vectorStoreService = StoreService();
   final indexingQueueService = IndexingQueueService();
   final aiInferenceService = AiInferenceService();
 
@@ -47,6 +58,10 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       home: MyHomePage(title: 'Local Image Search', repo: repo),
+      routes: const <String, WidgetBuilder>{
+        // '/full-image': FullImageViewer
+      },
+      initialRoute: '/',
     );
   }
 }
@@ -65,7 +80,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   void requestPermission() {
-    widget.photoGalleryService.requestGalleryAccess().then((granted) {
+    widget.repo.requestGalleryAccess().then((granted) {
       setState(() {});
     });
   }
@@ -81,57 +96,76 @@ class _MyHomePageState extends State<MyHomePage> {
     AppRepository repo = widget.repo;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text("Access Granted: ${repo.isPermissionGranted}"),
-            Builder(
-              builder: (context) {
-                if (repo.isPermissionGranted) {
-                  return const Text("Permission already granted");
-                }
-                return TextButton(
-                  onPressed: requestPermission,
-                  style: TextButton.styleFrom(backgroundColor: Colors.blue),
-                  child: Text("Request Permission"),
-                );
-              },
+      // appBar: AppBar(
+      //   backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      //   title: Text(widget.title),
+      // ),
+      body: Flex(
+        direction: Axis.vertical,
+        children: [
+          Expanded(
+            child: Center(
+              child: Builder(
+                builder: (context) {
+                  if (!repo.isPermissionGranted) {
+                    return TextButton(
+                      onPressed: requestPermission,
+                      style: TextButton.styleFrom(backgroundColor: Colors.blue),
+                      child: const Text("Request Permission"),
+                    );
+                  }
+
+                  // render images from gallery
+                  final assets = repo.assets;
+                  if (assets.isEmpty) {
+                    return const Text("No images found in gallery");
+                  }
+
+                  void handleImageClick(String name) {
+                    print("clicked on image:$name");
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(
+                      left: Config.gridViewGutter,
+                      right: Config.gridViewGutter,
+                    ),
+                    child: GridView.builder(
+                      scrollDirection: Axis.vertical,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: Config.imagesPerRow,
+                            crossAxisSpacing: 5,
+                            mainAxisSpacing: 5,
+                          ),
+                      itemCount: assets.length,
+                      cacheExtent: Config
+                          .gridViewCacheExtent, // top and bottom outside screen preload area
+                      itemBuilder: (context, index) {
+                        // one image tile
+                        return GestureDetector(
+                          onTap: () {
+                            handleImageClick(assets[index].title ?? "");
+                          },
+                          child: AssetEntityImage(
+                            assets[index],
+                            isOriginal: false,
+                            thumbnailSize: const ThumbnailSize(
+                              Config.thumbnailWidth,
+                              Config.thumbnailHeight,
+                            ),
+                            thumbnailFormat: ThumbnailFormat.jpeg,
+                            fit: BoxFit.cover,
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
-            // Builder(
-            //   builder: (context) {
-            //     if (repo.assets.isEmpty) {
-            //       return const Text("No images cached");
-            //     }
-            //     return Column(
-            //       children: repo.assets
-            //           .map(
-            //             (assetEntity) => Text(
-            //               "Image path: ${assetEntity.relativePath}${assetEntity.title}",
-            //             ),
-            //           )
-            //           .toList(),
-            //     );
-            //   },
-            // ),
-            Builder(
-              builder: (context) {
-                return TextButton(
-                  onPressed: () async {
-                    await repo.syncGallery();
-                    setState(() {});
-                  },
-                  style: TextButton.styleFrom(backgroundColor: Colors.green),
-                  child: Text("Sync Gallery"),
-                );
-              },
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -209,7 +209,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.startTable(4);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, textOffset);
-        fbb.addInt64(2, object.timestamp.millisecondsSinceEpoch);
+        fbb.addInt64(2, object.createdAt.millisecondsSinceEpoch);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -232,7 +232,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final object = SearchQuery(
           id: idParam,
           text: textParam,
-          timestamp: timestampParam,
+          createdAt: timestampParam,
         );
 
         return object;
@@ -276,7 +276,7 @@ class SearchQuery_ {
     _entities[1].properties[1],
   );
 
-  /// See [SearchQuery.timestamp].
+  /// See [SearchQuery.createdAt].
   static final timestamp = obx.QueryDateProperty<SearchQuery>(
     _entities[1].properties[2],
   );

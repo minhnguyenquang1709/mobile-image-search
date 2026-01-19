@@ -1,16 +1,16 @@
 import 'package:objectbox/objectbox.dart';
 import 'package:mobile_image_search/objectbox.g.dart';
 
-class VectorStoreService {
-  static final VectorStoreService _instance = VectorStoreService._internal();
+class StoreService {
+  static final StoreService _instance = StoreService._internal();
 
   late final ObjectBox _objectBox;
 
-  factory VectorStoreService() {
+  factory StoreService() {
     return _instance;
   }
 
-  VectorStoreService._internal();
+  StoreService._internal();
 
   Future<void> init() async {
     _objectBox = await ObjectBox.create();

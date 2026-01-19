@@ -6,19 +6,19 @@ import 'package:mobile_image_search/model/indexing_job.dart';
 import 'package:mobile_image_search/service/ai_inference_service.dart';
 import 'package:mobile_image_search/service/indexing_queue_service.dart';
 import 'package:mobile_image_search/service/photo_gallery_service.dart';
-import 'package:mobile_image_search/service/vector_store_service.dart';
+import 'package:mobile_image_search/service/store_service.dart';
 import 'package:mobile_image_search/utils/logger.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class AppRepository {
   final PhotoGalleryService _photoGalleryService;
-  final VectorStoreService _vectorStoreService;
+  final StoreService _vectorStoreService;
   final IndexingQueueService _indexingQueueService;
   final AiInferenceService _aiInferenceService;
 
   AppRepository({
     required PhotoGalleryService photoGalleryService,
-    required VectorStoreService vectorStoreService,
+    required StoreService vectorStoreService,
     required IndexingQueueService indexingQueueService,
     required AiInferenceService aiInferenceService,
   }) : _photoGalleryService = photoGalleryService,
@@ -39,9 +39,18 @@ class AppRepository {
     try {
       await this._photoGalleryService.init();
       await _vectorStoreService.init();
-      await this._aiInferenceService.init();
+      // await this._aiInferenceService.init();
     } catch (e) {
       _logger.printLog('Error initializing: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> requestGalleryAccess() async {
+    try {
+      await _photoGalleryService.requestGalleryAccess();
+    } catch (e) {
+      _logger.printLog('Error requesting gallery access: $e');
       rethrow;
     }
   }

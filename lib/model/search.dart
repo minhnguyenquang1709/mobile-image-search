@@ -10,9 +10,9 @@ class SearchQuery {
   String text;
 
   @Property(type: PropertyType.dateUtc)
-  DateTime timestamp;
+  DateTime createdAt;
 
-  SearchQuery({this.id = 0, required this.text, required this.timestamp});
+  SearchQuery({this.id = 0, required this.text, required this.createdAt});
 }
 
 class SearchResult {

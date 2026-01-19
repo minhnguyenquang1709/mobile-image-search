@@ -41,35 +41,59 @@ class PhotoGalleryService {
     }
   }
 
-  /// read gallery albums and cache them in memory
-  ///
-  /// record the number of image files
+  /// read gallery albums and cache them in memory and record the number of image files
   Future<void> syncGallery() async {
     try {
+      final FilterOptionGroup filterOptions = FilterOptionGroup(
+        orders: [
+          const OrderOption(type: OrderOptionType.updateDate, asc: false),
+        ],
+      );
+      filterOptions.setOption(
+        AssetType.image,
+        const FilterOption(needTitle: true),
+      );
       final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
         type: RequestType.image,
         onlyAll: true,
-        filterOption: FilterOptionGroup(
-          orders: [
-            const OrderOption(type: OrderOptionType.updateDate, asc: false),
-          ],
-        ),
+        filterOption: filterOptions,
       );
-      if (albums.isNotEmpty) {
-        final recentAlbum = albums.first;
+      _logger.printLog('Found ${albums.length} albums in the gallery.');
 
-        final int assetCount = await recentAlbum.assetCountAsync;
-
-        this._assets = await recentAlbum.getAssetListRange(
-          start: 0,
-          end: assetCount,
-        );
-
-        _logger.printLog('Found $assetCount assets (images) in total.');
-      } else {
+      if (albums.isEmpty) {
         this._assets = [];
         _logger.printLog('No image found in the gallery.');
+        return;
       }
+
+      final Set<String> assetIds = {};
+      final List<AssetEntity> allAssets = [];
+
+      for (final album in albums) {
+        _logger.printLog("Syncing album: ${album.name}");
+        final int assetCount = await album.assetCountAsync;
+        if (assetCount > 0) {
+          final assets = await album.getAssetListRange(
+            start: 0,
+            end: assetCount,
+          );
+
+          for (final asset in assets) {
+            if (!assetIds.contains(asset.id)) {
+              assetIds.add(asset.id);
+              allAssets.add(asset);
+            }
+          }
+        }
+      }
+
+      // Sort by update date (newest first)
+      allAssets.sort(
+        (a, b) => b.modifiedDateTime.compareTo(a.modifiedDateTime),
+      );
+      this._assets = allAssets;
+
+      _logger.printLog('Found ${assetIds.length} assets (images) in total.');
     } catch (e) {
       _logger.printLog('Error syncing gallery: $e');
       rethrow;
@@ -79,7 +103,7 @@ class PhotoGalleryService {
   Future<void> requestGalleryAccess() async {
     if (Platform.isAndroid) {
       final androidInfo = await DeviceInfoPlugin().androidInfo;
-      int sdkInt = androidInfo.version.sdkInt;
+      final int sdkInt = androidInfo.version.sdkInt;
 
       if (sdkInt < 33) {
         final storagePermission = await Permission.storage.status;

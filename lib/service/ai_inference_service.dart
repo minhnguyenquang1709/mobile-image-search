@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:mobile_image_search/config/ai_model.dart';
+import 'package:mobile_image_search/config/config.dart';
 import 'package:mobile_image_search/utils/logger.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 
@@ -145,9 +145,7 @@ class AiInferenceService {
       throw Exception('Image encoder model is not initialized');
     }
 
-    try {
-
-    } catch (e) {
+    try {} catch (e) {
       _logger.printLog('Error encoding image: $e');
       rethrow;
     }

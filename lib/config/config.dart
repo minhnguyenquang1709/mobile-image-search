@@ -10,3 +10,6 @@ const models = {
         "assets/openclip/ViT-B-32-SigLIP2-256/image_encoder_quant.onnx",
   },
 };
+
+const maxIndexAttempts = 3;
+const batchSize = 32;
