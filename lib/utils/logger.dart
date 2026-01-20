@@ -1,5 +1,4 @@
 import 'dart:developer';
-import 'dart:io';
 
 class Logger {
   final String name;
@@ -36,10 +35,18 @@ class Logger {
   }
 }
 
-final Map<String, Logger> loggers = {
-  'AppRepository': Logger('AppRepository'),
-  'PhotoGalleryService': Logger('PhotoGalleryService'),
-  'VectorStoreService': Logger('VectorStoreService'),
-  'AiInferenceService': Logger('AiInferenceService'),
-  'IndexingQueueService': Logger('IndexingQueueService'),
+enum LoggerName {
+  AppRepository,
+  PhotoGalleryService,
+  StoreService,
+  AiInferenceService,
+  IndexingQueueService,
+}
+
+final Map<LoggerName, Logger> loggers = {
+  LoggerName.AppRepository: Logger('AppRepository'),
+  LoggerName.PhotoGalleryService: Logger('PhotoGalleryService'),
+  LoggerName.StoreService: Logger('StoreService'),
+  LoggerName.AiInferenceService: Logger('AiInferenceService'),
+  LoggerName.IndexingQueueService: Logger('IndexingQueueService'),
 };

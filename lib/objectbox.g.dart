@@ -60,7 +60,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(2, 2663144698117126136),
     name: 'SearchQuery',
-    lastPropertyId: const obx_int.IdUid(3, 5503804796325456193),
+    lastPropertyId: const obx_int.IdUid(4, 1454935476442684565),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -77,8 +77,8 @@ final _entities = <obx_int.ModelEntity>[
         indexId: const obx_int.IdUid(3, 5815231524596225675),
       ),
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(3, 5503804796325456193),
-        name: 'timestamp',
+        id: const obx_int.IdUid(4, 1454935476442684565),
+        name: 'createdAt',
         type: 10,
         flags: 0,
       ),
@@ -137,7 +137,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [],
     retiredIndexUids: const [],
-    retiredPropertyUids: const [],
+    retiredPropertyUids: const [5503804796325456193],
     retiredRelationUids: const [],
     modelVersion: 5,
     modelVersionParserMinimum: 5,
@@ -206,10 +206,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (SearchQuery object, fb.Builder fbb) {
         final textOffset = fbb.writeString(object.text);
-        fbb.startTable(4);
+        fbb.startTable(5);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, textOffset);
-        fbb.addInt64(2, object.createdAt.millisecondsSinceEpoch);
+        fbb.addInt64(3, object.createdAt.millisecondsSinceEpoch);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -225,14 +225,14 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final textParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 6, '');
-        final timestampParam = DateTime.fromMillisecondsSinceEpoch(
-          const fb.Int64Reader().vTableGet(buffer, rootOffset, 8, 0),
+        final createdAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0),
           isUtc: true,
         );
         final object = SearchQuery(
           id: idParam,
           text: textParam,
-          createdAt: timestampParam,
+          createdAt: createdAtParam,
         );
 
         return object;
@@ -277,7 +277,7 @@ class SearchQuery_ {
   );
 
   /// See [SearchQuery.createdAt].
-  static final timestamp = obx.QueryDateProperty<SearchQuery>(
+  static final createdAt = obx.QueryDateProperty<SearchQuery>(
     _entities[1].properties[2],
   );
 }

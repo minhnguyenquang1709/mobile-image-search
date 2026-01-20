@@ -1,9 +1,13 @@
 import 'dart:io';
-
+import 'dart:ui';
+import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import 'package:flutter/foundation.dart';
 import 'package:mobile_image_search/config/config.dart';
 import 'package:mobile_image_search/utils/logger.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
+
+const Model _model = Model.vitBase16QuickGelu_224;
 
 class AiInferenceService {
   static final AiInferenceService _instance = AiInferenceService._internal();
@@ -17,34 +21,37 @@ class AiInferenceService {
   OrtSession? textEncoder;
   OrtSession? imageEncoder;
 
-  Model _model = Model.vitBase32SigLip2_256;
+  final int imageSize = models[_model]!["imageSize"] as int;
+  final int contextLength = models[_model]!["contextLength"] as int;
 
-  static const int imageSize = 256;
-  static const int contextLength = 64;
+  final List<double> mean = models[_model]!["mean"] as List<double>;
+  final List<double> std = models[_model]!["std"] as List<double>;
 
-  final List<double> mean = [0.5, 0.5, 0.5];
-  final List<double> std = [0.5, 0.5, 0.5];
-
-  final _logger = loggers['AiInferenceService']!;
+  final _logger = loggers[LoggerName.AiInferenceService]!;
 
   /// load the models
   Future<void> init() async {
     try {
-      final modelConfig = models[_model];
+      final Map<String, Object>? modelConfig = models[_model];
       if (modelConfig == null) {
         throw Exception('Model configuration not found for model: $_model');
       }
 
-      final textEncoderPath = modelConfig['textEncoder'];
-      final imageEncoderPath = modelConfig['imageEncoder'];
-      if (textEncoderPath == null || imageEncoderPath == null) {
-        throw Exception(
-          'Model paths not found in configuration for model: $_model',
-        );
-      }
+      final String textEncoderPath = modelConfig['textEncoder'] as String;
+      final String imageEncoderPath = modelConfig['imageEncoder'] as String;
+      // if (textEncoderPath == null || imageEncoderPath == null) {
+      //   throw Exception(
+      //     'Model paths not found in configuration for model: $_model',
+      //   );
+      // }
 
       final OrtSessionOptions options = OrtSessionOptions(
-        providers: [OrtProvider.XNNPACK, OrtProvider.CPU],
+        providers: [
+          OrtProvider.XNNPACK,
+          // OrtProvider.NNAPI,
+          // OrtProvider.CORE_ML,
+          OrtProvider.CPU,
+        ],
       );
 
       textEncoder = await ort.createSessionFromAsset(
@@ -130,11 +137,45 @@ class AiInferenceService {
       throw Exception('Text encoder model is not initialized');
     }
 
-    try {} catch (e) {
+    try {
+      _logger.printLog('Encoding text: $text');
+      // Tokenize text - simple approach: convert to char codes and pad/truncate
+      final List<int> tokens = text.codeUnits.take(contextLength).toList();
+
+      // Pad with zeros if needed
+      while (tokens.length < contextLength) {
+        tokens.add(0);
+      }
+
+      // Create input tensor [batch_size, sequence_length]
+      final inputData = Int64List.fromList(tokens);
+      final inputOrt = await OrtValue.fromList(inputData, [1, contextLength]);
+
+      // Run inference - use the actual input name from model
+      final inputs = {textEncoder!.inputNames.first: inputOrt};
+      final outputs = await textEncoder!.run(inputs);
+
+      // Get output embedding
+      final outputOrt = outputs[textEncoder!.outputNames.first]!;
+      final embeddings = await outputOrt.asFlattenedList();
+
+      // Convert to Float32List
+      final result = Float32List.fromList(
+        embeddings.map((e) => e as double).toList(),
+      );
+
+      // Cleanup
+      await inputOrt.dispose();
+      for (final output in outputs.values) {
+        await output.dispose();
+      }
+
+      return result;
+    } catch (e) {
       _logger.printLog('Error encoding text: $e');
       rethrow;
     }
-    throw UnimplementedError();
+    // throw UnimplementedError();
   }
 
   /// transform image into model's expected input
@@ -145,11 +186,94 @@ class AiInferenceService {
       throw Exception('Image encoder model is not initialized');
     }
 
-    try {} catch (e) {
+    try {
+      _logger.printLog('Encoding image: ${imageFile.path}');
+
+      // Read and decode image using image package
+      final imageBytes = await imageFile.readAsBytes();
+      final decodedImage = img.decodeImage(imageBytes);
+      if (decodedImage == null) {
+        throw Exception('Failed to decode image');
+      }
+
+      // Resize to target size
+      final resizedImage = img.copyResize(
+        decodedImage,
+        width: imageSize,
+        height: imageSize,
+        interpolation: img.Interpolation.linear,
+      );
+
+      // Prepare normalized input [1, 3, imageSize, imageSize]
+      final inputData = Float32List(1 * 3 * imageSize * imageSize);
+
+      int idx = 0;
+      // Convert to CHW format (channels, height, width) and normalize
+      for (int c = 0; c < 3; c++) {
+        for (int h = 0; h < imageSize; h++) {
+          for (int w = 0; w < imageSize; w++) {
+            final pixel = resizedImage.getPixel(w, h);
+            final int pixelValue;
+            switch (c) {
+              case 0:
+                pixelValue = pixel.r.toInt();
+                break;
+              case 1:
+                pixelValue = pixel.g.toInt();
+                break;
+              case 2:
+                pixelValue = pixel.b.toInt();
+                break;
+              default:
+                pixelValue = 0;
+            }
+            // Normalize: (pixel/255.0 - mean) / std
+            inputData[idx++] = (pixelValue / 255.0 - mean[c]) / std[c];
+          }
+        }
+      }
+
+      // Create input tensor
+      final inputOrt = await OrtValue.fromList(inputData, [
+        1,
+        3,
+        imageSize,
+        imageSize,
+      ]);
+
+      // Run inference - using actual input name 'image'
+      final inputs = {'image': inputOrt};
+      final outputs = await imageEncoder!.run(inputs);
+
+      // Get output embedding - output name is 'image_output'
+      final outputOrt = outputs['image_output']!;
+      final embeddings = await outputOrt.asFlattenedList();
+
+      // Convert to Float32List
+      final result = Float32List.fromList(
+        embeddings.map((e) => e as double).toList(),
+      );
+
+      // DEBUG: Print first few pixel values to verify they differ
+      _logger.printLog(
+        'First 12 bytes (3 pixels RGBA): ${[for (int i = 0; i < 12; i++) imageBytes[i]]}',
+      );
+      _logger.printLog(
+        'Image encoded successfully, embedding size: ${result.length}',
+      );
+
+      // Cleanup
+      await inputOrt.dispose();
+      for (final output in outputs.values) {
+        await output.dispose();
+      }
+
+      return result;
+    } catch (e) {
       _logger.printLog('Error encoding image: $e');
       rethrow;
     }
-    throw UnimplementedError();
+    // throw UnimplementedError();
   }
 
   Future<void> dispose() async {

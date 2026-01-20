@@ -17,7 +17,7 @@ class IndexingQueueService {
 
   ListQueue<IndexingJob> get queue => _queue;
 
-  final Logger _logger = loggers['IndexingQueueService']!;
+  final Logger _logger = loggers[LoggerName.IndexingQueueService]!;
 
   void enqueue(IndexingJob job) {
     _queue.addLast(job);

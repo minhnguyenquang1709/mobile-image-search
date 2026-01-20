@@ -1,4 +1,6 @@
 import 'dart:typed_data';
+import 'package:mobile_image_search/utils/math.dart';
+import 'package:mobile_image_search/widget/full_image_viewer.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_image_search/repository/app_repository.dart';
@@ -58,8 +60,8 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       home: MyHomePage(title: 'Local Image Search', repo: repo),
-      routes: const <String, WidgetBuilder>{
-        // '/full-image': FullImageViewer
+      routes: <String, WidgetBuilder>{
+        '/full-image': (context) => FullImageViewer(),
       },
       initialRoute: '/',
     );
@@ -121,8 +123,30 @@ class _MyHomePageState extends State<MyHomePage> {
                     return const Text("No images found in gallery");
                   }
 
-                  void handleImageClick(String name) {
-                    print("clicked on image:$name");
+                  void handleImageClick(AssetEntity assetEntity) async {
+                    // Navigator.pushNamed(
+                    //   context,
+                    //   '/full-image',
+                    //   arguments: assetEntity,
+                    // );
+
+                    /** TODO: remove debug */
+                    try {
+                      final Float32List imageEmbedding = await repo.encodeImage(
+                        assetEntity,
+                      );
+                      final Float32List textEmbedding = await repo.encodeText(
+                        "horse",
+                      );
+
+                      // repo.logger.printLog("Text embedding: $textEmbedding");
+                      // repo.logger.printLog("Image embedding: $imageEmbedding");
+                      repo.logger.printLog(
+                        "Cosine similarity: ${cosineSimilarity(imageEmbedding, textEmbedding)}",
+                      );
+                    } catch (e) {
+                      repo.logger.printLog('Error encoding image/text: $e');
+                    }
                   }
 
                   return Padding(
@@ -145,7 +169,10 @@ class _MyHomePageState extends State<MyHomePage> {
                         // one image tile
                         return GestureDetector(
                           onTap: () {
-                            handleImageClick(assets[index].title ?? "");
+                            repo.logger.printLog(
+                              'Image clicked: ${assets[index].id}',
+                            );
+                            handleImageClick(assets[index]);
                           },
                           child: AssetEntityImage(
                             assets[index],

@@ -1,6 +1,8 @@
 // ignore_for_file: unnecessary_this
 
 import 'dart:collection';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:mobile_image_search/model/indexing_job.dart';
 import 'package:mobile_image_search/service/ai_inference_service.dart';
@@ -26,7 +28,8 @@ class AppRepository {
        _indexingQueueService = indexingQueueService,
        _aiInferenceService = aiInferenceService;
 
-  final _logger = loggers['AppRepository']!;
+  final _logger = loggers[LoggerName.AppRepository]!;
+  Logger get logger => _logger;
   bool _isIndexing = false;
 
   List<AssetEntity> get assets => _photoGalleryService.assets;
@@ -35,11 +38,34 @@ class AppRepository {
   get isPermissionGranted => _photoGalleryService.isGalleryAccessGranted;
   ListQueue<IndexingJob> get indexingQueue => _indexingQueueService.queue;
 
+  Future<Float32List> encodeImage(AssetEntity assetEntity) async {
+    try {
+      File? imageFile = await assetEntity.originFile;
+      if (imageFile == null) {
+        throw Exception('Unable to get file for asset ${assetEntity.id}');
+      }
+      return await _aiInferenceService.encodeImage(imageFile);
+    } catch (e) {
+      _logger.printLog('Error encoding image for asset ${assetEntity.id}: $e');
+      rethrow;
+    }
+  }
+
+  Future<Float32List> encodeText(String text) async {
+    try {
+      return await _aiInferenceService.encodeText(text);
+    } catch (e) {
+      _logger.printLog('Error encoding text "$text": $e');
+      rethrow;
+    }
+  }
+
   Future<void> init() async {
     try {
       await this._photoGalleryService.init();
       await _vectorStoreService.init();
-      // await this._aiInferenceService.init();
+      await this._aiInferenceService.init();
+      // await syncGallery();
     } catch (e) {
       _logger.printLog('Error initializing: $e');
       rethrow;

@@ -12,7 +12,7 @@ class PhotoGalleryService {
   bool isGalleryAccessGranted = false;
   bool isGallerySynced = false;
 
-  final _logger = loggers['PhotoGalleryService']!;
+  final _logger = loggers[LoggerName.PhotoGalleryService]!;
 
   List<AssetEntity> _assets = [];
 

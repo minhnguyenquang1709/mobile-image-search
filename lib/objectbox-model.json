@@ -38,7 +38,7 @@
     },
     {
       "id": "2:2663144698117126136",
-      "lastPropertyId": "3:5503804796325456193",
+      "lastPropertyId": "4:1454935476442684565",
       "name": "SearchQuery",
       "properties": [
         {
@@ -55,8 +55,8 @@
           "flags": 2048
         },
         {
-          "id": "3:5503804796325456193",
-          "name": "timestamp",
+          "id": "4:1454935476442684565",
+          "name": "createdAt",
           "type": 10
         }
       ],
@@ -71,7 +71,9 @@
   "modelVersionParserMinimum": 5,
   "retiredEntityUids": [],
   "retiredIndexUids": [],
-  "retiredPropertyUids": [],
+  "retiredPropertyUids": [
+    5503804796325456193
+  ],
   "retiredRelationUids": [],
   "version": 1
 }
