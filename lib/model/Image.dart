@@ -10,7 +10,10 @@ class Image {
   @Unique(onConflict: ConflictStrategy.replace)
   String assetId;
 
-  @HnswIndex(dimensions: dimensions, distanceType: VectorDistanceType.cosine)
+  @HnswIndex(
+    dimensions: AppConfig.embeddingDimensions,
+    distanceType: VectorDistanceType.cosine,
+  )
   @Property(type: PropertyType.floatVector)
   List<double>? embedding;
 

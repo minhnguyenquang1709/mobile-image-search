@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:flutter/foundation.dart';
@@ -21,24 +20,19 @@ class AiInferenceService {
   OrtSession? textEncoder;
   OrtSession? imageEncoder;
 
-  final int imageSize = models[_model]!["imageSize"] as int;
-  final int contextLength = models[_model]!["contextLength"] as int;
+  final int imageSize = _model.specs.imageSize;
+  final int contextLength = _model.specs.contextLength;
 
-  final List<double> mean = models[_model]!["mean"] as List<double>;
-  final List<double> std = models[_model]!["std"] as List<double>;
+  final List<double> mean = _model.specs.mean;
+  final List<double> std = _model.specs.std;
 
   final _logger = loggers[LoggerName.AiInferenceService]!;
 
   /// load the models
   Future<void> init() async {
     try {
-      final Map<String, Object>? modelConfig = models[_model];
-      if (modelConfig == null) {
-        throw Exception('Model configuration not found for model: $_model');
-      }
-
-      final String textEncoderPath = modelConfig['textEncoder'] as String;
-      final String imageEncoderPath = modelConfig['imageEncoder'] as String;
+      final String textEncoderPath = _model.textEncoderPath;
+      final String imageEncoderPath = _model.imageEncoderPath;
       // if (textEncoderPath == null || imageEncoderPath == null) {
       //   throw Exception(
       //     'Model paths not found in configuration for model: $_model',
@@ -137,45 +131,7 @@ class AiInferenceService {
       throw Exception('Text encoder model is not initialized');
     }
 
-    try {
-      _logger.printLog('Encoding text: $text');
-      // Tokenize text - simple approach: convert to char codes and pad/truncate
-      final List<int> tokens = text.codeUnits.take(contextLength).toList();
-
-      // Pad with zeros if needed
-      while (tokens.length < contextLength) {
-        tokens.add(0);
-      }
-
-      // Create input tensor [batch_size, sequence_length]
-      final inputData = Int64List.fromList(tokens);
-      final inputOrt = await OrtValue.fromList(inputData, [1, contextLength]);
-
-      // Run inference - use the actual input name from model
-      final inputs = {textEncoder!.inputNames.first: inputOrt};
-      final outputs = await textEncoder!.run(inputs);
-
-      // Get output embedding
-      final outputOrt = outputs[textEncoder!.outputNames.first]!;
-      final embeddings = await outputOrt.asFlattenedList();
-
-      // Convert to Float32List
-      final result = Float32List.fromList(
-        embeddings.map((e) => e as double).toList(),
-      );
-
-      // Cleanup
-      await inputOrt.dispose();
-      for (final output in outputs.values) {
-        await output.dispose();
-      }
-
-      return result;
-    } catch (e) {
-      _logger.printLog('Error encoding text: $e');
-      rethrow;
-    }
-    // throw UnimplementedError();
+    throw UnimplementedError();
   }
 
   /// transform image into model's expected input
