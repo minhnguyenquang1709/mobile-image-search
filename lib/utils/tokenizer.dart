@@ -14,7 +14,7 @@ class BpeTokenizer {
   late final Map<String, int> _bpeRanks;
   bool _isInitialized = false;
 
-  final Logger debugLogger = loggers[LoggerName.Tokenizer]!;
+  final Logger _logger = loggers[LoggerName.Tokenizer]!;
 
   static final BpeTokenizer _instance = BpeTokenizer._internal();
   factory BpeTokenizer() => _instance;
@@ -51,21 +51,17 @@ class BpeTokenizer {
       }
 
       _isInitialized = true;
-      debugLogger.printLog(
+      _logger.printLog(
         "Tokenizer initialized: ${_vocab.length} vocab, ${_bpeRanks.length} merges.",
       );
 
       for (int i = 0; i < 5; i++) {
-        debugLogger.printLog("Token ID for 'the': ${_vocab['the']}");
-        debugLogger.printLog("Token ID for 'cat': ${_vocab['cat']}");
-        debugLogger.printLog("Token ID for 'dog': ${_vocab['dog']}");
-
-        debugLogger.printLog(
-          "BPE Rank for 't h': ${_bpeRanks.values.toList()[i]}",
+        _logger.printLog(
+          "BPE Rank for ${_bpeRanks.keys.toList()[i]}: ${_bpeRanks.values.toList()[i]}",
         );
       }
     } catch (e) {
-      debugLogger.printLog("Failed to initialize Tokenizer: $e");
+      _logger.printLog("Failed to initialize Tokenizer: $e");
       rethrow;
     }
   }
@@ -94,11 +90,12 @@ class BpeTokenizer {
       final List<String> subWords = _applyBPE(word);
 
       // get ID
+      _logger.printLog("Sub-words for '$word': $subWords");
       for (String subWord in subWords) {
         if (_vocab.containsKey(subWord)) {
           tokens.add(_vocab[subWord]!);
         } else {
-          debugLogger.printLog("Warning: Unknown subword '$subWord'");
+          _logger.printLog("Warning: Unknown subword '$subWord'");
         }
       }
 
@@ -122,15 +119,17 @@ class BpeTokenizer {
     final String wordWithEnd = "$word</w>";
 
     List<String> chars = [];
-    // searate into array of chars, treating </w> as single character
+    // separate into array of chars, with ${lastChar}</w> as single character
     for (int i = 0; i < wordWithEnd.length; i++) {
       if (wordWithEnd.startsWith("</w>", i)) {
-        chars.add("</w>");
-        i += 3; // skip / w >
+        // chars.add("</w>");
+        chars[i - 1] = '${chars[i - 1]}</w>';
+        i += 4; // skip / w >
       } else {
         chars.add(wordWithEnd[i]);
       }
     }
+    _logger.printLog("chars for '$word': $chars");
 
     // merge loop
     while (true) {
@@ -190,7 +189,7 @@ class BpeTokenizer {
         String token = this._vocab.keys.firstWhere((k) => this._vocab[k] == id);
         result += token;
       } else {
-        debugLogger.printLog("Warning: Unknown token ID '$id'");
+        _logger.printLog("Warning: Unknown token ID '$id'");
       }
     }
 

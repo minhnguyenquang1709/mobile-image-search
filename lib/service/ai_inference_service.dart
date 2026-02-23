@@ -7,6 +7,15 @@ import 'package:mobile_image_search/utils/logger.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:mobile_image_search/utils/tokenizer.dart';
 
+/// OnnxRuntime: Main entry point for creating sessions and configuring global options
+///
+/// OrtSession: Represents a loaded ML model for running inference
+///
+/// OrtValue: Represents tensor data for inputs and outputs
+///
+/// OrtSessionOptions: Configuration options for session creation
+///
+/// OrtRunOptions: Configuration options for inference execution
 class AiInferenceService {
   static final AiInferenceService _instance = AiInferenceService._internal();
 
@@ -38,6 +47,9 @@ class AiInferenceService {
       //     'Model paths not found in configuration for model: $_model',
       //   );
       // }
+
+      final providers = await ort.getAvailableProviders();
+      _logger.printLog('Available ONNX Runtime providers: $providers');
 
       final OrtSessionOptions options = OrtSessionOptions(
         providers: [
@@ -73,10 +85,14 @@ class AiInferenceService {
 
       // DEBUG
       // tokenizer test
-      final testText = "Hello, world!";
+      final testText = "white dog";
       final tokenIds = tokenizer!.tokenize(testText);
       _logger.printLog('Token IDs for "$testText": $tokenIds');
       _logger.printLog('Decoded: ${tokenizer!.decode(tokenIds)}');
+      encodeText(testText);
+
+      // embedding test
+      _logger.printLog('Vector: ${await encodeText(testText)}');
 
       // get model metadata
       final textEncoderMetadata = await textEncoder!.getMetadata();
@@ -147,7 +163,38 @@ class AiInferenceService {
       throw Exception('Text encoder model is not initialized');
     }
 
-    throw UnimplementedError();
+    if (tokenizer == null) {
+      throw Exception('Tokenizer is not initialized');
+    }
+
+    List<int> tokenIds = tokenizer!.tokenize(text);
+    final List<String> inputNames = textEncoder!.inputNames;
+    final List<String> outputNames = textEncoder!.outputNames;
+    _logger.printLog('Input names for text encoder: $inputNames');
+    _logger.printLog('Output names for text encoder: $outputNames');
+
+    final String inputName = inputNames.first;
+    final String outputName = outputNames.first;
+
+    final inputs = {
+      inputName: await OrtValue.fromList(Int64List.fromList(tokenIds), [
+        1,
+        contextLength,
+      ]),
+    };
+    final output = await textEncoder!.run(inputs);
+    _logger.printLog('Text encoded successfully, output keys:\n');
+    final outputKeys = output.keys.toList();
+    for (int i = 0; i < outputKeys.length; i++) {
+      _logger.printLog(
+        'Output $i: ${outputKeys[i]} - ${output[outputKeys[i]].runtimeType}',
+      );
+    }
+
+    return await output['text_output']!.asFlattenedList().then(
+      (embeddings) =>
+          Float32List.fromList(embeddings.map((e) => e as double).toList()),
+    );
   }
 
   /// transform image into model's expected input
