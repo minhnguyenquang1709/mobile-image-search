@@ -1,4 +1,4 @@
-import 'package:mobile_image_search/model/image.dart';
+import 'package:mobile_image_search/model/image.entity.dart';
 import 'package:objectbox/objectbox.dart';
 
 @Entity()

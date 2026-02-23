@@ -1,10 +1,8 @@
-// ignore_for_file: unnecessary_this
-
 import 'dart:collection';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:mobile_image_search/model/indexing_job.dart';
+import 'package:mobile_image_search/feature/indexing/domain/indexing_job.entity.dart';
 import 'package:mobile_image_search/service/ai_inference_service.dart';
 import 'package:mobile_image_search/service/indexing_queue_service.dart';
 import 'package:mobile_image_search/service/photo_gallery_service.dart';
@@ -62,9 +60,9 @@ class AppRepository {
 
   Future<void> init() async {
     try {
-      await this._photoGalleryService.init();
-      await this._vectorStoreService.init();
-      await this._aiInferenceService.init();
+      await _photoGalleryService.init();
+      await _vectorStoreService.init();
+      await _aiInferenceService.init();
       // await syncGallery();
     } catch (e) {
       _logger.printLog('Error initializing: $e');

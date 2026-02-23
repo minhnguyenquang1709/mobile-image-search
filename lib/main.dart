@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/utils/math.dart';
 import 'package:mobile_image_search/widget/full_image_viewer.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -36,12 +37,18 @@ void main() async {
   );
   try {
     await appRepo.init();
-    runApp(MyApp(repo: appRepo));
+    runApp(ProviderScope(child: MyApp(repo: appRepo)));
   } catch (e) {
     runApp(
-      const MaterialApp(
+      MaterialApp(
         home: Scaffold(
-          body: Center(child: Text("Error initializing app services")),
+          body: Center(
+            child: Column(
+              children: [
+                Text("Error initializing app services: ${e.toString()}"),
+              ],
+            ),
+          ),
         ),
       ),
     );
