@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:mobile_image_search/config/config.dart';
-import 'package:mobile_image_search/utils/logger.dart';
+import 'package:mobile_image_search/core/utils/logger.dart';
 
 class BpeTokenizer {
   static final int contextLength = Model.specs.contextLength;

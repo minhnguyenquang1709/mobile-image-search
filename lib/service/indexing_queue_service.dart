@@ -1,7 +1,7 @@
 import 'dart:collection';
 
 import 'package:mobile_image_search/model/indexing_job.dart';
-import 'package:mobile_image_search/utils/logger.dart';
+import 'package:mobile_image_search/core/utils/logger.dart';
 
 class IndexingQueueService {
   final ListQueue<IndexingJob> _queue = ListQueue<IndexingJob>();

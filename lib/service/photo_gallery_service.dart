@@ -2,7 +2,7 @@
 
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:mobile_image_search/utils/logger.dart';
+import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 

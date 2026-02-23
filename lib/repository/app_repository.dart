@@ -9,7 +9,7 @@ import 'package:mobile_image_search/service/ai_inference_service.dart';
 import 'package:mobile_image_search/service/indexing_queue_service.dart';
 import 'package:mobile_image_search/service/photo_gallery_service.dart';
 import 'package:mobile_image_search/service/store_service.dart';
-import 'package:mobile_image_search/utils/logger.dart';
+import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class AppRepository {

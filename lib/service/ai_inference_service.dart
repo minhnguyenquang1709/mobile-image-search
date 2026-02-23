@@ -4,9 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/foundation.dart';
 import 'package:mobile_image_search/config/config.dart';
-import 'package:mobile_image_search/utils/logger.dart';
+import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
-import 'package:mobile_image_search/utils/tokenizer.dart';
+import 'package:mobile_image_search/core/utils/tokenizer.dart';
 
 /// OnnxRuntime: Main entry point for creating sessions and configuring global options
 ///

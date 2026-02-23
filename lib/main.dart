@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:mobile_image_search/utils/math.dart';
+import 'package:mobile_image_search/core/utils/math.dart';
 import 'package:mobile_image_search/widget/full_image_viewer.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:flutter/material.dart';
