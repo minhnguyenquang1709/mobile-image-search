@@ -26,21 +26,24 @@ class BpeTokenizer {
 
     try {
       // 1. initialize Vocabulary
-      final vocabFile = File('${Model.tokenizerDir}/vocab.json');
-      final mergesFile = File('${Model.tokenizerDir}/merges.txt');
-      final vocabString = await vocabFile.readAsString();
+      // final vocabFile = File('${Model.tokenizerDir}/vocab.json');
+      // final mergesFile = File('${Model.tokenizerDir}/merges.txt');
+      final vocabString = await rootBundle.loadString(
+        '${Model.tokenizerDir}/vocab.json',
+      );
       final Map<String, dynamic> vocabMap = json.decode(vocabString);
       _vocab = vocabMap.map((key, value) => MapEntry(key, value as int));
 
-      // 2. Khởi tạo BPE Ranks (Luật gộp từ)
-      final mergesString = await mergesFile.readAsString();
+      // 2. initialize BPE Ranks
+      final mergesString = await rootBundle.loadString(
+        '${Model.tokenizerDir}/merges.txt',
+      );
       final lines = mergesString.split('\n');
 
       _bpeRanks = {};
       int rank = 0;
       for (String line in lines) {
         line = line.trim();
-        // Bỏ qua dòng trống hoặc dòng comment
         if (line.isEmpty || line.startsWith('#')) continue;
 
         _bpeRanks[line] = rank;
@@ -49,15 +52,24 @@ class BpeTokenizer {
 
       _isInitialized = true;
       debugLogger.printLog(
-        "✅ Tokenizer initialized: ${_vocab.length} vocab, ${_bpeRanks.length} merges.",
+        "Tokenizer initialized: ${_vocab.length} vocab, ${_bpeRanks.length} merges.",
       );
+
+      for (int i = 0; i < 5; i++) {
+        debugLogger.printLog("Token ID for 'the': ${_vocab['the']}");
+        debugLogger.printLog("Token ID for 'cat': ${_vocab['cat']}");
+        debugLogger.printLog("Token ID for 'dog': ${_vocab['dog']}");
+
+        debugLogger.printLog(
+          "BPE Rank for 't h': ${_bpeRanks.values.toList()[i]}",
+        );
+      }
     } catch (e) {
-      debugLogger.printLog("❌ Failed to initialize Tokenizer: $e");
+      debugLogger.printLog("Failed to initialize Tokenizer: $e");
       rethrow;
     }
   }
 
-  /// Hàm chính (Public API): Chuyển Text thành Mảng 77 số nguyên
   List<int> tokenize(String text) {
     if (!_isInitialized) {
       throw Exception(
@@ -68,76 +80,72 @@ class BpeTokenizer {
     List<int> tokens = [];
     tokens.add(startTokenId);
 
-    // 1. Tiền xử lý (Clean text & Split)
-    // Chuyển thành chữ thường và loại bỏ khoảng trắng thừa
+    // 1. preprocess
     final cleanText = text.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
     if (cleanText.isEmpty) {
-      return _padTokens(tokens); // Trả về mảng rỗng nếu user không nhập gì
+      return _padTokens(tokens);
     }
 
     final List<String> words = cleanText.split(' ');
 
-    // 2. Xử lý BPE cho từng từ
+    // 2. process each word
     for (String word in words) {
-      // Trích xuất các sub-words bằng thuật toán BPE
+      // extract sub-words using BPE
       final List<String> subWords = _applyBPE(word);
 
-      // Tra từ điển lấy ID
+      // get ID
       for (String subWord in subWords) {
         if (_vocab.containsKey(subWord)) {
-          tokens.add(_vocab!);
+          tokens.add(_vocab[subWord]!);
         } else {
-          // Bỏ qua ký tự không có trong từ điển (rất hiếm khi xảy ra với BPE)
           debugLogger.printLog("Warning: Unknown subword '$subWord'");
         }
       }
 
-      // Ngắt sớm nếu đã chạm ngưỡng giới hạn (chừa 1 chỗ cho endToken)
       if (tokens.length >= contextLength - 1) break;
     }
 
-    // 3. Cắt bớt nếu quá dài (Truncate)
+    // 3. Truncate
     if (tokens.length > contextLength - 1) {
       tokens = tokens.sublist(0, contextLength - 1);
     }
 
-    // 4. Thêm End Token
+    // 4. End Token
     tokens.add(endTokenId);
 
-    // 5. Thêm Padding (Bù số 0)
+    // 5. Padding
     return _padTokens(tokens);
   }
 
-  /// Thuật toán BPE Cốt lõi (Private)
+  /// BPE algo implementation
   List<String> _applyBPE(String word) {
-    // OpenCLIP luôn thêm </w> vào cuối mỗi từ để đánh dấu
     final String wordWithEnd = "$word</w>";
 
-    // Tách từ thành các ký tự rời rạc (Ví dụ: "cat</w>" -> "c", "a", "t", "</w>")
     List<String> chars = [];
+    // searate into array of chars, treating </w> as single character
     for (int i = 0; i < wordWithEnd.length; i++) {
       if (wordWithEnd.startsWith("</w>", i)) {
         chars.add("</w>");
-        i += 3; // Bỏ qua 3 ký tự tiếp theo
+        i += 3; // skip / w >
       } else {
-        chars.add(wordWithEnd);
+        chars.add(wordWithEnd[i]);
       }
     }
 
-    // Vòng lặp gộp từ
+    // merge loop
     while (true) {
-      if (chars.length < 2) break;
+      if (chars.length < 2) break; // stop condition
 
-      int minRank = 999999; // Giả lập vô cùng
+      int minRank = 999999;
       int bestIdxToMerge = -1;
       String bestPair = "";
 
-      // Tìm cặp ký tự liền kề có Rank ưu tiên cao nhất (số nhỏ nhất)
+      // find best pair to merge base on BPE ranks
       for (int i = 0; i < chars.length - 1; i++) {
-        final String pair = "${chars} ${chars}";
+        final String pair = "${chars[i]} ${chars[i + 1]}";
 
         if (_bpeRanks.containsKey(pair)) {
-          final int rank = _bpeRanks!;
+          final int rank = _bpeRanks[pair]!;
           if (rank < minRank) {
             minRank = rank;
             bestIdxToMerge = i;
@@ -146,18 +154,17 @@ class BpeTokenizer {
         }
       }
 
-      // Nếu không tìm thấy cặp nào trong merges.txt nữa -> Thuật toán kết thúc
+      // end when no more pairs to merge
       if (bestIdxToMerge == -1) break;
 
-      // Thực hiện Gộp (Merge)
+      // Merge
       final List<String> newChars = [];
       for (int i = 0; i < chars.length; i++) {
         if (i == bestIdxToMerge) {
-          // Gộp 2 phần tử lại (bỏ dấu cách ở giữa)
-          newChars.add(chars + chars);
-          i++; // Nhảy cóc qua phần tử tiếp theo vì đã bị gộp
+          newChars.add(chars[i] + chars[i + 1]);
+          i++;
         } else {
-          newChars.add(chars);
+          newChars.add(chars[i]);
         }
       }
       chars = newChars;
@@ -166,11 +173,29 @@ class BpeTokenizer {
     return chars;
   }
 
-  /// Hàm phụ trợ thêm số 0 cho đủ chiều dài mảng
   List<int> _padTokens(List<int> tokens) {
     while (tokens.length < contextLength) {
       tokens.add(padTokenId);
     }
     return tokens;
   }
+
+  String decode(List<int> tokenIds) {
+    if (!this._isInitialized) {
+      return "<error>";
+    }
+    String result = "";
+    for (int id in tokenIds) {
+      if (this._vocab.containsValue(id)) {
+        String token = this._vocab.keys.firstWhere((k) => this._vocab[k] == id);
+        result += token;
+      } else {
+        debugLogger.printLog("Warning: Unknown token ID '$id'");
+      }
+    }
+
+    return result;
+  }
 }
+
+final bpeTokenizer = BpeTokenizer();

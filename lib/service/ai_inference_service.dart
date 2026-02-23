@@ -5,8 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mobile_image_search/config/config.dart';
 import 'package:mobile_image_search/utils/logger.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
-
-const Model _model = Model.vitBase16QuickGelu_224;
+import 'package:mobile_image_search/utils/tokenizer.dart';
 
 class AiInferenceService {
   static final AiInferenceService _instance = AiInferenceService._internal();
@@ -19,20 +18,21 @@ class AiInferenceService {
   final ort = OnnxRuntime();
   OrtSession? textEncoder;
   OrtSession? imageEncoder;
+  BpeTokenizer? tokenizer;
 
-  final int imageSize = _model.specs.imageSize;
-  final int contextLength = _model.specs.contextLength;
+  final int imageSize = Model.specs.imageSize;
+  final int contextLength = Model.specs.contextLength;
 
-  final List<double> mean = _model.specs.mean;
-  final List<double> std = _model.specs.std;
+  final List<double> mean = Model.specs.mean;
+  final List<double> std = Model.specs.std;
 
   final _logger = loggers[LoggerName.AiInferenceService]!;
 
   /// load the models
   Future<void> init() async {
     try {
-      final String textEncoderPath = _model.textEncoderPath;
-      final String imageEncoderPath = _model.imageEncoderPath;
+      final String textEncoderPath = Model.textEncoderPath;
+      final String imageEncoderPath = Model.imageEncoderPath;
       // if (textEncoderPath == null || imageEncoderPath == null) {
       //   throw Exception(
       //     'Model paths not found in configuration for model: $_model',
@@ -56,12 +56,28 @@ class AiInferenceService {
         imageEncoderPath,
         options: options,
       );
+      tokenizer = bpeTokenizer;
+      await tokenizer?.init();
 
       if (textEncoder == null || imageEncoder == null) {
-        throw Exception('Failed to load models for model: $_model');
+        throw Exception(
+          'Failed to load models for model: ${Model.displayName}',
+        );
+      }
+
+      if (tokenizer == null) {
+        throw Exception(
+          'Failed to initialize tokenizer for model: ${Model.displayName}',
+        );
       }
 
       // DEBUG
+      // tokenizer test
+      final testText = "Hello, world!";
+      final tokenIds = tokenizer!.tokenize(testText);
+      _logger.printLog('Token IDs for "$testText": $tokenIds');
+      _logger.printLog('Decoded: ${tokenizer!.decode(tokenIds)}');
+
       // get model metadata
       final textEncoderMetadata = await textEncoder!.getMetadata();
       _logger.printLog('Producer: ${textEncoderMetadata.producerName}');

@@ -46,12 +46,13 @@ class Model {
 
   static String get textEncoderPath =>
       'assets/openclip/${specs.folderName}/text_encoder_quant.onnx';
-  String get imageEncoderPath =>
+  static String get imageEncoderPath =>
       'assets/openclip/${specs.folderName}/image_encoder_quant.onnx';
 
-  static String get tokenizerDir => 'assets/${specs.folderName}/tokenizer';
+  static String get tokenizerDir =>
+      'assets/openclip/${specs.folderName}/tokenizer';
 
-  String get displayName => specs.folderName;
+  static String get displayName => specs.folderName;
 }
 
 class AppConfig {

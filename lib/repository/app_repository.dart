@@ -63,7 +63,7 @@ class AppRepository {
   Future<void> init() async {
     try {
       await this._photoGalleryService.init();
-      await _vectorStoreService.init();
+      await this._vectorStoreService.init();
       await this._aiInferenceService.init();
       // await syncGallery();
     } catch (e) {
