@@ -83,6 +83,7 @@ class BpeTokenizer {
     }
 
     final List<String> words = cleanText.split(' ');
+    _logger.printLog("Preprocessed text: '$cleanText', words: $words");
 
     // 2. process each word
     for (String word in words) {
@@ -124,7 +125,7 @@ class BpeTokenizer {
       if (wordWithEnd.startsWith("</w>", i)) {
         // chars.add("</w>");
         chars[i - 1] = '${chars[i - 1]}</w>';
-        i += 4; // skip / w >
+        i += 4; // skip </w>. example: "dog" -> ["d", "o", "g</w>"]
       } else {
         chars.add(wordWithEnd[i]);
       }
@@ -180,13 +181,13 @@ class BpeTokenizer {
   }
 
   String decode(List<int> tokenIds) {
-    if (!this._isInitialized) {
+    if (!_isInitialized) {
       return "<error>";
     }
     String result = "";
     for (int id in tokenIds) {
-      if (this._vocab.containsValue(id)) {
-        String token = this._vocab.keys.firstWhere((k) => this._vocab[k] == id);
+      if (_vocab.containsValue(id)) {
+        String token = _vocab.keys.firstWhere((k) => _vocab[k] == id);
         result += token;
       } else {
         _logger.printLog("Warning: Unknown token ID '$id'");

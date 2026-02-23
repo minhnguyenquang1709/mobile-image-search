@@ -135,15 +135,12 @@ class _MyHomePageState extends State<MyHomePage> {
                       final Float32List imageEmbedding = await repo.encodeImage(
                         assetEntity,
                       );
-                      final Float32List textEmbedding = await repo.encodeText(
-                        "horse",
-                      );
 
                       // repo.logger.printLog("Text embedding: $textEmbedding");
                       // repo.logger.printLog("Image embedding: $imageEmbedding");
-                      repo.logger.printLog(
-                        "Cosine similarity: ${cosineSimilarity(imageEmbedding, textEmbedding)}",
-                      );
+                      // repo.logger.printLog(
+                      //   "Cosine similarity: ${cosineSimilarity(imageEmbedding, textEmbedding)}",
+                      // );
                     } catch (e) {
                       repo.logger.printLog('Error encoding image/text: $e');
                     }

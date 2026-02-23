@@ -135,7 +135,7 @@ class AppRepository {
       if (job == null) break;
 
       try {
-        final asset = _photoGalleryService.assets.firstWhere(
+        final AssetEntity asset = _photoGalleryService.assets.firstWhere(
           (asset) => asset.id == job.assetId,
           orElse: () => throw Exception('Asset not found!'),
         );

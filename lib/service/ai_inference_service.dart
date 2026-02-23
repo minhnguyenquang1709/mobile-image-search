@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/foundation.dart';
 import 'package:mobile_image_search/config/config.dart';
@@ -89,60 +90,70 @@ class AiInferenceService {
       final tokenIds = tokenizer!.tokenize(testText);
       _logger.printLog('Token IDs for "$testText": $tokenIds');
       _logger.printLog('Decoded: ${tokenizer!.decode(tokenIds)}');
-      encodeText(testText);
 
       // embedding test
-      _logger.printLog('Vector: ${await encodeText(testText)}');
+      final encodedTestText = await encodeText(testText);
+      _logger.printLog('Vector: $encodedTestText');
+
+      // final File testImageFile = await rootBundle
+      //     .load('assets/images/rider-187.jpg')
+      //     .then((byteData) {
+      //       final tempDir = Directory.systemTemp;
+      //       final tempFilePath = File('${tempDir.path}/rider-187.jpg');
+      //       return File.fromUri(Uri.parse(tempFilePath.path));
+      //     });
+      // final encodedTestImage = await encodeImage(testImageFile);
+      // _logger.printLog('Image Vector: $encodedTestImage');
 
       // get model metadata
-      final textEncoderMetadata = await textEncoder!.getMetadata();
-      _logger.printLog('Producer: ${textEncoderMetadata.producerName}');
-      _logger.printLog('Graph name: ${textEncoderMetadata.graphName}');
-      _logger.printLog(
-        'Domain: ${textEncoderMetadata.domain}, Version: ${textEncoderMetadata.version}',
-      );
-      _logger.printLog('Description: ${textEncoderMetadata.description}');
-      _logger.printLog(
-        'Custom metadata map: ${textEncoderMetadata.customMetadataMap}',
-      );
+      // final textEncoderMetadata = await textEncoder!.getMetadata();
+      // _logger.printLog('Producer: ${textEncoderMetadata.producerName}');
+      // _logger.printLog('Graph name: ${textEncoderMetadata.graphName}');
+      // _logger.printLog(
+      //   'Domain: ${textEncoderMetadata.domain}, Version: ${textEncoderMetadata.version}',
+      // );
+      // _logger.printLog('Description: ${textEncoderMetadata.description}');
+      // _logger.printLog(
+      //   'Custom metadata map: ${textEncoderMetadata.customMetadataMap}',
+      // );
 
-      final imageEncoderMetadata = await imageEncoder!.getMetadata();
-      _logger.printLog('Producer: ${imageEncoderMetadata.producerName}');
-      _logger.printLog('Graph name: ${imageEncoderMetadata.graphName}');
-      _logger.printLog(
-        'Domain: ${imageEncoderMetadata.domain}, Version: ${imageEncoderMetadata.version}',
-      );
-      _logger.printLog('Description: ${imageEncoderMetadata.description}');
-      _logger.printLog(
-        'Custom metadata map: ${imageEncoderMetadata.customMetadataMap}',
-      );
+      // final imageEncoderMetadata = await imageEncoder!.getMetadata();
+      // _logger.printLog('Producer: ${imageEncoderMetadata.producerName}');
+      // _logger.printLog('Graph name: ${imageEncoderMetadata.graphName}');
+      // _logger.printLog(
+      //   'Domain: ${imageEncoderMetadata.domain}, Version: ${imageEncoderMetadata.version}',
+      // );
+      // _logger.printLog('Description: ${imageEncoderMetadata.description}');
+      // _logger.printLog(
+      //   'Custom metadata map: ${imageEncoderMetadata.customMetadataMap}',
+      // );
 
       // get model input/output info
-      final textEncoderInputInfo = await textEncoder!.getInputInfo();
-      for (final info in textEncoderInputInfo) {
-        _logger.printLog(
-          'Text Encoder Input - Name: ${info['name']}, Type: ${info['type']}, Shape: ${info['shape']}',
-        );
-      }
-      final textEncoderOutputInfo = await textEncoder!.getOutputInfo();
-      for (final info in textEncoderOutputInfo) {
-        _logger.printLog(
-          'Text Encoder Output - Name: ${info['name']}, Type: ${info['type']}, Shape: ${info['shape']}',
-        );
-      }
+      // final textEncoderInputInfo = await textEncoder!.getInputInfo();
+      // for (final info in textEncoderInputInfo) {
+      //   _logger.printLog(
+      //     'Text Encoder Input - Name: ${info['name']}, Type: ${info['type']}, Shape: ${info['shape']}',
+      //   );
+      // }
+      // final textEncoderOutputInfo = await textEncoder!.getOutputInfo();
+      // for (final info in textEncoderOutputInfo) {
+      //   _logger.printLog(
+      //     'Text Encoder Output - Name: ${info['name']}, Type: ${info['type']}, Shape: ${info['shape']}',
+      //   );
+      // }
 
-      final imageEncoderInputInfo = await imageEncoder!.getInputInfo();
-      for (final info in imageEncoderInputInfo) {
-        _logger.printLog(
-          'Image Encoder Input - Name: ${info['name']}, Type: ${info['type']}, Shape: ${info['shape']}',
-        );
-      }
-      final imageEncoderOutputInfo = await imageEncoder!.getOutputInfo();
-      for (final info in imageEncoderOutputInfo) {
-        _logger.printLog(
-          'Image Encoder Output - Name: ${info['name']}, Type: ${info['type']}, Shape: ${info['shape']}',
-        );
-      }
+      // final imageEncoderInputInfo = await imageEncoder!.getInputInfo();
+      // for (final info in imageEncoderInputInfo) {
+      //   _logger.printLog(
+      //     'Image Encoder Input - Name: ${info['name']}, Type: ${info['type']}, Shape: ${info['shape']}',
+      //   );
+      // }
+      // final imageEncoderOutputInfo = await imageEncoder!.getOutputInfo();
+      // for (final info in imageEncoderOutputInfo) {
+      //   _logger.printLog(
+      //     'Image Encoder Output - Name: ${info['name']}, Type: ${info['type']}, Shape: ${info['shape']}',
+      //   );
+      // }
     } catch (e) {
       _logger.printLog('Error initializing AiInferenceService: $e');
       rethrow;
@@ -191,7 +202,7 @@ class AiInferenceService {
       );
     }
 
-    return await output['text_output']!.asFlattenedList().then(
+    return await output[outputName]!.asFlattenedList().then(
       (embeddings) =>
           Float32List.fromList(embeddings.map((e) => e as double).toList()),
     );
@@ -215,6 +226,7 @@ class AiInferenceService {
         throw Exception('Failed to decode image');
       }
 
+      // preprocess image: resize, normalize, convert to CHW format
       // Resize to target size
       final resizedImage = img.copyResize(
         decodedImage,
@@ -277,6 +289,7 @@ class AiInferenceService {
       _logger.printLog(
         'First 12 bytes (3 pixels RGBA): ${[for (int i = 0; i < 12; i++) imageBytes[i]]}',
       );
+      _logger.printLog('First 12 vector values: ${result.sublist(0, 12)}');
       _logger.printLog(
         'Image encoded successfully, embedding size: ${result.length}',
       );
