@@ -46,4 +46,4 @@ app.*.map.json
 
 # AI models
 assets/openclip/
-assets/
+assets/images/
