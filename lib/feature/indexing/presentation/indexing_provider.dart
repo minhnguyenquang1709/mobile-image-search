@@ -2,10 +2,8 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-abstract class IndexingState {
-  
-}
+class IndexingState {}
 
 final indexingProvider = StateProvider<IndexingState>((ref) {
-  return 
+  return IndexingState();
 });

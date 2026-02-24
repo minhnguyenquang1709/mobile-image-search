@@ -145,15 +145,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
   );
 
   final bindings = <Type, obx_int.EntityDefinition>{
-    Image: obx_int.EntityDefinition<Image>(
+    StoreImage: obx_int.EntityDefinition<StoreImage>(
       model: _entities[0],
-      toOneRelations: (Image object) => [],
-      toManyRelations: (Image object) => {},
-      getId: (Image object) => object.id,
-      setId: (Image object, int id) {
+      toOneRelations: (StoreImage object) => [],
+      toManyRelations: (StoreImage object) => {},
+      getId: (StoreImage object) => object.id,
+      setId: (StoreImage object, int id) {
         object.id = id;
       },
-      objectToFB: (Image object, fb.Builder fbb) {
+      objectToFB: (StoreImage object, fb.Builder fbb) {
         final assetIdOffset = fbb.writeString(object.assetId);
         final embeddingOffset = object.embedding == null
             ? null
@@ -186,7 +186,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           const fb.Int64Reader().vTableGet(buffer, rootOffset, 8, 0),
           isUtc: true,
         );
-        final object = Image(
+        final object = StoreImage(
           id: idParam,
           assetId: assetIdParam,
           embedding: embeddingParam,
@@ -243,23 +243,25 @@ obx_int.ModelDefinition getObjectBoxModel() {
   return obx_int.ModelDefinition(model, bindings);
 }
 
-/// [Image] entity fields to define ObjectBox queries.
+/// [StoreImage] entity fields to define ObjectBox queries.
 class Image_ {
-  /// See [Image.id].
-  static final id = obx.QueryIntegerProperty<Image>(_entities[0].properties[0]);
+  /// See [StoreImage.id].
+  static final id = obx.QueryIntegerProperty<StoreImage>(
+    _entities[0].properties[0],
+  );
 
-  /// See [Image.assetId].
-  static final assetId = obx.QueryStringProperty<Image>(
+  /// See [StoreImage.assetId].
+  static final assetId = obx.QueryStringProperty<StoreImage>(
     _entities[0].properties[1],
   );
 
-  /// See [Image.indexedAt].
-  static final indexedAt = obx.QueryDateProperty<Image>(
+  /// See [StoreImage.indexedAt].
+  static final indexedAt = obx.QueryDateProperty<StoreImage>(
     _entities[0].properties[2],
   );
 
-  /// See [Image.embedding].
-  static final embedding = obx.QueryHnswProperty<Image>(
+  /// See [StoreImage.embedding].
+  static final embedding = obx.QueryHnswProperty<StoreImage>(
     _entities[0].properties[3],
   );
 }

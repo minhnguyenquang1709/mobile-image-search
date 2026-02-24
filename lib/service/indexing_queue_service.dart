@@ -1,6 +1,5 @@
 import 'dart:collection';
-
-import 'package:mobile_image_search/feature/indexing/domain/indexing_job.entity.dart';
+import 'package:mobile_image_search/feature/indexing/domain/indexing_job.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 
 class IndexingQueueService {

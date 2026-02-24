@@ -60,3 +60,11 @@ class AppConfig {
   static const int maxIndexAttempts = 3;
   static const int batchSize = 32;
 }
+
+class Config {
+  static const double gridViewGutter = 5;
+  static const int thumbnailWidth = 75;
+  static const int thumbnailHeight = 75;
+  static const int imagesPerRow = 4;
+  static const double gridViewCacheExtent = 500;
+}

@@ -16,7 +16,7 @@ class SearchQuery {
 }
 
 class SearchResult {
-  final Image image;
+  final StoreImage image;
   final double score;
 
   SearchResult({required this.image, required this.score});

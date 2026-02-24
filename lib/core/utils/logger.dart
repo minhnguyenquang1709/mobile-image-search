@@ -42,6 +42,7 @@ enum LoggerName {
   AiInferenceService,
   IndexingQueueService,
   Tokenizer,
+  GalleryRepository,
 }
 
 final Map<LoggerName, Logger> loggers = {
@@ -51,4 +52,5 @@ final Map<LoggerName, Logger> loggers = {
   LoggerName.AiInferenceService: Logger('AiInferenceService'),
   LoggerName.IndexingQueueService: Logger('IndexingQueueService'),
   LoggerName.Tokenizer: Logger('Tokenizer'),
+  LoggerName.GalleryRepository: Logger('GalleryRepository'),
 };
