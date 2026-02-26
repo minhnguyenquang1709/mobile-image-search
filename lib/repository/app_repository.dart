@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:mobile_image_search/feature/indexing/domain/indexing_job.dart';
 import 'package:mobile_image_search/service/ai_inference_service.dart';
 import 'package:mobile_image_search/service/indexing_queue_service.dart';
-import 'package:mobile_image_search/service/photo_gallery_service.dart';
+import 'package:mobile_image_search/service/gallery_service.dart';
 import 'package:mobile_image_search/service/store_service.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -16,7 +16,7 @@ class AppRepository {
   final AiInferenceService _aiInferenceService;
 
   AppRepository({
-    required PhotoGalleryService photoGalleryService,
+    required GalleryService photoGalleryService,
     required StoreService vectorStoreService,
     required IndexingQueueService indexingQueueService,
     required AiInferenceService aiInferenceService,

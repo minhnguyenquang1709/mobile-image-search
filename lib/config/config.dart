@@ -67,4 +67,6 @@ class Config {
   static const int thumbnailHeight = 75;
   static const int imagesPerRow = 4;
   static const double gridViewCacheExtent = 500;
+  static const double crossAxisSpacing = 5;
+  static const double mainAxisSpacing = 5;
 }

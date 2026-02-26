@@ -43,14 +43,20 @@ enum LoggerName {
   IndexingQueueService,
   Tokenizer,
   GalleryRepository,
+  GalleryDataSource,
 }
 
 final Map<LoggerName, Logger> loggers = {
-  LoggerName.AppRepository: Logger('AppRepository'),
+  // application layer
   LoggerName.PhotoGalleryService: Logger('PhotoGalleryService'),
   LoggerName.StoreService: Logger('StoreService'),
   LoggerName.AiInferenceService: Logger('AiInferenceService'),
   LoggerName.IndexingQueueService: Logger('IndexingQueueService'),
+
   LoggerName.Tokenizer: Logger('Tokenizer'),
+
+  // data layer
   LoggerName.GalleryRepository: Logger('GalleryRepository'),
+  LoggerName.AppRepository: Logger('AppRepository'),
+  LoggerName.GalleryDataSource: Logger('GalleryDataSource'),
 };

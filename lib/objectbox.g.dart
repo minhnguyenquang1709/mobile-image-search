@@ -21,43 +21,6 @@ export 'package:objectbox/objectbox.dart'; // so that callers only have to impor
 
 final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
-    id: const obx_int.IdUid(1, 1561470879124125729),
-    name: 'Image',
-    lastPropertyId: const obx_int.IdUid(4, 8236889083046583962),
-    flags: 0,
-    properties: <obx_int.ModelProperty>[
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(1, 1936530908489758914),
-        name: 'id',
-        type: 6,
-        flags: 1,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(2, 3027495112137255621),
-        name: 'assetId',
-        type: 9,
-        flags: 34848,
-        indexId: const obx_int.IdUid(1, 1280362454381874712),
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(3, 8406163916037868059),
-        name: 'indexedAt',
-        type: 10,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
-        id: const obx_int.IdUid(4, 8236889083046583962),
-        name: 'embedding',
-        type: 28,
-        flags: 8,
-        indexId: const obx_int.IdUid(2, 4167776506385482670),
-        hnswParams: obx_int.ModelHnswParams(dimensions: 512, distanceType: 2),
-      ),
-    ],
-    relations: <obx_int.ModelRelation>[],
-    backlinks: <obx_int.ModelBacklink>[],
-  ),
-  obx_int.ModelEntity(
     id: const obx_int.IdUid(2, 2663144698117126136),
     name: 'SearchQuery',
     lastPropertyId: const obx_int.IdUid(4, 1454935476442684565),
@@ -79,6 +42,43 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelProperty(
         id: const obx_int.IdUid(4, 1454935476442684565),
         name: 'createdAt',
+        type: 10,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(3, 4579256638745705832),
+    name: 'StoreImage',
+    lastPropertyId: const obx_int.IdUid(4, 4925822784491038955),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 7364861189981264080),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 4902416859858591108),
+        name: 'assetId',
+        type: 9,
+        flags: 34848,
+        indexId: const obx_int.IdUid(4, 5132702083317046407),
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 5122337035740735393),
+        name: 'embedding',
+        type: 28,
+        flags: 8,
+        indexId: const obx_int.IdUid(5, 6251921170124127394),
+        hnswParams: obx_int.ModelHnswParams(dimensions: 512, distanceType: 2),
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 4925822784491038955),
+        name: 'indexedAt',
         type: 10,
         flags: 0,
       ),
@@ -131,13 +131,19 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(2, 2663144698117126136),
-    lastIndexId: const obx_int.IdUid(3, 5815231524596225675),
+    lastEntityId: const obx_int.IdUid(3, 4579256638745705832),
+    lastIndexId: const obx_int.IdUid(5, 6251921170124127394),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
-    retiredEntityUids: const [],
+    retiredEntityUids: const [1561470879124125729],
     retiredIndexUids: const [],
-    retiredPropertyUids: const [5503804796325456193],
+    retiredPropertyUids: const [
+      5503804796325456193,
+      1936530908489758914,
+      3027495112137255621,
+      8406163916037868059,
+      8236889083046583962,
+    ],
     retiredRelationUids: const [],
     modelVersion: 5,
     modelVersionParserMinimum: 5,
@@ -145,59 +151,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
   );
 
   final bindings = <Type, obx_int.EntityDefinition>{
-    StoreImage: obx_int.EntityDefinition<StoreImage>(
-      model: _entities[0],
-      toOneRelations: (StoreImage object) => [],
-      toManyRelations: (StoreImage object) => {},
-      getId: (StoreImage object) => object.id,
-      setId: (StoreImage object, int id) {
-        object.id = id;
-      },
-      objectToFB: (StoreImage object, fb.Builder fbb) {
-        final assetIdOffset = fbb.writeString(object.assetId);
-        final embeddingOffset = object.embedding == null
-            ? null
-            : fbb.writeListFloat32(object.embedding!);
-        fbb.startTable(5);
-        fbb.addInt64(0, object.id);
-        fbb.addOffset(1, assetIdOffset);
-        fbb.addInt64(2, object.indexedAt.millisecondsSinceEpoch);
-        fbb.addOffset(3, embeddingOffset);
-        fbb.finish(fbb.endTable());
-        return object.id;
-      },
-      objectFromFB: (obx.Store store, ByteData fbData) {
-        final buffer = fb.BufferContext(fbData);
-        final rootOffset = buffer.derefObject(0);
-        final idParam = const fb.Int64Reader().vTableGet(
-          buffer,
-          rootOffset,
-          4,
-          0,
-        );
-        final assetIdParam = const fb.StringReader(
-          asciiOptimization: true,
-        ).vTableGet(buffer, rootOffset, 6, '');
-        final embeddingParam = const fb.ListReader<double>(
-          fb.Float32Reader(),
-          lazy: false,
-        ).vTableGetNullable(buffer, rootOffset, 10);
-        final indexedAtParam = DateTime.fromMillisecondsSinceEpoch(
-          const fb.Int64Reader().vTableGet(buffer, rootOffset, 8, 0),
-          isUtc: true,
-        );
-        final object = StoreImage(
-          id: idParam,
-          assetId: assetIdParam,
-          embedding: embeddingParam,
-          indexedAt: indexedAtParam,
-        );
-
-        return object;
-      },
-    ),
     SearchQuery: obx_int.EntityDefinition<SearchQuery>(
-      model: _entities[1],
+      model: _entities[0],
       toOneRelations: (SearchQuery object) => [],
       toManyRelations: (SearchQuery object) => {},
       getId: (SearchQuery object) => object.id,
@@ -238,48 +193,99 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    ImageObjectBox: obx_int.EntityDefinition<ImageObjectBox>(
+      model: _entities[1],
+      toOneRelations: (ImageObjectBox object) => [],
+      toManyRelations: (ImageObjectBox object) => {},
+      getId: (ImageObjectBox object) => object.id,
+      setId: (ImageObjectBox object, int id) {
+        object.id = id;
+      },
+      objectToFB: (ImageObjectBox object, fb.Builder fbb) {
+        final assetIdOffset = fbb.writeString(object.assetId);
+        final embeddingOffset = object.embedding == null
+            ? null
+            : fbb.writeListFloat32(object.embedding!);
+        fbb.startTable(5);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, assetIdOffset);
+        fbb.addOffset(2, embeddingOffset);
+        fbb.addInt64(3, object.indexedAt.millisecondsSinceEpoch);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final assetIdParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final embeddingParam = const fb.ListReader<double>(
+          fb.Float32Reader(),
+          lazy: false,
+        ).vTableGetNullable(buffer, rootOffset, 8);
+        final indexedAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0),
+          isUtc: true,
+        );
+        final object = ImageObjectBox(
+          id: idParam,
+          assetId: assetIdParam,
+          embedding: embeddingParam,
+          indexedAt: indexedAtParam,
+        );
+
+        return object;
+      },
+    ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
-}
-
-/// [StoreImage] entity fields to define ObjectBox queries.
-class Image_ {
-  /// See [StoreImage.id].
-  static final id = obx.QueryIntegerProperty<StoreImage>(
-    _entities[0].properties[0],
-  );
-
-  /// See [StoreImage.assetId].
-  static final assetId = obx.QueryStringProperty<StoreImage>(
-    _entities[0].properties[1],
-  );
-
-  /// See [StoreImage.indexedAt].
-  static final indexedAt = obx.QueryDateProperty<StoreImage>(
-    _entities[0].properties[2],
-  );
-
-  /// See [StoreImage.embedding].
-  static final embedding = obx.QueryHnswProperty<StoreImage>(
-    _entities[0].properties[3],
-  );
 }
 
 /// [SearchQuery] entity fields to define ObjectBox queries.
 class SearchQuery_ {
   /// See [SearchQuery.id].
   static final id = obx.QueryIntegerProperty<SearchQuery>(
-    _entities[1].properties[0],
+    _entities[0].properties[0],
   );
 
   /// See [SearchQuery.text].
   static final text = obx.QueryStringProperty<SearchQuery>(
-    _entities[1].properties[1],
+    _entities[0].properties[1],
   );
 
   /// See [SearchQuery.createdAt].
   static final createdAt = obx.QueryDateProperty<SearchQuery>(
+    _entities[0].properties[2],
+  );
+}
+
+/// [ImageObjectBox] entity fields to define ObjectBox queries.
+class StoreImage_ {
+  /// See [ImageObjectBox.id].
+  static final id = obx.QueryIntegerProperty<ImageObjectBox>(
+    _entities[1].properties[0],
+  );
+
+  /// See [ImageObjectBox.assetId].
+  static final assetId = obx.QueryStringProperty<ImageObjectBox>(
+    _entities[1].properties[1],
+  );
+
+  /// See [ImageObjectBox.embedding].
+  static final embedding = obx.QueryHnswProperty<ImageObjectBox>(
     _entities[1].properties[2],
+  );
+
+  /// See [ImageObjectBox.indexedAt].
+  static final indexedAt = obx.QueryDateProperty<ImageObjectBox>(
+    _entities[1].properties[3],
   );
 }

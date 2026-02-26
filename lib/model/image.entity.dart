@@ -2,7 +2,7 @@ import 'package:objectbox/objectbox.dart';
 import '../config/config.dart';
 
 @Entity()
-class StoreImage {
+class ImageObjectBox {
   @Id()
   int id = 0;
 
@@ -20,7 +20,7 @@ class StoreImage {
   @Property(type: PropertyType.dateUtc)
   DateTime indexedAt;
 
-  StoreImage({
+  ImageObjectBox({
     this.id = 0,
     required this.assetId,
     required this.embedding,

@@ -1,16 +1,6 @@
-import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/router/router_config.dart';
-import 'package:mobile_image_search/core/utils/math.dart';
-import 'package:mobile_image_search/shared/widget/full_image_viewer.dart';
-import 'package:photo_manager/photo_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:mobile_image_search/repository/app_repository.dart';
-import 'package:mobile_image_search/service/ai_inference_service.dart';
-import 'package:mobile_image_search/service/indexing_queue_service.dart';
-import 'package:mobile_image_search/service/photo_gallery_service.dart';
-import 'package:mobile_image_search/service/store_service.dart';
-import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +20,7 @@ void main() async {
   // );
   try {
     // await appRepo.init();
-    runApp(ProviderScope(child: MyApp(repo: appRepo)));
+    runApp(ProviderScope(child: MyApp()));
   } catch (e) {
     runApp(
       MaterialApp(
@@ -49,8 +39,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  final AppRepository repo;
-  const MyApp({super.key, required this.repo});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
