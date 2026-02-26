@@ -44,6 +44,7 @@ enum LoggerName {
   Tokenizer,
   GalleryRepository,
   GalleryDataSource,
+  IndexingRepository,
 }
 
 final Map<LoggerName, Logger> loggers = {
@@ -57,6 +58,6 @@ final Map<LoggerName, Logger> loggers = {
 
   // data layer
   LoggerName.GalleryRepository: Logger('GalleryRepository'),
-  LoggerName.AppRepository: Logger('AppRepository'),
   LoggerName.GalleryDataSource: Logger('GalleryDataSource'),
+  LoggerName.IndexingRepository: Logger('IndexingRepository'),
 };

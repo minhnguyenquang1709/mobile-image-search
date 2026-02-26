@@ -1,9 +1,9 @@
 class Image {
-  ///The ID of the asset.
+  /// The ID of the asset.
   ///
-  ///- Android: _id column in MediaStore database.
+  /// - Android: _id column in MediaStore database.
   ///
-  ///- iOS/macOS: localIdentifier.
+  /// - iOS/macOS: localIdentifier.
   final String id;
   final DateTime createdAt;
 

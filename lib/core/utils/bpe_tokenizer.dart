@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
-import 'package:mobile_image_search/config/config.dart';
+import 'package:mobile_image_search/core/config/config.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 
 class BpeTokenizer {

@@ -14,8 +14,8 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
-import 'model/image.entity.dart';
-import 'model/search.entity.dart';
+import 'shared/model/image.entity.dart';
+import 'shared/model/search.entity.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -50,34 +50,34 @@ final _entities = <obx_int.ModelEntity>[
     backlinks: <obx_int.ModelBacklink>[],
   ),
   obx_int.ModelEntity(
-    id: const obx_int.IdUid(3, 4579256638745705832),
-    name: 'StoreImage',
-    lastPropertyId: const obx_int.IdUid(4, 4925822784491038955),
+    id: const obx_int.IdUid(4, 5043420744528449525),
+    name: 'ImageObjectBox',
+    lastPropertyId: const obx_int.IdUid(4, 4696879542942844184),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(1, 7364861189981264080),
+        id: const obx_int.IdUid(1, 859285058173673911),
         name: 'id',
         type: 6,
         flags: 1,
       ),
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(2, 4902416859858591108),
+        id: const obx_int.IdUid(2, 7130088022235307144),
         name: 'assetId',
         type: 9,
         flags: 34848,
-        indexId: const obx_int.IdUid(4, 5132702083317046407),
+        indexId: const obx_int.IdUid(6, 5572759801300789294),
       ),
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(3, 5122337035740735393),
+        id: const obx_int.IdUid(3, 4360099693225361642),
         name: 'embedding',
         type: 28,
         flags: 8,
-        indexId: const obx_int.IdUid(5, 6251921170124127394),
+        indexId: const obx_int.IdUid(7, 2419459409395599829),
         hnswParams: obx_int.ModelHnswParams(dimensions: 512, distanceType: 2),
       ),
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(4, 4925822784491038955),
+        id: const obx_int.IdUid(4, 4696879542942844184),
         name: 'indexedAt',
         type: 10,
         flags: 0,
@@ -131,11 +131,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(3, 4579256638745705832),
-    lastIndexId: const obx_int.IdUid(5, 6251921170124127394),
+    lastEntityId: const obx_int.IdUid(4, 5043420744528449525),
+    lastIndexId: const obx_int.IdUid(7, 2419459409395599829),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
-    retiredEntityUids: const [1561470879124125729],
+    retiredEntityUids: const [1561470879124125729, 4579256638745705832],
     retiredIndexUids: const [],
     retiredPropertyUids: const [
       5503804796325456193,
@@ -143,6 +143,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
       3027495112137255621,
       8406163916037868059,
       8236889083046583962,
+      7364861189981264080,
+      4902416859858591108,
+      5122337035740735393,
+      4925822784491038955,
     ],
     retiredRelationUids: const [],
     modelVersion: 5,
@@ -235,10 +239,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
           isUtc: true,
         );
         final object = ImageObjectBox(
-          id: idParam,
-          assetId: assetIdParam,
-          embedding: embeddingParam,
-          indexedAt: indexedAtParam,
+          idParam,
+          assetIdParam,
+          embeddingParam,
+          indexedAtParam,
         );
 
         return object;
@@ -268,7 +272,7 @@ class SearchQuery_ {
 }
 
 /// [ImageObjectBox] entity fields to define ObjectBox queries.
-class StoreImage_ {
+class ImageObjectBox_ {
   /// See [ImageObjectBox.id].
   static final id = obx.QueryIntegerProperty<ImageObjectBox>(
     _entities[1].properties[0],

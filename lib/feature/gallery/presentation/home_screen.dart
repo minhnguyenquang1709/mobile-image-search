@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mobile_image_search/config/config.dart';
+import 'package:mobile_image_search/core/config/config.dart';
 import 'package:mobile_image_search/core/constants/route.constant.dart';
-import 'package:mobile_image_search/service/gallery_service.dart';
+import 'package:mobile_image_search/service/gallery.service.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 

@@ -1,7 +1,11 @@
-import 'package:mobile_image_search/shared/domain/image.dart';
+import 'dart:io';
+
+import 'package:mobile_image_search/shared/domain/image.model.dart';
 
 abstract class IGalleryRepository {
   Future<List<Image>> readGallery();
   Future<bool> requestGalleryAccess();
   Future<bool> deleteImage(String imageId);
+
+  Future<File> getImageFile(String assetId);
 }

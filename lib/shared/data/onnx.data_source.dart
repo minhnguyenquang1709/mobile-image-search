@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
-import 'package:flutter/foundation.dart';
-import 'package:mobile_image_search/config/config.dart';
+import 'package:mobile_image_search/core/config/config.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
-import 'package:mobile_image_search/core/utils/tokenizer.dart';
+import 'package:mobile_image_search/core/utils/bpe_tokenizer.dart';
 
 /// OnnxRuntime: Main entry point for creating sessions and configuring global options
 ///
@@ -16,14 +16,7 @@ import 'package:mobile_image_search/core/utils/tokenizer.dart';
 /// OrtSessionOptions: Configuration options for session creation
 ///
 /// OrtRunOptions: Configuration options for inference execution
-class AiInferenceService {
-  static final AiInferenceService _instance = AiInferenceService._internal();
-
-  factory AiInferenceService() {
-    return _instance;
-  }
-  AiInferenceService._internal();
-
+class OnnxDataSource {
   final ort = OnnxRuntime();
   OrtSession? textEncoder;
   OrtSession? imageEncoder;
@@ -312,3 +305,10 @@ class AiInferenceService {
     await imageEncoder?.close();
   }
 }
+
+final onnxDataSourceProvider = FutureProvider((ref) async {
+  final dataSource = OnnxDataSource();
+  await dataSource.init();
+
+  return dataSource;
+});

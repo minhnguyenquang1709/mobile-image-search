@@ -113,58 +113,46 @@ class GalleryDataSource {
   }
 
   Future<List<AssetEntity>> getAllImages() async {
-    try {
-      final FilterOptionGroup filterOptions = FilterOptionGroup(
-        orders: [
-          const OrderOption(type: OrderOptionType.updateDate, asc: false),
-        ],
-      );
-      filterOptions.setOption(
-        AssetType.image,
-        const FilterOption(needTitle: true),
-      );
-      final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
-        type: RequestType.image,
-        onlyAll: true,
-        filterOption: filterOptions,
-      );
-      _logger.printLog('Found ${albums.length} albums in the gallery.');
+    final FilterOptionGroup filterOptions = FilterOptionGroup(
+      orders: [const OrderOption(type: OrderOptionType.updateDate, asc: false)],
+    );
+    filterOptions.setOption(
+      AssetType.image,
+      const FilterOption(needTitle: true),
+    );
+    final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+      type: RequestType.image,
+      onlyAll: true,
+      filterOption: filterOptions,
+    );
+    _logger.printLog('Found ${albums.length} albums in the gallery.');
 
-      if (albums.isEmpty) {
-        _logger.printLog('No image found in the gallery.');
-        return [];
-      }
+    if (albums.isEmpty) {
+      _logger.printLog('No image found in the gallery.');
+      return [];
+    }
 
-      final Set<String> assetIds = {};
-      final List<AssetEntity> allAssets = [];
+    final Set<String> assetIds = {};
+    final List<AssetEntity> allAssets = [];
 
-      for (final album in albums) {
-        _logger.printLog("Syncing album: ${album.name}");
-        final int assetCount = await album.assetCountAsync;
-        if (assetCount > 0) {
-          final assets = await album.getAssetListRange(
-            start: 0,
-            end: assetCount,
-          );
+    for (final album in albums) {
+      _logger.printLog("Syncing album: ${album.name}");
+      final int assetCount = await album.assetCountAsync;
+      if (assetCount > 0) {
+        final assets = await album.getAssetListRange(start: 0, end: assetCount);
 
-          for (final asset in assets) {
-            if (!assetIds.contains(asset.id)) {
-              assetIds.add(asset.id);
-              allAssets.add(asset);
-            }
+        for (final asset in assets) {
+          if (!assetIds.contains(asset.id)) {
+            assetIds.add(asset.id);
+            allAssets.add(asset);
           }
         }
       }
-
-      // Sort by update date (newest first)
-      allAssets.sort(
-        (a, b) => b.modifiedDateTime.compareTo(a.modifiedDateTime),
-      );
-      return allAssets;
-    } catch (e) {
-      _logger.printLog('Error syncing gallery: $e');
-      rethrow;
     }
+
+    // Sort by update date (newest first)
+    allAssets.sort((a, b) => b.modifiedDateTime.compareTo(a.modifiedDateTime));
+    return allAssets;
   }
 
   Future<bool> deleteImages(List<String> imageIds) async {
@@ -175,6 +163,17 @@ class GalleryDataSource {
       _logger.printLog('Error deleting image with id $imageIds: $e');
       return false;
     }
+  }
+
+  Future<File?> getImageFile(String assetId) async {
+    final assetEntity = await AssetEntity.fromId(assetId);
+
+    if (assetEntity == null) {
+      _logger.printLog('AssetEntity not found for assetId $assetId');
+      return null;
+    }
+
+    return await assetEntity.file;
   }
 }
 

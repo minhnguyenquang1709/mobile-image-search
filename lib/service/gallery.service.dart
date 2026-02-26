@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_image_search/feature/gallery/data/gallery_repository.dart';
+import 'package:mobile_image_search/feature/gallery/data/gallery.repository.dart';
 import 'package:mobile_image_search/feature/gallery/domain/interface.dart';
-import 'package:mobile_image_search/shared/domain/image.dart';
+import 'package:mobile_image_search/shared/domain/image.model.dart';
 
 class GalleryService {
   final IGalleryRepository _galleryRepository;

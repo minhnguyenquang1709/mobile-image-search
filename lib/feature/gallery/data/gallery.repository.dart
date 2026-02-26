@@ -1,19 +1,21 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_image_search/core/constants/common.constant.dart';
+// import 'package:mobile_image_search/core/constants/common.constant.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
-import 'package:mobile_image_search/feature/gallery/data/gallery_data_source.dart';
+import 'package:mobile_image_search/feature/gallery/data/gallery.data_source.dart';
 import 'package:mobile_image_search/feature/gallery/domain/interface.dart';
-import 'package:mobile_image_search/shared/domain/image.dart';
+import 'package:mobile_image_search/shared/domain/image.model.dart';
 
 class GalleryRepository implements IGalleryRepository {
   final GalleryDataSource _galleryDataSource;
 
   GalleryRepository(this._galleryDataSource);
 
-  bool _hasPermission = false;
-  get hasPermission => _hasPermission;
+  // bool _hasPermission = false;
+  // get hasPermission => _hasPermission;
 
-  EGallerySyncStatus _syncStatus = EGallerySyncStatus.idle;
+  // EGallerySyncStatus _syncStatus = EGallerySyncStatus.idle;
 
   final Logger _logger = loggers[LoggerName.GalleryRepository]!;
 
@@ -48,6 +50,24 @@ class GalleryRepository implements IGalleryRepository {
     } catch (e) {
       _logger.printLog('Error deleting image with id $imageId: $e');
       return false;
+    }
+  }
+
+  @override
+  Future<File> getImageFile(String assetId) async {
+    try {
+      final file = await _galleryDataSource.getImageFile(assetId);
+      _logger.printLog('Retrieved file for assetId $assetId');
+
+      if (file == null) {
+        _logger.printLog('File for assetId $assetId is null');
+        throw Exception('File not found for assetId $assetId');
+      }
+
+      return file;
+    } catch (e) {
+      _logger.printLog('Error retrieving file for assetId $assetId: $e');
+      rethrow;
     }
   }
 }

@@ -1,10 +1,9 @@
 import 'package:objectbox/objectbox.dart';
-import '../config/config.dart';
+import '../../core/config/config.dart';
 
 @Entity()
 class ImageObjectBox {
-  @Id()
-  int id = 0;
+  int id;
 
   @Index()
   @Unique(onConflict: ConflictStrategy.replace)
@@ -20,10 +19,5 @@ class ImageObjectBox {
   @Property(type: PropertyType.dateUtc)
   DateTime indexedAt;
 
-  ImageObjectBox({
-    this.id = 0,
-    required this.assetId,
-    required this.embedding,
-    required this.indexedAt,
-  });
+  ImageObjectBox(this.id, this.assetId, this.embedding, this.indexedAt);
 }
