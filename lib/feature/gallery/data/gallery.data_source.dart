@@ -8,7 +8,7 @@ import 'package:photo_manager/photo_manager.dart';
 
 /// Get images from device storage
 class GalleryDataSource {
-  final _logger = loggers[LoggerName.GalleryDataSource]!;
+  final _logger = loggers[LoggerName.galleryDataSource]!;
 
   /// Call photo_manager to check permission
   Future<bool> checkGalleryPermission() async {
@@ -34,6 +34,7 @@ class GalleryDataSource {
 
   /// Request gallery access
   Future<bool> requestGalleryAccess() async {
+    _logger.printLog('Requesting gallery access permission');
     bool result = false;
 
     if (Platform.isAndroid) {
@@ -112,7 +113,9 @@ class GalleryDataSource {
     return result;
   }
 
-  Future<List<AssetEntity>> getAllImages() async {
+  /// read all images no matter the album
+  Future<List<AssetEntity>> getAllImages({int page = 0, int limit = 50}) async {
+    // filter options
     final FilterOptionGroup filterOptions = FilterOptionGroup(
       orders: [const OrderOption(type: OrderOptionType.updateDate, asc: false)],
     );
@@ -129,7 +132,6 @@ class GalleryDataSource {
 
     if (albums.isEmpty) {
       _logger.printLog('No image found in the gallery.');
-      return [];
     }
 
     final Set<String> assetIds = {};
@@ -140,6 +142,52 @@ class GalleryDataSource {
       final int assetCount = await album.assetCountAsync;
       if (assetCount > 0) {
         final assets = await album.getAssetListRange(start: 0, end: assetCount);
+
+        for (final asset in assets) {
+          if (!assetIds.contains(asset.id)) {
+            assetIds.add(asset.id);
+            allAssets.add(asset);
+          }
+        }
+      }
+    }
+
+    // Sort by update date (newest first)
+    allAssets.sort((a, b) => b.modifiedDateTime.compareTo(a.modifiedDateTime));
+    return allAssets;
+  }
+
+  Future<List<AssetEntity>> getImages({int page = 0, int limit = 50}) async {
+    // filter options
+    final FilterOptionGroup filterOptions = FilterOptionGroup(
+      orders: [const OrderOption(type: OrderOptionType.updateDate, asc: false)],
+    );
+    filterOptions.setOption(
+      AssetType.image,
+      const FilterOption(needTitle: true),
+    );
+    final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+      type: RequestType.image,
+      onlyAll: true,
+      filterOption: filterOptions,
+    );
+    _logger.printLog('Found ${albums.length} albums in the gallery.');
+
+    if (albums.isEmpty) {
+      _logger.printLog('No image found in the gallery.');
+    }
+
+    final Set<String> assetIds = {};
+    final List<AssetEntity> allAssets = [];
+
+    for (final album in albums) {
+      _logger.printLog("Syncing album: ${album.name}");
+      final int assetCount = await album.assetCountAsync;
+      if (assetCount > 0) {
+        final assets = await album.getAssetListRange(
+          start: page * limit + 1,
+          end: assetCount,
+        );
 
         for (final asset in assets) {
           if (!assetIds.contains(asset.id)) {

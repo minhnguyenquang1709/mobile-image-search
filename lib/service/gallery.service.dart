@@ -27,7 +27,11 @@ final galleryServiceProvider = Provider((ref) {
   return GalleryService(repository);
 });
 
-final galleryImagesProvider = FutureProvider.autoDispose<List<Image>>((ref) {
+final galleryImagesProvider = FutureProvider.autoDispose<List<Image>>((
+  ref,
+) async {
+  ref.keepAlive();
   final galleryService = ref.watch(galleryServiceProvider);
-  return galleryService.readGallery();
+  final images = await galleryService.readGallery();
+  return images;
 });

@@ -17,14 +17,15 @@ class GalleryRepository implements IGalleryRepository {
 
   // EGallerySyncStatus _syncStatus = EGallerySyncStatus.idle;
 
-  final Logger _logger = loggers[LoggerName.GalleryRepository]!;
+  final Logger _logger = loggers[LoggerName.galleryRepository]!;
 
   bool isGallerySynced = false;
 
   /// read gallery albums and cache them in memory and record the number of image files
   ///
   /// return domain model
-  Future<List<Image>> readGallery() async {
+  @override
+  Future<List<Image>> readGallery({required int page, int limit = 50}) async {
     final sourceImages = await _galleryDataSource.getAllImages();
 
     return sourceImages
@@ -32,10 +33,12 @@ class GalleryRepository implements IGalleryRepository {
         .toList();
   }
 
+  @override
   Future<bool> requestGalleryAccess() async {
     return await _galleryDataSource.requestGalleryAccess();
   }
 
+  @override
   Future<bool> deleteImage(String imageId) async {
     try {
       final result = await _galleryDataSource.deleteImages([imageId]);
@@ -55,20 +58,15 @@ class GalleryRepository implements IGalleryRepository {
 
   @override
   Future<File> getImageFile(String assetId) async {
-    try {
-      final file = await _galleryDataSource.getImageFile(assetId);
-      _logger.printLog('Retrieved file for assetId $assetId');
+    final file = await _galleryDataSource.getImageFile(assetId);
+    _logger.printLog('Retrieved file for assetId $assetId');
 
-      if (file == null) {
-        _logger.printLog('File for assetId $assetId is null');
-        throw Exception('File not found for assetId $assetId');
-      }
-
-      return file;
-    } catch (e) {
-      _logger.printLog('Error retrieving file for assetId $assetId: $e');
-      rethrow;
+    if (file == null) {
+      _logger.printLog('File for assetId $assetId is null');
+      throw FileSystemException('File not found for assetId $assetId');
     }
+
+    return file;
   }
 }
 

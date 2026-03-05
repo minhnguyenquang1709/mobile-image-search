@@ -28,7 +28,7 @@ class OnnxDataSource {
   final List<double> mean = Model.specs.mean;
   final List<double> std = Model.specs.std;
 
-  final _logger = loggers[LoggerName.AiInferenceService]!;
+  final _logger = loggers[LoggerName.aiInferenceService]!;
 
   /// load the models
   Future<void> init() async {

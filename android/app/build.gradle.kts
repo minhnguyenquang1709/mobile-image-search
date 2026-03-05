@@ -15,12 +15,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
+    kotlinOptions { jvmTarget = JavaVersion.VERSION_11.toString() }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // TODO: Specify your own unique Application ID
+        // (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.mobile_image_search"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -39,22 +38,19 @@ android {
     }
 }
 
-flutter {
-    source = "../.."
-}
+flutter { source = "../.." }
 
 // Tell Gradle to exclude the Android library (without Admin)
 // that is added by the objectbox_flutter_libs package for debug builds.
 configurations {
-    named("debugImplementation") {
-        exclude(group = "io.objectbox", module = "objectbox-android")
-    }
+    named("debugImplementation") { exclude(group = "io.objectbox", module = "objectbox-android") }
 }
 
 dependencies {
     // Add the Android library with ObjectBox Admin only for debug builds.
     // Note: when the objectbox package updates, check if the Android
     // library below needs to be updated as well.
-    // TODO Replace <version> with the one noted in the release notes (https://github.com/objectbox/objectbox-dart/releases)
-    debugImplementation("io.objectbox:objectbox-android-objectbrowser:<version>")
+    // TODO Replace <version> with the one noted in the release notes
+    // (https://github.com/objectbox/objectbox-dart/releases)
+    debugImplementation("io.objectbox:objectbox-android-objectbrowser:5.1.0")
 }

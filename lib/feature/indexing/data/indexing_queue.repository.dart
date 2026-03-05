@@ -10,7 +10,7 @@ class IndexingQueueRepository implements IIndexingQueueRepository {
   bool get isEmpty => _queue.isEmpty;
   int get length => _queue.length;
 
-  final Logger _logger = loggers[LoggerName.IndexingRepository]!;
+  final Logger _logger = loggers[LoggerName.indexingRepository]!;
 
   @override
   void enqueueIndexingJob(IndexingJob job) {

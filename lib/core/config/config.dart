@@ -63,10 +63,10 @@ class AppConfig {
 
 class Config {
   static const double gridViewGutter = 5;
-  static const int thumbnailWidth = 75;
-  static const int thumbnailHeight = 75;
+  static const int thumbnailWidth = 100;
+  static const int thumbnailHeight = 100;
   static const int imagesPerRow = 4;
-  static const double gridViewCacheExtent = 500;
+  static const double gridViewCacheExtent = 1000;
   static const double crossAxisSpacing = 5;
   static const double mainAxisSpacing = 5;
 }

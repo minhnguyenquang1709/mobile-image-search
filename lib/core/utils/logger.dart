@@ -35,29 +35,29 @@ class Logger {
   }
 }
 
-enum LoggerName {
-  AppRepository,
-  PhotoGalleryService,
-  StoreService,
-  AiInferenceService,
-  IndexingQueueService,
-  Tokenizer,
-  GalleryRepository,
-  GalleryDataSource,
-  IndexingRepository,
+class LoggerName {
+  static const String appRepository = "AppRepository";
+  static const String photoGalleryService = "PhotoGalleryService";
+  static const String storeService = "StoreService";
+  static const String aiInferenceService = "AiInferenceService";
+  static const String indexingQueueService = "IndexingQueueService";
+  static const String tokenizer = "Tokenizer";
+  static const String galleryRepository = "GalleryRepository";
+  static const String galleryDataSource = "GalleryDataSource";
+  static const String indexingRepository = "IndexingRepository";
 }
 
-final Map<LoggerName, Logger> loggers = {
-  // application layer
-  LoggerName.PhotoGalleryService: Logger('PhotoGalleryService'),
-  LoggerName.StoreService: Logger('StoreService'),
-  LoggerName.AiInferenceService: Logger('AiInferenceService'),
-  LoggerName.IndexingQueueService: Logger('IndexingQueueService'),
+final Map<String, Logger> loggers = {
+  // Application layer
+  LoggerName.photoGalleryService: Logger(LoggerName.photoGalleryService),
+  LoggerName.storeService: Logger(LoggerName.storeService),
+  LoggerName.aiInferenceService: Logger(LoggerName.aiInferenceService),
+  LoggerName.indexingQueueService: Logger(LoggerName.indexingQueueService),
 
-  LoggerName.Tokenizer: Logger('Tokenizer'),
+  LoggerName.tokenizer: Logger(LoggerName.tokenizer),
 
-  // data layer
-  LoggerName.GalleryRepository: Logger('GalleryRepository'),
-  LoggerName.GalleryDataSource: Logger('GalleryDataSource'),
-  LoggerName.IndexingRepository: Logger('IndexingRepository'),
+  // Data layer
+  LoggerName.galleryRepository: Logger(LoggerName.galleryRepository),
+  LoggerName.galleryDataSource: Logger(LoggerName.galleryDataSource),
+  LoggerName.indexingRepository: Logger(LoggerName.indexingRepository),
 };

@@ -14,7 +14,7 @@ class BpeTokenizer {
   late final Map<String, int> _bpeRanks;
   bool _isInitialized = false;
 
-  final Logger _logger = loggers[LoggerName.Tokenizer]!;
+  final Logger _logger = loggers[LoggerName.tokenizer]!;
 
   static final BpeTokenizer _instance = BpeTokenizer._internal();
   factory BpeTokenizer() => _instance;
