@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:mobile_image_search/core/constants/common.constant.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
-import 'package:mobile_image_search/feature/gallery/data/gallery.data_source.dart';
+import 'package:mobile_image_search/feature/gallery/data/gallery_data_source.dart';
 import 'package:mobile_image_search/feature/gallery/domain/interface.dart';
-import 'package:mobile_image_search/shared/domain/image.model.dart';
+import 'package:mobile_image_search/shared/domain/image_model.dart';
 
 class GalleryRepository implements IGalleryRepository {
   final GalleryDataSource _galleryDataSource;
@@ -29,7 +29,7 @@ class GalleryRepository implements IGalleryRepository {
     final sourceImages = await _galleryDataSource.getAllImages();
 
     return sourceImages
-        .map((asset) => Image(id: asset.id, createdAt: asset.createDateTime))
+        .map((asset) => Image(id: asset.id, createdAt: asset.createDateSecond))
         .toList();
   }
 

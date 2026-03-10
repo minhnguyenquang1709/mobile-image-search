@@ -14,8 +14,8 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
-import 'shared/model/image.entity.dart';
-import 'shared/model/search.entity.dart';
+import 'shared/data/image_objectbox_model.dart';
+import 'shared/data/search_objectbox_model.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:mobile_image_search/shared/domain/image.model.dart';
+import 'package:mobile_image_search/shared/domain/image_model.dart';
 
 abstract class IGalleryRepository {
   Future<List<Image>> readGallery({required int page, int limit});

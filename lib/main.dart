@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_image_search/core/config/theme.dart';
 import 'package:mobile_image_search/core/router/router_config.dart';
 import 'package:flutter/material.dart';
 
@@ -32,9 +33,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
+      theme: lightTheme,
       // home: MyHomePage(title: 'Local Image Search', repo: repo),
       // routes: <String, WidgetBuilder>{
       //   '/full-image': (context) => FullImageViewer(),
