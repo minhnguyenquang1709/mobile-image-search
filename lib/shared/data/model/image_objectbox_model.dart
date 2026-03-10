@@ -1,5 +1,5 @@
 import 'package:objectbox/objectbox.dart';
-import '../../core/config/config.dart';
+import '../../../core/config/config.dart';
 
 @Entity()
 class ImageObjectBox {

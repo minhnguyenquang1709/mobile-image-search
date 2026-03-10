@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:mobile_image_search/shared/data/onnx_data_source.dart';
-import 'package:mobile_image_search/shared/domain/ai_inference_interface.dart';
+import 'package:mobile_image_search/shared/data/data_source/onnx_data_source.dart';
+import 'package:mobile_image_search/shared/domain/interface/ai_inference_interface.dart';
 
 class OnnxInferenceRepository implements IAiInferenceRepositoryInterface {
   OnnxInferenceRepository(this._onnxDataSource);

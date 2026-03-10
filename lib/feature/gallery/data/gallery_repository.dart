@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:mobile_image_search/core/constants/common.constant.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:mobile_image_search/feature/gallery/data/gallery_data_source.dart';
-import 'package:mobile_image_search/feature/gallery/domain/interface.dart';
+import 'package:mobile_image_search/feature/gallery/domain/gallery_repository_interface.dart';
 import 'package:mobile_image_search/shared/domain/image_model.dart';
+import 'package:mobile_image_search/shared/domain/interface/image_interface.dart';
 
 class GalleryRepository implements IGalleryRepository {
   final GalleryDataSource _galleryDataSource;
@@ -26,11 +27,19 @@ class GalleryRepository implements IGalleryRepository {
   /// return domain model
   @override
   Future<List<Image>> readGallery({required int page, int limit = 50}) async {
-    final sourceImages = await _galleryDataSource.getAllImages();
+    final sourceImages = await _galleryDataSource.getImages(
+      page: page,
+      limit: limit,
+    );
 
-    return sourceImages
-        .map((asset) => Image(id: asset.id, createdAt: asset.createDateSecond))
-        .toList();
+    return sourceImages.map((asset) {
+      final IImageMetadata metadata = IImageMetadata(
+        name: asset.title!,
+        createDateTime: asset.createDateTime,
+        modifiedDateTime: asset.modifiedDateTime,
+      );
+      return Image(assetId: asset.id, metadata: metadata);
+    }).toList();
   }
 
   @override

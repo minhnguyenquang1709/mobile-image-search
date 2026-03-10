@@ -73,12 +73,15 @@ class _ThumbnailWidgetState extends State<ThumbnailWidget> {
   }
 }
 
-class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  final ScrollController _scrollController = ScrollController();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final imagesAsync = ref.watch(galleryImagesProvider);
+    final galleryService = ref.watch(galleryServiceProvider);
+
+    // TODO: implement pagination and infinite scroll
 
     return imagesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -111,8 +114,11 @@ class HomeScreen extends ConsumerWidget {
                           cacheExtent: Config.gridViewCacheExtent,
                           itemCount: images.length,
                           itemBuilder: (context, index) {
-                            return ThumbnailWidget(assetId: images[index].id);
+                            return ThumbnailWidget(
+                              assetId: images[index].assetId,
+                            );
                           },
+                          controller: _scrollController,
                         ),
                       );
                     },
@@ -125,4 +131,11 @@ class HomeScreen extends ConsumerWidget {
       },
     );
   }
+}
+
+class HomeScreen extends ConsumerStatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
