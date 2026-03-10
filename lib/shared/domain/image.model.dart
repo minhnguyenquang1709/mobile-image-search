@@ -5,9 +5,7 @@ class Image {
   ///
   /// - iOS/macOS: localIdentifier.
   final String id;
-  final DateTime createdAt;
+  final int createdAt;
 
-  double? similarity;
-
-  Image({required this.id, required this.createdAt, this.similarity});
+  Image({required this.id, required this.createdAt});
 }
