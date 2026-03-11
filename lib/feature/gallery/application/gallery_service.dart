@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/feature/gallery/data/gallery_repository.dart';
 import 'package:mobile_image_search/feature/gallery/domain/gallery_repository_interface.dart';
@@ -20,20 +22,13 @@ class GalleryService {
   Future<bool> deleteImage(String imageId) async {
     return await _galleryRepository.deleteImage(imageId);
   }
+
+  Future<void> getImageMetadata(String assetId) async {
+    await _galleryRepository.getImageMetadata(assetId);
+  }
 }
 
 final galleryServiceProvider = Provider((ref) {
   final repository = ref.watch(galleryRepositoryProvider);
   return GalleryService(repository);
-});
-
-final galleryImagesProvider = FutureProvider<List<Image>>((ref) async {
-  ref.onDispose(() {
-    // add dispose logic
-  });
-
-  ref.keepAlive();
-  final galleryService = ref.watch(galleryServiceProvider);
-  final images = await galleryService.readGallery(page: 0, limit: 100);
-  return images;
 });

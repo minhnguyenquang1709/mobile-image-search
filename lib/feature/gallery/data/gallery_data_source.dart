@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:exif/exif.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -166,9 +167,11 @@ class GalleryDataSource {
       AssetType.image,
       const FilterOption(needTitle: true),
     );
+
+    // get albums
     final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
       type: RequestType.image,
-      onlyAll: true,
+      onlyAll: true, // only get the root album
       filterOption: filterOptions,
     );
     _logger.printLog('Found ${albums.length} albums in the gallery.');
@@ -177,30 +180,40 @@ class GalleryDataSource {
       _logger.printLog('No image found in the gallery.');
     }
 
-    final Set<String> assetIds = {};
-    final List<AssetEntity> allAssets = [];
+    // final Set<String> assetIds = {};
+    // final List<AssetEntity> allAssets = [];
 
-    for (final album in albums) {
-      _logger.printLog("Syncing album: ${album.name}");
-      final int assetCount = await album.assetCountAsync;
-      if (assetCount > 0) {
-        final assets = await album.getAssetListRange(
-          start: page * limit + 1,
-          end: assetCount,
-        );
+    // for (final album in albums) {
+    //   _logger.printLog("Syncing album: ${album.name}");
+    //   final int assetCount = await album.assetCountAsync;
+    //   if (assetCount > 0) {
+    //     final start = page * limit;
+    //     final assets = await album.getAssetListRange(
+    //       start: start,
+    //       end: start + limit,
+    //     );
 
-        for (final asset in assets) {
-          if (!assetIds.contains(asset.id)) {
-            assetIds.add(asset.id);
-            allAssets.add(asset);
-          }
-        }
-      }
-    }
+    //     for (final asset in assets) {
+    //       if (!assetIds.contains(asset.id)) {
+    //         assetIds.add(asset.id);
+    //         allAssets.add(asset);
+    //       }
+    //     }
+    //   }
+    // }
 
-    // Sort by update date (newest first)
-    allAssets.sort((a, b) => b.modifiedDateTime.compareTo(a.modifiedDateTime));
-    return allAssets;
+    // // Sort by update date (newest first)
+    // allAssets.sort((a, b) => b.modifiedDateTime.compareTo(a.modifiedDateTime));
+    // return allAssets;
+
+    // get root album (contains all images, sorted by date desc)
+    final AssetPathEntity rootAlbum = albums.first;
+    final List<AssetEntity> assetPage = await rootAlbum.getAssetListPaged(
+      page: page,
+      size: limit,
+    );
+
+    return assetPage;
   }
 
   Future<bool> deleteImages(List<String> imageIds) async {
@@ -222,6 +235,14 @@ class GalleryDataSource {
     }
 
     return await assetEntity.file;
+  }
+
+  Future<void> getImageMetadata(String assetId) async {
+    final imageFile = await getImageFile(assetId);
+    if (imageFile != null) {
+      final exifData = await readExifFromFile(imageFile);
+      _logger.printLog('EXIF data for assetId $assetId: $exifData');
+    }
   }
 }
 

@@ -7,4 +7,5 @@ abstract class IGalleryRepository {
   Future<bool> requestGalleryAccess();
   Future<bool> deleteImage(String imageId);
   Future<File> getImageFile(String assetId);
+  Future<void> getImageMetadata(String assetId);
 }

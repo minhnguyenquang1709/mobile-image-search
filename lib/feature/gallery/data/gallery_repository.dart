@@ -38,7 +38,7 @@ class GalleryRepository implements IGalleryRepository {
         createDateTime: asset.createDateTime,
         modifiedDateTime: asset.modifiedDateTime,
       );
-      return Image(assetId: asset.id, metadata: metadata);
+      return Image(assetEntity: asset, metadata: metadata);
     }).toList();
   }
 
@@ -76,6 +76,11 @@ class GalleryRepository implements IGalleryRepository {
     }
 
     return file;
+  }
+
+  @override
+  Future<void> getImageMetadata(String assetId) {
+    return _galleryDataSource.getImageMetadata(assetId);
   }
 }
 

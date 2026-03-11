@@ -3,57 +3,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/core/config/config.dart';
 import 'package:mobile_image_search/core/constants/route.constant.dart';
-import 'package:mobile_image_search/feature/gallery/application/gallery_service.dart';
+import 'package:mobile_image_search/feature/gallery/presentation/gallery_controller.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 
 class ThumbnailWidget extends StatefulWidget {
-  final String assetId;
+  final AssetEntity assetEntity;
+  final Future<void> Function(String assetId)? onTap;
 
-  const ThumbnailWidget({super.key, required this.assetId});
+  const ThumbnailWidget({super.key, required this.assetEntity, this.onTap});
 
   @override
   State<ThumbnailWidget> createState() => _ThumbnailWidgetState();
 }
 
 class _ThumbnailWidgetState extends State<ThumbnailWidget> {
-  AssetEntity? assetEntity;
-  bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();
-    // load asset entity and cache in state
-    AssetEntity.fromId(widget.assetId)
-        .then((entity) {
-          setState(() {
-            assetEntity = entity;
-            _isLoading = false;
-          });
-        })
-        .catchError((error) {
-          setState(() {
-            assetEntity = null;
-            _isLoading = false;
-          });
-        });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (assetEntity == null) {
-      return const Center(child: Icon(Icons.error));
-    }
     return GestureDetector(
-      onTap: () => context.push(
-        RouteConstants.imageViewer,
-        extra: {'assetId': widget.assetId},
-      ),
+      onTap: () {
+        context.push(
+          RouteConstants.imageViewer,
+          extra: {'assetId': widget.assetEntity.id},
+        );
+        if (widget.onTap != null) {
+          widget.onTap!(widget.assetEntity.id);
+        }
+      },
       child: AssetEntityImage(
-        assetEntity!,
+        widget.assetEntity,
         loadingBuilder: (context, child, progress) {
           if (progress == null) {
             return child;
@@ -77,22 +60,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 500) {
+        ref.read(galleryControllerProvider.notifier).loadMore();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final imagesAsync = ref.watch(galleryImagesProvider);
-    final galleryService = ref.watch(galleryServiceProvider);
+    final galleryController = ref.watch(galleryControllerProvider);
 
-    // TODO: implement pagination and infinite scroll
+    return Scaffold(
+      body: galleryController.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) =>
+            Center(child: Text("Error loading images: $err")),
+        data: (images) {
+          if (images.isEmpty) {
+            return const Center(child: Text("No images found in gallery"));
+          }
 
-    return imagesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text("Error loading images: $err")),
-      data: (images) {
-        if (images.isEmpty) {
-          return const Center(child: Text("No images found in gallery"));
-        }
-        return Scaffold(
-          // appBar: AppBar(title: Text("Home")),
-          body: Flex(
+          return Flex(
             direction: Axis.vertical,
             children: [
               Expanded(
@@ -115,7 +114,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           itemCount: images.length,
                           itemBuilder: (context, index) {
                             return ThumbnailWidget(
-                              assetId: images[index].assetId,
+                              assetEntity: images[index].assetEntity,
                             );
                           },
                           controller: _scrollController,
@@ -126,9 +125,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

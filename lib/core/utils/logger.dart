@@ -45,6 +45,7 @@ class LoggerName {
   static const String galleryRepository = "GalleryRepository";
   static const String galleryDataSource = "GalleryDataSource";
   static const String indexingRepository = "IndexingRepository";
+  static const String galleryController = "GalleryController";
 }
 
 final Map<String, Logger> loggers = {
@@ -60,4 +61,7 @@ final Map<String, Logger> loggers = {
   LoggerName.galleryRepository: Logger(LoggerName.galleryRepository),
   LoggerName.galleryDataSource: Logger(LoggerName.galleryDataSource),
   LoggerName.indexingRepository: Logger(LoggerName.indexingRepository),
+
+  // Presentation layer
+  LoggerName.galleryController: Logger(LoggerName.galleryController),
 };
