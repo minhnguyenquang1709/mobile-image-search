@@ -47,7 +47,6 @@ dependencies:
   go_router: ^17.1.0
   freezed: ^3.2.5
   google_mlkit_translation: ^0.13.1
-  exif: ^3.3.0
 
 dev_dependencies:
   flutter_test:

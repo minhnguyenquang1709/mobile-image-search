@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:exif/exif.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -238,10 +237,11 @@ class GalleryDataSource {
   }
 
   Future<void> getImageMetadata(String assetId) async {
-    final imageFile = await getImageFile(assetId);
-    if (imageFile != null) {
-      final exifData = await readExifFromFile(imageFile);
-      _logger.printLog('EXIF data for assetId $assetId: $exifData');
+    final assetEntity = await AssetEntity.fromId(assetId);
+    if (assetEntity != null) {
+      _logger.printLog("\nMetadata for image ${assetEntity.title} is:}\n");
+      _logger.printLog("createDateTime:${assetEntity.createDateTime}\n");
+      _logger.printLog("modifiedDateTime:${assetEntity.modifiedDateTime}\n");
     }
   }
 }

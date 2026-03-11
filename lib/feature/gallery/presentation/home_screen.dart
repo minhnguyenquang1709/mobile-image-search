@@ -11,7 +11,7 @@ import 'package:mobile_image_search/shared/domain/image_model.dart'
 
 class ThumbnailWidget extends StatefulWidget {
   final image_model.Image image;
-  final Future<void> Function(String assetId)? onTap;
+  final Function(String assetId)? onTap;
 
   const ThumbnailWidget({super.key, required this.image, this.onTap});
 
@@ -84,6 +84,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final galleryController = ref.watch(galleryControllerProvider);
 
+    Future<void> onImageTap(String assetId) async {
+      ref.read(galleryControllerProvider.notifier).printImageMetadata(assetId);
+    }
+
     return Scaffold(
       body: galleryController.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -116,7 +120,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           cacheExtent: Config.gridViewCacheExtent,
                           itemCount: images.length,
                           itemBuilder: (context, index) {
-                            return ThumbnailWidget(image: images[index]);
+                            return ThumbnailWidget(
+                              image: images[index],
+                              onTap: onImageTap,
+                            );
                           },
                           controller: _scrollController,
                         ),

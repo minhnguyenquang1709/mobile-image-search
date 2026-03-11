@@ -46,6 +46,12 @@ class GalleryController extends AsyncNotifier<List<Image>> {
       _isFetching = false;
     }
   }
+
+  /// print metadata of image
+  Future<void> printImageMetadata(String assetId) async {
+    final galleryService = ref.read(galleryServiceProvider);
+    await galleryService.getImageMetadata(assetId);
+  }
 }
 
 final galleryControllerProvider =
