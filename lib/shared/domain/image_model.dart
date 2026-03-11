@@ -12,3 +12,10 @@ class Image {
 
   Image({required this.assetEntity, required this.metadata});
 }
+
+class ImageGroup {
+  final List<Image> images;
+  final DateTime date;
+
+  ImageGroup({required this.date, required this.images});
+}

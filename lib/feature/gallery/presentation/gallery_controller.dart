@@ -6,7 +6,7 @@ import 'package:mobile_image_search/shared/domain/image_model.dart';
 /// Behave like ViewModel in MVVM
 ///
 /// State Controller
-class GalleryController extends AsyncNotifier<List<Image>> {
+class GalleryController extends AsyncNotifier<List<ImageGroup>> {
   int _currentPage = 0;
   final int _limit = 100;
   bool _isFetching = false; // prevent spam
@@ -15,8 +15,50 @@ class GalleryController extends AsyncNotifier<List<Image>> {
   final Logger _logger = loggers[LoggerName.galleryController]!;
 
   @override
-  Future<List<Image>> build() async {
-    return await _fetchPage(_currentPage);
+  Future<List<ImageGroup>> build() async {
+    final hasPermission = await ref
+        .read(galleryServiceProvider)
+        .requestGalleryAccess();
+    if (!hasPermission) {
+      throw Exception('Gallery access permission denied');
+    }
+    final newImages = await _fetchPage(_currentPage);
+
+    return groupImagesByDate(newImages);
+  }
+
+  List<ImageGroup> groupImagesByDate(List<Image> images) {
+    final Map<DateTime, List<Image>> groupedMap = {};
+
+    for (var image in images) {
+      final asset = image.assetEntity;
+
+      // Kiểm tra xem modifiedDateSecond có tồn tại và hợp lệ không
+      final DateTime dateTime =
+          (asset.modifiedDateSecond != null && asset.modifiedDateSecond! > 0)
+          ? asset.modifiedDateTime
+          : asset.createDateTime;
+
+      // Chuẩn hóa thời gian: Chặt bỏ giờ, phút, giây để có thể nhóm chung các ảnh cùng 1 ngày
+      final DateTime dateObj = DateTime(
+        dateTime.year,
+        dateTime.month,
+        dateTime.day,
+      );
+
+      if (!groupedMap.containsKey(dateObj)) {
+        groupedMap[dateObj] = [];
+      }
+      groupedMap[dateObj]!.add(image);
+    }
+
+    final List<ImageGroup> groups = groupedMap.entries.map((entry) {
+      return ImageGroup(date: entry.key, images: entry.value);
+    }).toList();
+
+    groups.sort((a, b) => b.date.compareTo(a.date));
+
+    return groups;
   }
 
   Future<List<Image>> _fetchPage(int page) async {
@@ -38,7 +80,13 @@ class GalleryController extends AsyncNotifier<List<Image>> {
         _hasReachedEnd = true;
       } else {
         _currentPage = nextPage;
-        state = AsyncValue.data([...state.value!, ...newImages]);
+        final List<Image> combinedImageList = [];
+        for (var group in state.value!) {
+          combinedImageList.addAll(group.images);
+        }
+        combinedImageList.addAll(newImages);
+        final imageGroupList = groupImagesByDate(combinedImageList);
+        state = AsyncValue.data(imageGroupList);
       }
     } catch (e, st) {
       _logger.printLog("\nError fetching page $_currentPage: $e\n");
@@ -52,9 +100,14 @@ class GalleryController extends AsyncNotifier<List<Image>> {
     final galleryService = ref.read(galleryServiceProvider);
     await galleryService.getImageMetadata(assetId);
   }
+
+  Future<void> requestGalleryAccess() async {
+    final galleryService = ref.read(galleryServiceProvider);
+    await galleryService.requestGalleryAccess();
+  }
 }
 
 final galleryControllerProvider =
-    AsyncNotifierProvider<GalleryController, List<Image>>(() {
+    AsyncNotifierProvider<GalleryController, List<ImageGroup>>(() {
       return GalleryController();
     });
