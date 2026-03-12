@@ -29,10 +29,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final galleryController = ref.watch(galleryControllerProvider);
 
-    // Future<void> onImageTap(String assetId) async {
-    //   ref.read(galleryControllerProvider.notifier).printImageMetadata(assetId);
-    // }
-
     return Scaffold(
       body: galleryController.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -41,7 +37,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             Center(child: Text("Error loading images: $err")),
             TextButton(
-              child: const Text("Refresh"),
+              child: const Text("Request Permission"),
               onPressed: () {
                 ref.refresh(galleryControllerProvider);
               },
@@ -70,6 +66,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             SliverToBoxAdapter(
                               child: Text(group.date.toString().split(' ')[0]),
                             ),
+
+                            // image grid
                             SliverGrid(
                               delegate: SliverChildBuilderDelegate((
                                 context,
@@ -86,7 +84,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     mainAxisSpacing: Config.mainAxisSpacing,
                                   ),
                             ),
-                            // image grid
+
+                            // ending space
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: Config.imageGroupSpacing),
+                            ),
                           ],
                         );
                       }).toList(),

@@ -33,13 +33,12 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
     for (var image in images) {
       final asset = image.assetEntity;
 
-      // Kiểm tra xem modifiedDateSecond có tồn tại và hợp lệ không
       final DateTime dateTime =
           (asset.modifiedDateSecond != null && asset.modifiedDateSecond! > 0)
           ? asset.modifiedDateTime
           : asset.createDateTime;
 
-      // Chuẩn hóa thời gian: Chặt bỏ giờ, phút, giây để có thể nhóm chung các ảnh cùng 1 ngày
+      // normalize to date
       final DateTime dateObj = DateTime(
         dateTime.year,
         dateTime.month,

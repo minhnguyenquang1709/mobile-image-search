@@ -7,36 +7,6 @@ import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:mobile_image_search/shared/domain/image_model.dart'
     as image_model;
 
-// class _ImageGroupByDateWidgetState extends State<ImageGroupByDateWidget> {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Column(
-//       children: [
-//         Text(widget.imageGroup.date.toString()),
-//         SliverGrid(
-//           delegate: SliverChildBuilderDelegate((context, index) {
-//             return ThumbnailWidget(image: widget.imageGroup.images[index]);
-//           }, childCount: widget.imageGroup.images.length),
-//           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-//             crossAxisCount: Config.imagesPerRow,
-//             crossAxisSpacing: Config.crossAxisSpacing,
-//             mainAxisSpacing: Config.mainAxisSpacing,
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-// class ImageGroupByDateWidget extends StatefulWidget {
-//   final image_model.ImageGroup imageGroup;
-
-//   const ImageGroupByDateWidget({super.key, required this.imageGroup});
-
-//   @override
-//   State<ImageGroupByDateWidget> createState() => _ImageGroupByDateWidgetState();
-// }
-
 class ThumbnailWidget extends StatefulWidget {
   final image_model.Image image;
   final Function(String assetId)? onTap;

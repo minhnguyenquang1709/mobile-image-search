@@ -69,4 +69,5 @@ class Config {
   static const double gridViewCacheExtent = 1000;
   static const double crossAxisSpacing = 5;
   static const double mainAxisSpacing = 5;
+  static const double imageGroupSpacing = 15;
 }

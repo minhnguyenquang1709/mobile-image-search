@@ -6,7 +6,8 @@ import 'package:mobile_image_search/core/infra/background_worker_interface.dart'
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:mobile_image_search/feature/indexing/domain/indexing_model.dart';
 
-class IndexingWorker extends IBackgroundWorker<IndexingTask, IndexingResult> {
+class IndexingWorker
+    implements IBackgroundWorker<IndexingTask, IndexingResult> {
   final Queue<IndexingTask> taskQueue = Queue();
   final StreamController<IndexingResult> _streamController =
       StreamController<IndexingResult>();
