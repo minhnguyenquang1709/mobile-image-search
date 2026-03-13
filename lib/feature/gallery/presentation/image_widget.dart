@@ -28,21 +28,40 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget> {
   @override
   Widget build(BuildContext context) {
     final assetEntity = widget.image.assetEntity;
-    final selectionController = ref.watch(selectionControllerProvider.notifier);
-    final isImageSelected = selectionController.isSelected(assetEntity.id);
+    final isImageSelected = ref
+        .watch(selectionControllerProvider)
+        .contains(assetEntity.id);
 
     return GestureDetector(
       onTap: () {
-        context.push(
-          RouteConstants.imageViewer,
-          extra: {'image': widget.image},
-        );
-        if (widget.onTap != null) {
-          widget.onTap!(assetEntity.id);
+        final isInSelectionMode = ref
+            .read(selectionControllerProvider)
+            .isNotEmpty;
+        if (isInSelectionMode) {
+          isImageSelected
+              ? ref
+                    .read(selectionControllerProvider.notifier)
+                    .deselectImage(assetEntity.id)
+              : ref
+                    .read(selectionControllerProvider.notifier)
+                    .selectImage(assetEntity.id);
+        } else {
+          context.push(
+            RouteConstants.imageViewer,
+            extra: {'image': widget.image},
+          );
+          if (widget.onTap != null) {
+            widget.onTap!(assetEntity.id);
+          }
         }
       },
       onLongPress: () {
-        selectionController.toggleSelection(assetEntity.id);
+        final selectionController = ref.read(
+          selectionControllerProvider.notifier,
+        );
+        if (!isImageSelected) {
+          selectionController.selectImage(assetEntity.id);
+        }
       },
       child: Builder(
         builder: (context) {
@@ -64,7 +83,28 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget> {
             ),
           );
 
-          return assetEntityImage;
+          final stack = Stack(
+            children: [
+              Positioned.fill(child: assetEntityImage),
+              Container(
+                color: isImageSelected
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : Colors.transparent,
+              ),
+              if (isImageSelected)
+                const Positioned(
+                  top: 4,
+                  right: 4,
+                  child: Icon(
+                    Icons.check_circle,
+                    color: Colors.blueAccent,
+                    size: 24,
+                  ),
+                ),
+            ],
+          );
+
+          return stack;
         },
       ),
     );

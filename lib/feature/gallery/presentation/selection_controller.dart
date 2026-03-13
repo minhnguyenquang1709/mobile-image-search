@@ -1,27 +1,29 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SelectionController extends Notifier<Set<String>> {
-  final Set<String> _selectedAssetIds = {};
-
   @override
   Set<String> build() {
-    return _selectedAssetIds;
+    return <String>{};
   }
 
-  void toggleSelection(String assetId) {
-    if (_selectedAssetIds.contains(assetId)) {
-      _selectedAssetIds.remove(assetId);
-    } else {
-      _selectedAssetIds.add(assetId);
-    }
-    state = Set.from(_selectedAssetIds); // Trigger state update
+  void selectImage(String assetId) {
+    state = {...state, assetId};
 
     // TODO: remove debug
     print("Selected asset IDs: $state");
   }
 
-  bool isSelected(String assetId) {
-    return _selectedAssetIds.contains(assetId);
+  void deselectImage(String assetId) {
+    if (_isImageSelected(assetId)) {
+      state = state.where((id) => id != assetId).toSet();
+    }
+
+    // TODO: remove debug
+    print("Selected asset IDs: $state");
+  }
+
+  bool _isImageSelected(String assetId) {
+    return state.contains(assetId);
   }
 }
 

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/config/config.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/gallery_controller.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/image_widget.dart';
-import 'package:mobile_image_search/feature/gallery/presentation/selection_controller.dart';
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
