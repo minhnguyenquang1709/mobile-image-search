@@ -8,18 +8,12 @@ class SelectionController extends Notifier<Set<String>> {
 
   void selectImage(String assetId) {
     state = {...state, assetId};
-
-    // TODO: remove debug
-    print("Selected asset IDs: $state");
   }
 
   void deselectImage(String assetId) {
     if (_isImageSelected(assetId)) {
       state = state.where((id) => id != assetId).toSet();
     }
-
-    // TODO: remove debug
-    print("Selected asset IDs: $state");
   }
 
   bool _isImageSelected(String assetId) {

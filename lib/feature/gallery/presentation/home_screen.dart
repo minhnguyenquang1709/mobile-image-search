@@ -3,6 +3,59 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/config/config.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/gallery_controller.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/image_widget.dart';
+import 'package:mobile_image_search/feature/gallery/presentation/selection_controller.dart';
+import 'package:mobile_image_search/shared/domain/image_model.dart';
+
+class SelectionStatusBar extends StatelessWidget {
+  final int selectedCount;
+  const SelectionStatusBar({super.key, required this.selectedCount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black54,
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      child: Text(
+        '$selectedCount selected',
+        style: const TextStyle(color: Colors.black, fontSize: 16),
+      ),
+    );
+  }
+}
+
+class ImageGroupWidget extends StatelessWidget {
+  final ImageGroup imageGroup;
+  const ImageGroupWidget({super.key, required this.imageGroup});
+
+  @override
+  Widget build(BuildContext context) {
+    // date
+    final SliverToBoxAdapter dateHeader = SliverToBoxAdapter(
+      child: Text(imageGroup.date.toString().split(' ')[0]),
+    );
+
+    // image grid
+    final SliverGrid imageGrid = SliverGrid(
+      delegate: SliverChildBuilderDelegate((context, index) {
+        return ThumbnailWidget(image: imageGroup.images[index]);
+      }, childCount: imageGroup.images.length),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: Config.imagesPerRow,
+        crossAxisSpacing: Config.crossAxisSpacing,
+        mainAxisSpacing: Config.mainAxisSpacing,
+      ),
+    );
+
+    // spacing to next group
+    const spacing = SliverToBoxAdapter(
+      child: SizedBox(height: Config.imageGroupSpacing),
+    );
+
+    return SliverList(
+      delegate: SliverChildListDelegate([dateHeader, imageGrid, spacing]),
+    );
+  }
+}
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
@@ -37,7 +90,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             Center(child: Text("Error loading images: $err")),
             TextButton(
-              child: const Text("Request Permission"),
+              child: const Text("Request Permission or Refresh"),
               onPressed: () {
                 ref.refresh(galleryControllerProvider);
               },
@@ -48,7 +101,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (imageGroups.isEmpty) {
             return const Center(child: Text("No images found in gallery"));
           }
-          return Flex(
+
+          final selectedImages = ref.watch(selectionControllerProvider);
+
+          // UI rebuild optimization: flatten image group list
+          final imageGroupWidgetList = imageGroups
+              .map((group) => ImageGroupWidget(imageGroup: group))
+              .toList();
+
+          final fullScreenImageList = Flex(
             direction: Axis.vertical,
             children: [
               Expanded(
@@ -59,39 +120,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     child: CustomScrollView(
                       controller: _scrollController,
-                      slivers: imageGroups.map((group) {
-                        return SliverMainAxisGroup(
-                          slivers: [
-                            // datetime header
-                            SliverToBoxAdapter(
-                              child: Text(group.date.toString().split(' ')[0]),
-                            ),
-
-                            // image grid
-                            SliverGrid(
-                              delegate: SliverChildBuilderDelegate((
-                                context,
-                                index,
-                              ) {
-                                return ThumbnailWidget(
-                                  image: group.images[index],
-                                );
-                              }, childCount: group.images.length),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: Config.imagesPerRow,
-                                    crossAxisSpacing: Config.crossAxisSpacing,
-                                    mainAxisSpacing: Config.mainAxisSpacing,
-                                  ),
-                            ),
-
-                            // ending space
-                            const SliverToBoxAdapter(
-                              child: SizedBox(height: Config.imageGroupSpacing),
-                            ),
-                          ],
-                        );
-                      }).toList(),
+                      slivers: imageGroupWidgetList,
                       scrollDirection: Axis.vertical,
                     ),
                   ),
@@ -99,6 +128,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ],
           );
+
+          final selectionStatusBar = SelectionStatusBar(
+            selectedCount: selectedImages.length,
+          );
+
+          final stack = Stack(
+            children: [
+              fullScreenImageList,
+              if (selectedImages.isNotEmpty) selectionStatusBar,
+            ],
+          );
+
+          return stack;
         },
       ),
     );

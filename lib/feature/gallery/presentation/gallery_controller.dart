@@ -12,6 +12,8 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
   bool _isFetching = false; // prevent spam
   bool _hasReachedEnd = false; // end of gallery
 
+  List<ImageGroup> _cachedImageGroups = [];
+
   final Logger _logger = loggers[LoggerName.galleryController]!;
 
   @override
@@ -27,16 +29,19 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
     return groupImagesByDate(newImages);
   }
 
+  /// Group images
   List<ImageGroup> groupImagesByDate(List<Image> images) {
     final Map<DateTime, List<Image>> groupedMap = {};
 
     for (var image in images) {
       final asset = image.assetEntity;
 
-      final DateTime dateTime =
-          (asset.modifiedDateSecond != null && asset.modifiedDateSecond! > 0)
-          ? asset.modifiedDateTime
-          : asset.createDateTime;
+      // final DateTime dateTime =
+      //     (asset.modifiedDateSecond != null && asset.modifiedDateSecond! > 0)
+      //     ? asset.modifiedDateTime
+      //     : asset.createDateTime;
+
+      final DateTime dateTime = asset.createDateTime;
 
       // normalize to date
       final DateTime dateObj = DateTime(
@@ -55,7 +60,7 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
       return ImageGroup(date: entry.key, images: entry.value);
     }).toList();
 
-    groups.sort((a, b) => b.date.compareTo(a.date));
+    // groups.sort((a, b) => b.date.compareTo(a.date));
 
     return groups;
   }
@@ -65,7 +70,9 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
     return await galleryService.readGallery(page: page, limit: _limit);
   }
 
-  /// fetch next page
+  /// Fetch next page
+  ///
+  /// Merge with cached image groups
   Future<void> loadMore() async {
     if (_isFetching || _hasReachedEnd) return;
 
@@ -79,19 +86,46 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
         _hasReachedEnd = true;
       } else {
         _currentPage = nextPage;
-        final List<Image> combinedImageList = [];
-        for (var group in state.value!) {
-          combinedImageList.addAll(group.images);
+
+        final currentGroups = state.value ?? [];
+        final newImageGroups = groupImagesByDate(newImages);
+
+        if (currentGroups.isEmpty) {
+          state = AsyncValue.data(newImageGroups);
+          return;
         }
-        combinedImageList.addAll(newImages);
-        final imageGroupList = groupImagesByDate(combinedImageList);
-        state = AsyncValue.data(imageGroupList);
+
+        if (_isSameDay(currentGroups.last.date, newImageGroups.first.date)) {
+          // merge with cached data
+          final mergedGroup = ImageGroup(
+            date: currentGroups.last.date,
+            images: [
+              ...currentGroups.last.images,
+              ...newImageGroups.first.images,
+            ],
+          );
+          state = AsyncValue.data([
+            ...currentGroups.sublist(0, currentGroups.length - 1),
+            mergedGroup,
+            ...newImageGroups.sublist(1),
+          ]);
+        } else {
+          // just append
+          currentGroups.addAll(newImageGroups);
+          state = AsyncValue.data(currentGroups);
+        }
       }
-    } catch (e, st) {
+    } catch (e, _) {
       _logger.printLog("\nError fetching page $_currentPage: $e\n");
     } finally {
       _isFetching = false;
     }
+  }
+
+  bool _isSameDay(DateTime dateA, DateTime dateB) {
+    return dateA.year == dateB.year &&
+        dateA.month == dateB.month &&
+        dateA.day == dateB.day;
   }
 
   /// print metadata of image

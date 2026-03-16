@@ -153,14 +153,14 @@ class GalleryDataSource {
     }
 
     // Sort by update date (newest first)
-    allAssets.sort((a, b) => b.modifiedDateTime.compareTo(a.modifiedDateTime));
+    // allAssets.sort((a, b) => b.modifiedDateTime.compareTo(a.modifiedDateTime));
     return allAssets;
   }
 
   Future<List<AssetEntity>> getImages({int page = 0, int limit = 50}) async {
     // filter options
     final FilterOptionGroup filterOptions = FilterOptionGroup(
-      orders: [const OrderOption(type: OrderOptionType.updateDate, asc: false)],
+      orders: [const OrderOption(type: OrderOptionType.createDate, asc: false)],
     );
     filterOptions.setOption(
       AssetType.image,
@@ -173,7 +173,24 @@ class GalleryDataSource {
       onlyAll: true, // only get the root album
       filterOption: filterOptions,
     );
-    _logger.printLog('Found ${albums.length} albums in the gallery.');
+
+    // TODO: remove debug print
+    // _logger.printLog('Found ${albums.length} albums in the gallery.');
+    final List<AssetPathEntity> allAlbums = await PhotoManager.getAssetPathList(
+      type: RequestType.image,
+      onlyAll: false, // get all albums
+      filterOption: filterOptions,
+    );
+    _logger.printLog(
+      "Found ${allAlbums.length} albums in the gallery (including non-root albums).",
+    );
+    for (int i = 0; i < allAlbums.length; i++) {
+      final album = allAlbums[i];
+      final assetCount = await album.assetCountAsync;
+      _logger.printLog(
+        "Album ${i + 1}: ${album.name}, asset count: $assetCount",
+      );
+    }
 
     if (albums.isEmpty) {
       _logger.printLog('No image found in the gallery.');

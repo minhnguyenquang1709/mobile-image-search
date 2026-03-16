@@ -62,6 +62,7 @@ class AppConfig {
 }
 
 class Config {
+  // Home Screen UI
   static const double gridViewGutter = 5;
   static const int thumbnailWidth = 100;
   static const int thumbnailHeight = 100;
