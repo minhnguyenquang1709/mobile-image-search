@@ -207,9 +207,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
       },
       objectToFB: (ImageObjectBox object, fb.Builder fbb) {
         final assetIdOffset = fbb.writeString(object.assetId);
-        final embeddingOffset = object.embedding == null
-            ? null
-            : fbb.writeListFloat32(object.embedding!);
+        final embeddingOffset = fbb.writeListFloat32(object.embedding);
         fbb.startTable(5);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, assetIdOffset);
@@ -221,29 +219,19 @@ obx_int.ModelDefinition getObjectBoxModel() {
       objectFromFB: (obx.Store store, ByteData fbData) {
         final buffer = fb.BufferContext(fbData);
         final rootOffset = buffer.derefObject(0);
-        final idParam = const fb.Int64Reader().vTableGet(
-          buffer,
-          rootOffset,
-          4,
-          0,
-        );
         final assetIdParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 6, '');
         final embeddingParam = const fb.ListReader<double>(
           fb.Float32Reader(),
           lazy: false,
-        ).vTableGetNullable(buffer, rootOffset, 8);
-        final indexedAtParam = DateTime.fromMillisecondsSinceEpoch(
-          const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0),
-          isUtc: true,
-        );
-        final object = ImageObjectBox(
-          idParam,
-          assetIdParam,
-          embeddingParam,
-          indexedAtParam,
-        );
+        ).vTableGet(buffer, rootOffset, 8, []);
+        final object =
+            ImageObjectBox(assetId: assetIdParam, embedding: embeddingParam)
+              ..id = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0)
+              ..indexedAt = DateTime.fromMillisecondsSinceEpoch(
+                const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0),
+              );
 
         return object;
       },

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:mobile_image_search/feature/gallery/application/gallery_service.dart';
+import 'package:mobile_image_search/feature/indexing/application/indexing_service.dart';
 import 'package:mobile_image_search/shared/domain/image_model.dart';
 
 /// Behave like ViewModel in MVVM
@@ -21,6 +22,7 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
     final hasPermission = await ref
         .read(galleryServiceProvider)
         .requestGalleryAccess();
+
     if (!hasPermission) {
       throw Exception('Gallery access permission denied');
     }
@@ -67,7 +69,21 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
 
   Future<List<Image>> _fetchPage(int page) async {
     final galleryService = ref.read(galleryServiceProvider);
-    return await galleryService.readGallery(page: page, limit: _limit);
+
+    // TODO: remove debug
+    final List<Image> images = await galleryService.readGallery(
+      page: page,
+      limit: _limit,
+    );
+    final indexingService = await ref.read(indexingServiceProvider.future);
+    final List<String> assetIds = [];
+    for (int i = 0; i < 5; i++) {
+      assetIds.add(images[i].assetEntity.id);
+    }
+    indexingService.enQueue(assetIds);
+    indexingService.processNextTask();
+
+    return images;
   }
 
   /// Fetch next page
@@ -111,8 +127,7 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
           ]);
         } else {
           // just append
-          currentGroups.addAll(newImageGroups);
-          state = AsyncValue.data(currentGroups);
+          state = AsyncValue.data([...currentGroups, ...newImageGroups]);
         }
       }
     } catch (e, _) {

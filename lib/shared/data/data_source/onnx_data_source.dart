@@ -28,13 +28,13 @@ class OnnxDataSource {
   final List<double> mean = Model.specs.mean;
   final List<double> std = Model.specs.std;
 
-  final _logger = loggers[LoggerName.aiInferenceService]!;
+  final _logger = loggers[LoggerName.onnxDataSource]!;
 
   /// load the models
   Future<void> init() async {
     try {
-      final String textEncoderPath = Model.textEncoderPath;
-      final String imageEncoderPath = Model.imageEncoderPath;
+      final String textEncoderPath = Model.textEncoderAssetPath;
+      final String imageEncoderPath = Model.imageEncoderAssetPath;
       // if (textEncoderPath == null || imageEncoderPath == null) {
       //   throw Exception(
       //     'Model paths not found in configuration for model: $_model',
@@ -51,6 +51,7 @@ class OnnxDataSource {
           // OrtProvider.CORE_ML,
           OrtProvider.CPU,
         ],
+        intraOpNumThreads: 4,
       );
 
       textEncoder = await ort.createSessionFromAsset(
@@ -306,9 +307,9 @@ class OnnxDataSource {
   }
 }
 
-final onnxDataSourceProvider = FutureProvider((ref) async {
-  final dataSource = OnnxDataSource();
-  await dataSource.init();
+// final onnxDataSourceProvider = FutureProvider((ref) async {
+//   final dataSource = OnnxDataSource();
+//   await dataSource.init();
 
-  return dataSource;
-});
+//   return dataSource;
+// });

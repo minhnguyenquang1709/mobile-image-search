@@ -114,7 +114,7 @@ class GalleryDataSource {
   }
 
   /// read all images no matter the album
-  Future<List<AssetEntity>> getAllImages({int page = 0, int limit = 50}) async {
+  Future<List<AssetEntity>> getAllImages() async {
     // filter options
     final FilterOptionGroup filterOptions = FilterOptionGroup(
       orders: [const OrderOption(type: OrderOptionType.updateDate, asc: false)],
@@ -256,11 +256,48 @@ class GalleryDataSource {
   Future<void> getImageMetadata(String assetId) async {
     final assetEntity = await AssetEntity.fromId(assetId);
     if (assetEntity != null) {
-      _logger.printLog("\nMetadata for image ${assetEntity.title} is:}\n");
-      _logger.printLog("createDateTime:${assetEntity.createDateTime}\n");
-      _logger.printLog("modifiedDateTime:${assetEntity.modifiedDateTime}\n");
+      // _logger.printLog("\nMetadata for image ${assetEntity.title} is:\n");
+      // _logger.printLog("createDateTime:${assetEntity.createDateTime}\n");
+      // _logger.printLog("modifiedDateTime:${assetEntity.modifiedDateTime}\n");
     }
   }
+
+  Future<List<AssetPathEntity>> getAllAlbums() async {
+    final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
+      type: RequestType.common,
+      onlyAll: false, // get all albums
+      hasAll: true, // include "All Photos"/"Recent" album
+    );
+    // _logger.printLog('Found ${albums.length} albums in the gallery.');
+
+    if (albums.isEmpty) {
+      _logger.printLog('No album found in the gallery.');
+    }
+
+    return albums;
+  }
+
+  Future<List<AssetEntity>> getImagesFromAlbum({
+    required String albumId,
+    required int page,
+    int limit = 50,
+  }) async {
+    final List<AssetPathEntity> albumList = await PhotoManager.getAssetPathList(
+      type: RequestType.common,
+      onlyAll: false,
+      hasAll: true,
+    );
+    final album = albumList.firstWhere((album) => album.id == albumId);
+
+    final List<AssetEntity> assetPage = await album.getAssetListPaged(
+      page: page,
+      size: limit,
+    );
+
+    return assetPage;
+  }
+
+  Future<void> createAlbum(String albumName) async {}
 }
 
 final galleryDataSourceProvider = Provider((ref) {

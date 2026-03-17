@@ -44,9 +44,9 @@ class Model {
 
   static const ModelSpecs specs = vitBase16QuickGelu_224;
 
-  static String get textEncoderPath =>
+  static String get textEncoderAssetPath =>
       'assets/openclip/${specs.folderName}/text_encoder_quant.onnx';
-  static String get imageEncoderPath =>
+  static String get imageEncoderAssetPath =>
       'assets/openclip/${specs.folderName}/image_encoder_quant.onnx';
 
   static String get tokenizerDir =>

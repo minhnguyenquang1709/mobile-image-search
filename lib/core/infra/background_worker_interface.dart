@@ -1,4 +1,23 @@
-abstract class IBackgroundWorker<T_in, T_out> {
+import 'dart:async';
+import 'dart:isolate';
+
+import 'package:flutter/services.dart';
+
+abstract class IWorker {
+  ReceivePort? mainReceivePort;
+  SendPort? workerSendPort;
+  Isolate? isolate;
   Future<void> init();
   void dispose();
+  Stream<dynamic> get onMessage;
+}
+
+class WorkerSetupConfig {
+  final SendPort mainSendPort;
+  final RootIsolateToken rootIsolateToken;
+
+  WorkerSetupConfig({
+    required this.mainSendPort,
+    required this.rootIsolateToken,
+  });
 }

@@ -7,6 +7,7 @@ import 'package:mobile_image_search/feature/gallery/data/gallery_data_source.dar
 import 'package:mobile_image_search/feature/gallery/domain/gallery_repository_interface.dart';
 import 'package:mobile_image_search/shared/domain/image_model.dart';
 import 'package:mobile_image_search/shared/domain/interface/image_interface.dart';
+import 'package:photo_manager/src/types/entity.dart';
 
 class GalleryRepository implements IGalleryRepository {
   final GalleryDataSource _galleryDataSource;
@@ -81,6 +82,65 @@ class GalleryRepository implements IGalleryRepository {
   @override
   Future<void> getImageMetadata(String assetId) {
     return _galleryDataSource.getImageMetadata(assetId);
+  }
+
+  @override
+  Future<List<IImageMetadata>> getAllMetadata() async {
+    final List<AssetEntity> allImageAssets = await _galleryDataSource
+        .getAllImages();
+    return allImageAssets.map((asset) {
+      return IImageMetadata(
+        name: asset.title!,
+        createDateTime: asset.createDateTime,
+        modifiedDateTime: asset.modifiedDateTime,
+      );
+    }).toList();
+  }
+
+  @override
+  Future<List<AssetPathEntity>> getAlbumList() async {
+    final List<AssetPathEntity> albumLists = await _galleryDataSource
+        .getAllAlbums();
+    return albumLists;
+  }
+
+  @override
+  Future<List<Image>> readAlbum({
+    required String albumId,
+    required int page,
+    int limit = 50,
+  }) async {
+    final List<AssetEntity> albumImageAssets = await _galleryDataSource
+        .getImagesFromAlbum(albumId: albumId, page: page, limit: limit);
+
+    return albumImageAssets.map((asset) {
+      final IImageMetadata metadata = IImageMetadata(
+        name: asset.title!,
+        createDateTime: asset.createDateTime,
+        modifiedDateTime: asset.modifiedDateTime,
+      );
+      return Image(assetEntity: asset, metadata: metadata);
+    }).toList();
+  }
+
+  @override
+  Future<void> createAlbum(String albumName) async {
+    await _galleryDataSource.createAlbum(albumName);
+  }
+
+  @override
+  Future<void> moveImagesToAlbum(
+    List<String> assetIds,
+    String targetAlbumId,
+  ) async {
+    // TODO: implement moveImagesToAlbum
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> deleteAlbum(String albumId) async {
+    // TODO: implement deleteAlbum
+    throw UnimplementedError();
   }
 }
 

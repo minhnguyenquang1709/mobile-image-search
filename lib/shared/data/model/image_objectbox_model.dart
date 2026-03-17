@@ -3,7 +3,8 @@ import '../../../core/config/config.dart';
 
 @Entity()
 class ImageObjectBox {
-  int id;
+  @Id()
+  int id = 0;
 
   @Index()
   @Unique(onConflict: ConflictStrategy.replace)
@@ -14,10 +15,10 @@ class ImageObjectBox {
     distanceType: VectorDistanceType.cosine,
   )
   @Property(type: PropertyType.floatVector)
-  List<double>? embedding;
+  List<double> embedding;
 
-  @Property(type: PropertyType.dateUtc)
-  DateTime indexedAt;
+  @Property(type: PropertyType.date)
+  DateTime indexedAt = DateTime.now();
 
-  ImageObjectBox(this.id, this.assetId, this.embedding, this.indexedAt);
+  ImageObjectBox({required this.assetId, required this.embedding});
 }

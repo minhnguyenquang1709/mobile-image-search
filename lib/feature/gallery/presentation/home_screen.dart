@@ -37,7 +37,10 @@ class ImageGroupWidget extends StatelessWidget {
     // image grid
     final SliverGrid imageGrid = SliverGrid(
       delegate: SliverChildBuilderDelegate((context, index) {
-        return ThumbnailWidget(image: imageGroup.images[index]);
+        return ThumbnailWidget(
+          image: imageGroup.images[index],
+          key: Key(imageGroup.images[index].assetEntity.id),
+        );
       }, childCount: imageGroup.images.length),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: Config.imagesPerRow,
@@ -51,9 +54,7 @@ class ImageGroupWidget extends StatelessWidget {
       child: SizedBox(height: Config.imageGroupSpacing),
     );
 
-    return SliverList(
-      delegate: SliverChildListDelegate([dateHeader, imageGrid, spacing]),
-    );
+    return SliverMainAxisGroup(slivers: [dateHeader, imageGrid, spacing]);
   }
 }
 
@@ -105,8 +106,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           final selectedImages = ref.watch(selectionControllerProvider);
 
           // UI rebuild optimization: flatten image group list
+          // this is eager loading, causes performance issue when the list is big
           final imageGroupWidgetList = imageGroups
-              .map((group) => ImageGroupWidget(imageGroup: group))
+              .map(
+                (group) => ImageGroupWidget(
+                  imageGroup: group,
+                  key: ValueKey(group.date),
+                ),
+              )
               .toList();
 
           final fullScreenImageList = Flex(

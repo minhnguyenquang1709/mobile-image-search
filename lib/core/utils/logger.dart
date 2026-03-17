@@ -36,16 +36,22 @@ class Logger {
 }
 
 class LoggerName {
-  static const String appRepository = "AppRepository";
+  // application layer
   static const String photoGalleryService = "PhotoGalleryService";
   static const String storeService = "StoreService";
   static const String aiInferenceService = "AiInferenceService";
   static const String indexingQueueService = "IndexingQueueService";
-  static const String tokenizer = "Tokenizer";
+
+  // data layer
+  static const String apRepository = "AppRepository";
   static const String galleryRepository = "GalleryRepository";
   static const String galleryDataSource = "GalleryDataSource";
   static const String indexingRepository = "IndexingRepository";
+  static const String onnxDataSource = "OnnxDataSource";
+
+  // presentation layer
   static const String galleryController = "GalleryController";
+  static const String tokenizer = "Tokenizer";
 }
 
 final Map<String, Logger> loggers = {
@@ -61,6 +67,7 @@ final Map<String, Logger> loggers = {
   LoggerName.galleryRepository: Logger(LoggerName.galleryRepository),
   LoggerName.galleryDataSource: Logger(LoggerName.galleryDataSource),
   LoggerName.indexingRepository: Logger(LoggerName.indexingRepository),
+  LoggerName.onnxDataSource: Logger(LoggerName.onnxDataSource),
 
   // Presentation layer
   LoggerName.galleryController: Logger(LoggerName.galleryController),
