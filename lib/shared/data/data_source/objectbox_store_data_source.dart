@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 /// * provide store instance
 class ObjectBoxStoreDataSource {
   late final Store store;
+  Admin? admin;
 
   ObjectBoxStoreDataSource();
 
@@ -17,8 +18,15 @@ class ObjectBoxStoreDataSource {
     final docsDir = await getApplicationDocumentsDirectory();
     store = await openStore(directory: p.join(docsDir.path, 'image-embedding'));
 
+    // TODO: remove debug print
+    print(
+      "[ObjectBoxStoreDataSource] Store initialized at ${store.directoryPath}",
+    );
+    print(
+      "[ObjectBoxStoreDataSource] ObjectBox Admin available: ${Admin.isAvailable()}",
+    );
     if (Admin.isAvailable()) {
-      Admin admin = Admin(store);
+      admin = Admin(store);
     }
   }
 }

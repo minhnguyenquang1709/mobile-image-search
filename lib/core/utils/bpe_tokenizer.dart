@@ -21,23 +21,33 @@ class BpeTokenizer {
   BpeTokenizer._internal();
 
   /// read file vocab.json and merges.txt
-  Future<void> init() async {
+  Future<void> init({
+    String? vocabExtractedPath,
+    String? mergesExtractedPath,
+  }) async {
     if (_isInitialized) return;
 
     try {
       // 1. initialize Vocabulary
-      // final vocabFile = File('${Model.tokenizerDir}/vocab.json');
-      // final mergesFile = File('${Model.tokenizerDir}/merges.txt');
-      final vocabString = await rootBundle.loadString(
-        '${Model.tokenizerDir}/vocab.json',
+      final vocabFile = File(
+        vocabExtractedPath ?? '${Model.tokenizerDir}/vocab.json',
       );
+      _logger.printLog("Initializing tokenizer vocab from ${vocabFile.path}");
+      final mergesFile = File(
+        mergesExtractedPath ?? '${Model.tokenizerDir}/merges.txt',
+      );
+      // final vocabString = await rootBundle.loadString(
+      //   '${Model.tokenizerDir}/vocab.json',
+      // );
+      final vocabString = await vocabFile.readAsString();
       final Map<String, dynamic> vocabMap = json.decode(vocabString);
       _vocab = vocabMap.map((key, value) => MapEntry(key, value as int));
 
       // 2. initialize BPE Ranks
-      final mergesString = await rootBundle.loadString(
-        '${Model.tokenizerDir}/merges.txt',
-      );
+      // final mergesString = await rootBundle.loadString(
+      //   '${Model.tokenizerDir}/merges.txt',
+      // );
+      final mergesString = await mergesFile.readAsString();
       final lines = mergesString.split('\n');
 
       _bpeRanks = {};
@@ -197,5 +207,3 @@ class BpeTokenizer {
     return result;
   }
 }
-
-final bpeTokenizer = BpeTokenizer();

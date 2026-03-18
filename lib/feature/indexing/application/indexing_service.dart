@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_image_search/core/config/config.dart';
 import 'package:mobile_image_search/core/infra/background_worker_interface.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:mobile_image_search/feature/indexing/domain/indexing_model.dart';
@@ -13,6 +14,7 @@ import 'package:mobile_image_search/shared/data/data_source/onnx_data_source.dar
 import 'package:mobile_image_search/shared/data/repository/ai_inference_repository.dart';
 import 'package:mobile_image_search/shared/data/repository/objectbox_store_repository.dart';
 import 'package:mobile_image_search/shared/domain/interface/store_repository_interface.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class IndexingWorker extends IWorker {
@@ -36,7 +38,12 @@ class IndexingWorker extends IWorker {
   }
 
   @override
-  Future<void> init() async {
+  Future<void> init({
+    String? textEncoderExtractedPath,
+    String? imageEncoderExtractedPath,
+    String? bpeVocabExtractedPath,
+    String? bpeMergesExtractedPath,
+  }) async {
     mainReceivePort = ReceivePort();
 
     final RootIsolateToken rootToken = RootIsolateToken.instance!;
@@ -46,7 +53,14 @@ class IndexingWorker extends IWorker {
       rootIsolateToken: rootToken,
     );
 
-    isolate = await Isolate.spawn(_initWorker, workerSetupConfig);
+    final spawnArgs = [
+      workerSetupConfig,
+      textEncoderExtractedPath,
+      imageEncoderExtractedPath,
+      bpeVocabExtractedPath,
+      bpeMergesExtractedPath,
+    ];
+    isolate = await Isolate.spawn(_initWorker, spawnArgs);
     mainReceivePort?.listen((dynamic message) {
       // set up communication channel
       if (message is SendPort) {
@@ -62,7 +76,13 @@ class IndexingWorker extends IWorker {
     await initCompleter.future;
   }
 
-  static Future<void> _initWorker(WorkerSetupConfig config) async {
+  static Future<void> _initWorker(List<dynamic> args) async {
+    final WorkerSetupConfig config = args[0] as WorkerSetupConfig;
+    final String? textEncoderExtractedPath = args[1];
+    final String? imageEncoderExtractedPath = args[2];
+    final String? bpeVocabExtractedPath = args[3];
+    final String? bpeMergesExtractedPath = args[4];
+
     // register isolate to allow using plugins
     BackgroundIsolateBinaryMessenger.ensureInitialized(config.rootIsolateToken);
 
@@ -72,7 +92,12 @@ class IndexingWorker extends IWorker {
 
     // set up model inference service, load model
     OnnxDataSource onnxDataSource = OnnxDataSource();
-    await onnxDataSource.init();
+    await onnxDataSource.init(
+      textEncoderExtractedPath: textEncoderExtractedPath,
+      imageEncoderExtractedPath: imageEncoderExtractedPath,
+      bpeVocabExtractedPath: bpeVocabExtractedPath,
+      bpeMergesExtractedPath: bpeMergesExtractedPath,
+    );
     OnnxInferenceRepository onnxInferenceRepository = OnnxInferenceRepository(
       onnxDataSource,
     );
@@ -124,7 +149,7 @@ class IndexingService {
 
   final IndexingWorker _worker = IndexingWorker();
 
-  final Logger _logger = loggers[LoggerName.indexingQueueService]!;
+  final Logger _logger = loggers[LoggerName.indexingService]!;
 
   final IStoreRepository _storeRepository;
 
@@ -135,11 +160,104 @@ class IndexingService {
   bool _isProcessing = false;
 
   Future<void> initialize() async {
-    await _worker.init();
-    _isWorkerReady = true;
-    _worker.onMessage.listen((message) {
-      handleWorkerResult(message);
-    });
+    try {
+      // extract model to file system for worker to load
+      final directory = await getApplicationSupportDirectory();
+      final textEncoderFilePath =
+          '${directory.path}${Platform.pathSeparator}${Model.textEncoderAssetPath}';
+      final imageEncoderFilePath =
+          '${directory.path}${Platform.pathSeparator}${Model.imageEncoderAssetPath}';
+      final bpeVocabFilePath =
+          '${directory.path}${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}vocab.json';
+      final bpeMergesFilePath =
+          '${directory.path}${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}merges.txt';
+
+      // chgeck if files exist
+      final textEncoderFile = File(textEncoderFilePath);
+      final imageEncoderFile = File(imageEncoderFilePath);
+      final bpeVocabFile = File(bpeVocabFilePath);
+      final bpeMergesFile = File(bpeMergesFilePath);
+      if (!await textEncoderFile.exists()) {
+        _logger.printLog(
+          'Extracting text encoder model to $textEncoderFilePath',
+        );
+        final textEncoderFileData = await rootBundle.load(
+          Model.textEncoderAssetPath,
+        );
+        _logger.printLog("Loaded text encoder model data, writing to file...");
+
+        // create parent directories
+        await textEncoderFile.parent.create(recursive: true);
+
+        await textEncoderFile.writeAsBytes(
+          textEncoderFileData.buffer.asUint8List(),
+          flush: true,
+        );
+        _logger.printLog("Text encoder model extracted successfully!");
+        _logger.printLog(
+          "Text encoder file exists: ${await textEncoderFile.exists()}",
+        );
+      }
+
+      if (!await imageEncoderFile.exists()) {
+        final imageEncoderFileData = await rootBundle.load(
+          Model.imageEncoderAssetPath,
+        );
+
+        // create parent directories
+        await imageEncoderFile.parent.create(recursive: true);
+
+        await imageEncoderFile.writeAsBytes(
+          imageEncoderFileData.buffer.asUint8List(),
+          flush: true,
+        );
+      }
+
+      if (!await bpeVocabFile.exists()) {
+        final bpeVocabFileData = await rootBundle.load(
+          '${Model.tokenizerDir}/vocab.json',
+        );
+
+        // create parent directories
+        await bpeVocabFile.parent.create(recursive: true);
+
+        await bpeVocabFile.writeAsBytes(
+          bpeVocabFileData.buffer.asUint8List(),
+          flush: true,
+        );
+      }
+
+      if (!await bpeMergesFile.exists()) {
+        final bpeMergesFileData = await rootBundle.load(
+          '${Model.tokenizerDir}/merges.txt',
+        );
+
+        // create parent directories
+        await bpeMergesFile.parent.create(recursive: true);
+
+        await bpeMergesFile.writeAsBytes(
+          bpeMergesFileData.buffer.asUint8List(),
+          flush: true,
+        );
+        _logger.printLog(
+          "Tokenizer vocab file exists: ${await bpeVocabFile.exists()}",
+        );
+      }
+
+      // init background isolate
+      await _worker.init(
+        textEncoderExtractedPath: textEncoderFilePath,
+        imageEncoderExtractedPath: imageEncoderFilePath,
+        bpeMergesExtractedPath: bpeMergesFilePath,
+        bpeVocabExtractedPath: bpeVocabFilePath,
+      );
+      _isWorkerReady = true;
+      _worker.onMessage.listen((message) {
+        handleWorkerResult(message);
+      });
+    } catch (e, _) {
+      rethrow;
+    }
   }
 
   void enQueue(List<String> assetIds) {

@@ -31,15 +31,19 @@ class OnnxDataSource {
   final _logger = loggers[LoggerName.onnxDataSource]!;
 
   /// load the models
-  Future<void> init() async {
+  Future<void> init({
+    String? textEncoderExtractedPath,
+    String? imageEncoderExtractedPath,
+    String? bpeVocabExtractedPath,
+    String? bpeMergesExtractedPath,
+  }) async {
     try {
-      final String textEncoderPath = Model.textEncoderAssetPath;
-      final String imageEncoderPath = Model.imageEncoderAssetPath;
-      // if (textEncoderPath == null || imageEncoderPath == null) {
-      //   throw Exception(
-      //     'Model paths not found in configuration for model: $_model',
-      //   );
-      // }
+      final String textEncoderPath = (textEncoderExtractedPath != null)
+          ? textEncoderExtractedPath
+          : Model.textEncoderAssetPath;
+      final String imageEncoderPath = (imageEncoderExtractedPath != null)
+          ? imageEncoderExtractedPath
+          : Model.imageEncoderAssetPath;
 
       final providers = await ort.getAvailableProviders();
       _logger.printLog('Available ONNX Runtime providers: $providers');
@@ -54,16 +58,16 @@ class OnnxDataSource {
         intraOpNumThreads: 4,
       );
 
-      textEncoder = await ort.createSessionFromAsset(
-        textEncoderPath,
-        options: options,
-      );
-      imageEncoder = await ort.createSessionFromAsset(
+      textEncoder = await ort.createSession(textEncoderPath, options: options);
+      imageEncoder = await ort.createSession(
         imageEncoderPath,
         options: options,
       );
-      tokenizer = bpeTokenizer;
-      await tokenizer?.init();
+      tokenizer = BpeTokenizer();
+      await tokenizer?.init(
+        vocabExtractedPath: bpeVocabExtractedPath,
+        mergesExtractedPath: bpeMergesExtractedPath,
+      );
 
       if (textEncoder == null || imageEncoder == null) {
         throw Exception(

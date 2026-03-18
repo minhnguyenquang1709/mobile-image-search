@@ -40,7 +40,7 @@ class LoggerName {
   static const String photoGalleryService = "PhotoGalleryService";
   static const String storeService = "StoreService";
   static const String aiInferenceService = "AiInferenceService";
-  static const String indexingQueueService = "IndexingQueueService";
+  static const String indexingService = "IndexingService";
 
   // data layer
   static const String apRepository = "AppRepository";
@@ -59,7 +59,7 @@ final Map<String, Logger> loggers = {
   LoggerName.photoGalleryService: Logger(LoggerName.photoGalleryService),
   LoggerName.storeService: Logger(LoggerName.storeService),
   LoggerName.aiInferenceService: Logger(LoggerName.aiInferenceService),
-  LoggerName.indexingQueueService: Logger(LoggerName.indexingQueueService),
+  LoggerName.indexingService: Logger(LoggerName.indexingService),
 
   LoggerName.tokenizer: Logger(LoggerName.tokenizer),
 
