@@ -26,8 +26,6 @@ class IndexingWorker extends IWorker {
   @override
   Stream get onMessage => _messageController.stream;
 
-  IndexingWorker() {}
-
   @override
   void dispose() {
     isolate?.kill(priority: Isolate.immediate);
@@ -62,12 +60,15 @@ class IndexingWorker extends IWorker {
     ];
     isolate = await Isolate.spawn(_initWorker, spawnArgs);
     mainReceivePort?.listen((dynamic message) {
-      // set up communication channel
       if (message is SendPort) {
+        // set up communication channel
         workerSendPort = message;
         initCompleter.complete();
       } else {
-        print('[IndexingWorker] Received message from worker: $message');
+        // send message to service
+
+        // TODO: remove debug print
+        // print('[IndexingWorker] Received message from worker: $message');
         _messageController.add(message);
       }
     });
