@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/core/config/config.dart';
 import 'package:mobile_image_search/core/config/theme.dart';
 import 'package:mobile_image_search/core/constants/route_constant.dart';
+import 'package:mobile_image_search/core/infra/platform_image_method_channel.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/selection_controller.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
@@ -45,13 +46,18 @@ class ThumbnailWidget extends ConsumerWidget {
           }
         }
       },
-      onLongPress: () {
-        final selectionController = ref.read(
-          selectionControllerProvider.notifier,
-        );
-        if (!isImageSelected) {
-          selectionController.selectImage(assetEntity.id);
-        }
+      // TODO: remove async keyword, uncomment true code and debug deleting images
+      onLongPress: () async {
+        // TODO: uncomment
+        // final selectionController = ref.read(
+        //   selectionControllerProvider.notifier,
+        // );
+        // if (!isImageSelected) {
+        //   selectionController.selectImage(assetEntity.id);
+        // }
+
+        // TODO: remove debug deleting images
+        await platformImageMethodChannel.deleteImages([assetEntity.id]);
       },
       child: RepaintBoundary(
         child: Builder(

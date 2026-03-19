@@ -15,4 +15,17 @@ class PlatformImageMethodChannel {
       return -1;
     }
   }
+
+  Future<bool> deleteImages(List<String> assetIds) async {
+    try {
+      return await _methodChannel.invokeMethod('deleteImages', {
+        'ids': assetIds,
+      });
+    } on PlatformException catch (e) {
+      print("Failed to delete images: ${e.message}");
+      return Future.value(false);
+    }
+  }
 }
+
+final platformImageMethodChannel = PlatformImageMethodChannel();
