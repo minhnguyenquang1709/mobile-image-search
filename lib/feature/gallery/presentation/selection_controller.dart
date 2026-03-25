@@ -19,6 +19,10 @@ class SelectionController extends Notifier<Set<String>> {
   bool _isImageSelected(String assetId) {
     return state.contains(assetId);
   }
+
+  void clearSelection() {
+    state = <String>{};
+  }
 }
 
 final selectionControllerProvider =

@@ -20,6 +20,7 @@ class ImageViewScreen extends StatelessWidget {
           ),
         ],
       ),
+      bottomNavigationBar: BottomAppBar(child: Text(image.metadata.name)),
     );
   }
 }

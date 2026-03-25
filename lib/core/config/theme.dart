@@ -12,3 +12,7 @@ final lightTheme = ThemeData(
     error: Color(0xFFEF4444), // Semantic/Danger
   ),
 );
+
+abstract class CustomTextStyles {
+  static const String fontFamily = 'Inter';
+}

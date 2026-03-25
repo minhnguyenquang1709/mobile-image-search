@@ -143,7 +143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           final stack = Stack(
             children: [
               fullScreenImageList,
-              if (selectedImages.isNotEmpty) selectionStatusBar,
+              // if (selectedImages.isNotEmpty) selectionStatusBar,
             ],
           );
 

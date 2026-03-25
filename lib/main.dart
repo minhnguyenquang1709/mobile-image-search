@@ -3,13 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/config/theme.dart';
 import 'package:mobile_image_search/core/router/router_config.dart';
 import 'package:flutter/material.dart';
-import 'package:mobile_image_search/shared/presentation/bottom_navigation_bar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // await appRepo.init();
     runApp(ProviderScope(child: AppLifecycleWrapper()));
   } catch (e) {
     runApp(
@@ -58,14 +56,7 @@ class _AppLifecycleWrapperState extends State<AppLifecycleWrapper> {
       title: 'Smart Image Gallery',
       theme: lightTheme,
       routerConfig: topLevelNavigationRouter,
+      showPerformanceOverlay: true,
     );
-    // return Scaffold(
-    //   body: MaterialApp.router(
-    //     title: 'Smart Image Gallery',
-    //     theme: lightTheme,
-    //     routerConfig: topLevelNavigationRouter,
-    //   ),
-    // bottomNavigationBar: const CustomBottomNavigationBar(),
-    // );
   }
 }

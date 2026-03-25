@@ -46,18 +46,13 @@ class ThumbnailWidget extends ConsumerWidget {
           }
         }
       },
-      // TODO: remove async keyword, uncomment true code and debug deleting images
-      onLongPress: () async {
-        // TODO: uncomment
-        // final selectionController = ref.read(
-        //   selectionControllerProvider.notifier,
-        // );
-        // if (!isImageSelected) {
-        //   selectionController.selectImage(assetEntity.id);
-        // }
-
-        // TODO: remove debug deleting images
-        await platformImageMethodChannel.deleteImages([assetEntity.id]);
+      onLongPress: () {
+        final selectionController = ref.read(
+          selectionControllerProvider.notifier,
+        );
+        if (!isImageSelected) {
+          selectionController.selectImage(assetEntity.id);
+        }
       },
       child: RepaintBoundary(
         child: Builder(
