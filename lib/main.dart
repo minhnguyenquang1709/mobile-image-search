@@ -56,7 +56,7 @@ class _AppLifecycleWrapperState extends State<AppLifecycleWrapper> {
       title: 'Smart Image Gallery',
       theme: lightTheme,
       routerConfig: topLevelNavigationRouter,
-      showPerformanceOverlay: true,
+      // showPerformanceOverlay: true,
     );
   }
 }

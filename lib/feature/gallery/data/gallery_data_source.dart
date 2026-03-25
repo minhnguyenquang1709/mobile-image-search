@@ -21,7 +21,8 @@ class GalleryDataSource {
         return await Permission.storage.isGranted;
       } else {
         // for Android 13 and above, use photos permission
-        return await Permission.photos.isGranted;
+        return await Permission.photos.isGranted &&
+            await Permission.videos.isGranted;
       }
     } else if (Platform.isIOS) {
       return await Permission.photos.isGranted;
@@ -67,25 +68,46 @@ class GalleryDataSource {
         }
       } else {
         // for Android 13 and above, use photos permission
-        final photoStorage = await Permission.photos.status;
-        if (photoStorage.isGranted) {
+        // photo and video access are separated
+        // final photoStorage = await Permission.photos.status;
+        // if (photoStorage.isGranted) {
+        //   return true;
+        // }
+        // if (photoStorage.isDenied) {
+        //   final status = await Permission.photos.request();
+        //   _logger.printLog('Gallery access granted: ${status.isGranted}');
+        //   return status.isGranted;
+        // }
+        // if (photoStorage.isPermanentlyDenied || photoStorage.isRestricted) {
+        //   await openAppSettings();
+
+        //   // recheck
+        //   final PermissionStatus newStatus = await Permission.photos.status;
+        //   _logger.printLog(
+        //     'Gallery access granted after opening settings: ${newStatus.isGranted}',
+        //   );
+        //   return newStatus.isGranted;
+        // }
+
+        Map<Permission, PermissionStatus> statuses = await [
+          Permission.photos,
+          Permission.videos,
+        ].request();
+
+        final photosGranted = statuses[Permission.photos]?.isGranted ?? false;
+        final videosGranted = statuses[Permission.videos]?.isGranted ?? false;
+
+        if (photosGranted && videosGranted) {
           return true;
         }
-        if (photoStorage.isDenied) {
-          final status = await Permission.photos.request();
-          _logger.printLog('Gallery access granted: ${status.isGranted}');
-          return status.isGranted;
-        }
-        if (photoStorage.isPermanentlyDenied || photoStorage.isRestricted) {
-          await openAppSettings();
 
-          // recheck
-          final PermissionStatus newStatus = await Permission.photos.status;
-          _logger.printLog(
-            'Gallery access granted after opening settings: ${newStatus.isGranted}',
-          );
-          return newStatus.isGranted;
+        if (statuses[Permission.photos]!.isPermanentlyDenied ||
+            statuses[Permission.videos]!.isPermanentlyDenied) {
+          await openAppSettings();
+          // recheck after returning from settings
+          return await checkGalleryPermission();
         }
+        return false;
       }
     } else if (Platform.isIOS) {
       final photoStorage = await Permission.photos.status;
@@ -166,31 +188,35 @@ class GalleryDataSource {
       AssetType.image,
       const FilterOption(needTitle: true),
     );
+    filterOptions.setOption(
+      AssetType.video,
+      const FilterOption(needTitle: true),
+    );
 
     // get albums
     final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
-      type: RequestType.image,
+      type: RequestType.common,
       onlyAll: true, // only get the root album
       filterOption: filterOptions,
     );
 
     // TODO: remove debug print
     // _logger.printLog('Found ${albums.length} albums in the gallery.');
-    final List<AssetPathEntity> allAlbums = await PhotoManager.getAssetPathList(
-      type: RequestType.image,
-      onlyAll: false, // get all albums
-      filterOption: filterOptions,
-    );
-    _logger.printLog(
-      "Found ${allAlbums.length} albums in the gallery (including non-root albums).",
-    );
-    for (int i = 0; i < allAlbums.length; i++) {
-      final album = allAlbums[i];
-      final assetCount = await album.assetCountAsync;
-      _logger.printLog(
-        "Album ${i + 1}: ${album.name}, asset count: $assetCount",
-      );
-    }
+    // final List<AssetPathEntity> allAlbums = await PhotoManager.getAssetPathList(
+    //   type: RequestType.common,
+    //   onlyAll: false, // get all albums
+    //   filterOption: filterOptions,
+    // );
+    // _logger.printLog(
+    //   "Found ${allAlbums.length} albums in the gallery (including non-root albums).",
+    // );
+    // for (int i = 0; i < allAlbums.length; i++) {
+    //   final album = allAlbums[i];
+    //   final assetCount = await album.assetCountAsync;
+    //   _logger.printLog(
+    //     "Album ${i + 1}: ${album.name}, asset count: $assetCount",
+    //   );
+    // }
 
     if (albums.isEmpty) {
       _logger.printLog('No image found in the gallery.');

@@ -7,6 +7,7 @@ import 'package:mobile_image_search/feature/gallery/data/gallery_data_source.dar
 import 'package:mobile_image_search/feature/gallery/domain/gallery_repository_interface.dart';
 import 'package:mobile_image_search/shared/domain/image_model.dart';
 import 'package:mobile_image_search/shared/domain/interface/image_interface.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager/src/types/entity.dart';
 
 class GalleryRepository implements IGalleryRepository {
@@ -33,14 +34,30 @@ class GalleryRepository implements IGalleryRepository {
       limit: limit,
     );
 
-    return sourceImages.map((asset) {
-      final IImageMetadata metadata = IImageMetadata(
-        name: asset.title!,
-        createDateTime: asset.createDateTime,
-        modifiedDateTime: asset.modifiedDateTime,
-      );
-      return Image(assetEntity: asset, metadata: metadata);
-    }).toList();
+    final List<Image> assets = [];
+
+    for (final asset in sourceImages) {
+      if (asset.type == AssetType.image || asset.type == AssetType.video) {
+        final IImageMetadata metadata = IImageMetadata(
+          name: asset.title!,
+          createDateTime: asset.createDateTime,
+          modifiedDateTime: asset.modifiedDateTime,
+        );
+        assets.add(Image(assetEntity: asset, metadata: metadata));
+      }
+    }
+
+    return assets;
+
+    // return sourceImages.map((asset) {
+    //   if (asset.type != AssetType.image && asset.type != AssetType.video) {}
+    //   final IImageMetadata metadata = IImageMetadata(
+    //     name: asset.title!,
+    //     createDateTime: asset.createDateTime,
+    //     modifiedDateTime: asset.modifiedDateTime,
+    //   );
+    //   return Image(assetEntity: asset, metadata: metadata);
+    // }).toList();
   }
 
   @override
