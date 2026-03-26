@@ -1,1 +1,1 @@
-enum EGallerySyncStatus { idle, inProgress, failed }
+enum EMediaType { image, video }

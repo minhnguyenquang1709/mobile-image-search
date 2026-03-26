@@ -20,5 +20,16 @@ class ImageObjectBox {
   @Property(type: PropertyType.date)
   DateTime indexedAt = DateTime.now();
 
-  ImageObjectBox({required this.assetId, required this.embedding});
+  @Property(type: PropertyType.date)
+  DateTime createdAt;
+
+  @Property(type: PropertyType.date)
+  DateTime modifiedAt;
+
+  ImageObjectBox({
+    required this.assetId,
+    required this.embedding,
+    required this.createdAt,
+    required this.modifiedAt,
+  });
 }

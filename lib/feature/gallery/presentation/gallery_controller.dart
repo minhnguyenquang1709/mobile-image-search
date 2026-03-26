@@ -1,23 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:mobile_image_search/feature/gallery/application/gallery_service.dart';
-import 'package:mobile_image_search/shared/domain/image_model.dart';
+import 'package:mobile_image_search/shared/domain/media.dart';
 
 /// Behave like ViewModel in MVVM
 ///
 /// State Controller
-class GalleryController extends AsyncNotifier<List<ImageGroup>> {
+///
+/// Data caching
+class GalleryController extends AsyncNotifier<List<MediaGroup>> {
   int _currentPage = 0;
   final int _limit = 100;
   bool _isFetching = false; // prevent spam
   bool _hasReachedEnd = false; // end of gallery
 
-  List<ImageGroup> _cachedImageGroups = [];
+  Map<String, Media> _cachedMediaItems = {};
 
   final Logger _logger = loggers[LoggerName.galleryController]!;
 
   @override
-  Future<List<ImageGroup>> build() async {
+  Future<List<MediaGroup>> build() async {
     final hasPermission = await ref
         .read(galleryServiceProvider)
         .requestGalleryAccess();
@@ -31,18 +33,11 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
   }
 
   /// Group images
-  List<ImageGroup> groupImagesByDate(List<Image> images) {
-    final Map<DateTime, List<Image>> groupedMap = {};
+  List<MediaGroup> groupImagesByDate(List<Media> media) {
+    final Map<DateTime, List<Media>> groupedMap = {};
 
-    for (var image in images) {
-      final asset = image.assetEntity;
-
-      // final DateTime dateTime =
-      //     (asset.modifiedDateSecond != null && asset.modifiedDateSecond! > 0)
-      //     ? asset.modifiedDateTime
-      //     : asset.createDateTime;
-
-      final DateTime dateTime = asset.createDateTime;
+    for (var mediaItem in media) {
+      final DateTime dateTime = mediaItem.metadata.createDateTime;
 
       // normalize to date
       final DateTime dateObj = DateTime(
@@ -54,11 +49,11 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
       if (!groupedMap.containsKey(dateObj)) {
         groupedMap[dateObj] = [];
       }
-      groupedMap[dateObj]!.add(image);
+      groupedMap[dateObj]!.add(mediaItem);
     }
 
-    final List<ImageGroup> groups = groupedMap.entries.map((entry) {
-      return ImageGroup(date: entry.key, images: entry.value);
+    final List<MediaGroup> groups = groupedMap.entries.map((entry) {
+      return MediaGroup(date: entry.key, mediaItems: entry.value);
     }).toList();
 
     // groups.sort((a, b) => b.date.compareTo(a.date));
@@ -66,10 +61,10 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
     return groups;
   }
 
-  Future<List<Image>> _fetchPage(int page) async {
+  Future<List<Media>> _fetchPage(int page) async {
     final galleryService = ref.read(galleryServiceProvider);
 
-    final List<Image> images = await galleryService.readGallery(
+    final List<Media> newMediaItems = await galleryService.readGallery(
       page: page,
       limit: _limit,
     );
@@ -83,7 +78,12 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
     // indexingService.enQueue(assetIds);
     // indexingService.processNextTask();
 
-    return images;
+    // cache
+    for (final media in newMediaItems) {
+      _cachedMediaItems[media.assetId] = media;
+    }
+
+    return newMediaItems;
   }
 
   /// Fetch next page
@@ -113,11 +113,11 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
 
         if (_isSameDay(currentGroups.last.date, newImageGroups.first.date)) {
           // merge with cached data
-          final mergedGroup = ImageGroup(
+          final mergedGroup = MediaGroup(
             date: currentGroups.last.date,
-            images: [
-              ...currentGroups.last.images,
-              ...newImageGroups.first.images,
+            mediaItems: [
+              ...currentGroups.last.mediaItems,
+              ...newImageGroups.first.mediaItems,
             ],
           );
           state = AsyncValue.data([
@@ -156,6 +156,6 @@ class GalleryController extends AsyncNotifier<List<ImageGroup>> {
 }
 
 final galleryControllerProvider =
-    AsyncNotifierProvider<GalleryController, List<ImageGroup>>(() {
+    AsyncNotifierProvider<GalleryController, List<MediaGroup>>(() {
       return GalleryController();
     });

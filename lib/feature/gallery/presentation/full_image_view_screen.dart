@@ -1,16 +1,18 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/core/config/theme.dart';
+import 'package:mobile_image_search/core/constants/common_constant.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
-import 'package:mobile_image_search/shared/domain/image_model.dart'
-    as image_model;
+import 'package:mobile_image_search/shared/domain/media.dart';
 import 'package:video_player/video_player.dart';
 
 class MediaViewScreen extends StatefulWidget {
-  final image_model.Image image;
+  final Media media;
 
-  const MediaViewScreen({super.key, required this.image});
+  const MediaViewScreen({super.key, required this.media});
 
   @override
   State<MediaViewScreen> createState() => _MediaViewScreenState();
@@ -21,7 +23,7 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isVideo = widget.image.assetEntity.type == AssetType.video;
+    final isVideo = widget.media.metadata.mediaType == EMediaType.video;
     return Scaffold(
       body: Flex(
         direction: Axis.vertical,
@@ -32,8 +34,8 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
                 constrained: true,
                 maxScale: 4.0,
                 child: isVideo
-                    ? VideoPlayerWidget(video: widget.image)
-                    : ImageContainer(image: widget.image),
+                    ? VideoPlayerWidget(media: widget.media)
+                    : ImageViewWidget(image: widget.media),
               ),
               onTap: () {
                 setState(() {
@@ -59,7 +61,7 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
             )
           : null,
       bottomNavigationBar: !isFocused
-          ? BottomAppBar(child: Text(widget.image.metadata.name))
+          ? BottomAppBar(child: Text(widget.media.metadata.name))
           : null,
       extendBody: true, // allow content to extend behind bottom navigation bar
       extendBodyBehindAppBar: true,
@@ -67,70 +69,127 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
   }
 }
 
-class ImageContainer extends StatelessWidget {
-  final image_model.Image image;
-  const ImageContainer({super.key, required this.image});
+class ImageViewWidget extends StatelessWidget {
+  final Media image;
+  const ImageViewWidget({super.key, required this.image});
 
   @override
   Widget build(BuildContext context) {
-    return AssetEntityImage(
-      image.assetEntity,
-      isOriginal: true,
-      fit: BoxFit.contain,
-      width: double.infinity,
+    return FutureBuilder(
+      future: AssetEntity.fromId(image.assetId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError || snapshot.data == null) {
+          return const Center(child: Text('Failed to load image'));
+        }
+        final assetEntity = snapshot.data!;
+        return AssetEntityImage(
+          assetEntity,
+          isOriginal: true,
+          fit: BoxFit.contain,
+          width: double.infinity,
+        );
+      },
     );
   }
 }
 
 class VideoPlayerWidget extends StatefulWidget {
-  final image_model.Image video;
+  final Media media;
 
-  const VideoPlayerWidget({super.key, required this.video});
+  const VideoPlayerWidget({super.key, required this.media});
 
   @override
   State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
 }
 
 class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
-  late VideoPlayerController _controller;
+  VideoPlayerController? _controller;
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    widget.video.assetEntity.file.then((value) {
-      if (value == null) {
-        throw Exception('Failed to load video file');
-      }
-      _controller = VideoPlayerController.file(value)
-        ..initialize().then((_) {
-          setState(() {
-            _isInitialized = true;
+
+    try {
+      final Future<AssetEntity?> assetEntityFuture = AssetEntity.fromId(
+        widget.media.assetId,
+      );
+      assetEntityFuture.then((assetEntity) async {
+        if (assetEntity == null) {
+          throw Exception('Failed to load video asset');
+        }
+        final file = await assetEntity.file;
+        if (file == null) {
+          throw Exception('Failed to load video file');
+        }
+        _controller = VideoPlayerController.file(file)
+          ..initialize().then((_) {
+            setState(() {
+              _isInitialized = true;
+            });
           });
-          _controller.play();
-        });
-    });
+      });
+    } catch (e) {
+      print('Error loading video: $e');
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return _isInitialized
-        ? SizedBox.expand(
-            child: FittedBox(
-              fit: BoxFit.contain,
-              child: SizedBox(
-                width: _controller.value.size.width,
-                height: _controller.value.size.height,
-                child: VideoPlayer(_controller),
+    if (_controller == null) {
+      return const Center(child: Text('Failed to load video'));
+    }
+    if (_controller != null && !_isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Center(
+      child: SizedBox.expand(
+        child: Stack(
+          children: [
+            Center(
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: SizedBox(
+                  width: _controller!.value.size.width,
+                  height: _controller!.value.size.height,
+                  child: VideoPlayer(_controller!),
+                ),
               ),
             ),
-          )
-        : const Center(child: CircularProgressIndicator());
+
+            // play/pause button
+            Positioned(
+              bottom: 100,
+              right: 20,
+              child: IconButton(
+                icon: Icon(
+                  _controller!.value.isPlaying
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled,
+                  size: 48,
+                  color: CustomColors.onPrimary,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _controller!.value.isPlaying
+                        ? _controller!.pause()
+                        : _controller!.play();
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

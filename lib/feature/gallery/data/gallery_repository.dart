@@ -1,14 +1,26 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_image_search/core/constants/common_constant.dart';
 // import 'package:mobile_image_search/core/constants/common.constant.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:mobile_image_search/feature/gallery/data/gallery_data_source.dart';
 import 'package:mobile_image_search/feature/gallery/domain/gallery_repository_interface.dart';
-import 'package:mobile_image_search/shared/domain/image_model.dart';
+import 'package:mobile_image_search/shared/domain/media.dart';
 import 'package:mobile_image_search/shared/domain/interface/image_interface.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:photo_manager/src/types/entity.dart';
+
+IMediaMetadata fillMetadataFromAsset(AssetEntity asset) {
+  return IMediaMetadata(
+    name: asset.title!,
+    createDateTime: asset.createDateTime,
+    modifiedDateTime: asset.modifiedDateTime,
+    mediaType: asset.type == AssetType.image
+        ? EMediaType.image
+        : EMediaType.video,
+    duration: asset.duration,
+  );
+}
 
 class GalleryRepository implements IGalleryRepository {
   final GalleryDataSource _galleryDataSource;
@@ -18,8 +30,6 @@ class GalleryRepository implements IGalleryRepository {
   // bool _hasPermission = false;
   // get hasPermission => _hasPermission;
 
-  // EGallerySyncStatus _syncStatus = EGallerySyncStatus.idle;
-
   final Logger _logger = loggers[LoggerName.galleryRepository]!;
 
   bool isGallerySynced = false;
@@ -28,22 +38,18 @@ class GalleryRepository implements IGalleryRepository {
   ///
   /// return domain model
   @override
-  Future<List<Image>> readGallery({required int page, int limit = 50}) async {
+  Future<List<Media>> readGallery({required int page, int limit = 50}) async {
     final sourceImages = await _galleryDataSource.getImages(
       page: page,
       limit: limit,
     );
 
-    final List<Image> assets = [];
+    final List<Media> assets = [];
 
     for (final asset in sourceImages) {
       if (asset.type == AssetType.image || asset.type == AssetType.video) {
-        final IImageMetadata metadata = IImageMetadata(
-          name: asset.title!,
-          createDateTime: asset.createDateTime,
-          modifiedDateTime: asset.modifiedDateTime,
-        );
-        assets.add(Image(assetEntity: asset, metadata: metadata));
+        final IMediaMetadata metadata = fillMetadataFromAsset(asset);
+        assets.add(Media(assetId: asset.id, metadata: metadata));
       }
     }
 
@@ -102,15 +108,11 @@ class GalleryRepository implements IGalleryRepository {
   }
 
   @override
-  Future<List<IImageMetadata>> getAllMetadata() async {
+  Future<List<IMediaMetadata>> getAllMetadata() async {
     final List<AssetEntity> allImageAssets = await _galleryDataSource
         .getAllImages();
     return allImageAssets.map((asset) {
-      return IImageMetadata(
-        name: asset.title!,
-        createDateTime: asset.createDateTime,
-        modifiedDateTime: asset.modifiedDateTime,
-      );
+      return fillMetadataFromAsset(asset);
     }).toList();
   }
 
@@ -122,7 +124,7 @@ class GalleryRepository implements IGalleryRepository {
   }
 
   @override
-  Future<List<Image>> readAlbum({
+  Future<List<Media>> readAlbum({
     required String albumId,
     required int page,
     int limit = 50,
@@ -131,12 +133,15 @@ class GalleryRepository implements IGalleryRepository {
         .getImagesFromAlbum(albumId: albumId, page: page, limit: limit);
 
     return albumImageAssets.map((asset) {
-      final IImageMetadata metadata = IImageMetadata(
+      final IMediaMetadata metadata = IMediaMetadata(
         name: asset.title!,
         createDateTime: asset.createDateTime,
         modifiedDateTime: asset.modifiedDateTime,
+        mediaType: asset.type == AssetType.image
+            ? EMediaType.image
+            : EMediaType.video,
       );
-      return Image(assetEntity: asset, metadata: metadata);
+      return Media(assetId: asset.id, metadata: metadata);
     }).toList();
   }
 

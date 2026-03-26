@@ -3,14 +3,14 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/feature/gallery/data/gallery_repository.dart';
 import 'package:mobile_image_search/feature/gallery/domain/gallery_repository_interface.dart';
-import 'package:mobile_image_search/shared/domain/image_model.dart';
+import 'package:mobile_image_search/shared/domain/media.dart';
 
 class GalleryService {
   final IGalleryRepository _galleryRepository;
 
   GalleryService(this._galleryRepository);
 
-  Future<List<Image>> readGallery({required int page, int limit = 100}) async {
+  Future<List<Media>> readGallery({required int page, int limit = 100}) async {
     return await _galleryRepository.readGallery(page: page, limit: limit);
   }
 

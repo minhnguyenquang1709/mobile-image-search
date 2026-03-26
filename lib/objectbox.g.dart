@@ -52,7 +52,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(4, 5043420744528449525),
     name: 'ImageObjectBox',
-    lastPropertyId: const obx_int.IdUid(4, 4696879542942844184),
+    lastPropertyId: const obx_int.IdUid(6, 2740278633346680692),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -79,6 +79,18 @@ final _entities = <obx_int.ModelEntity>[
       obx_int.ModelProperty(
         id: const obx_int.IdUid(4, 4696879542942844184),
         name: 'indexedAt',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 5523354732516403391),
+        name: 'createdAt',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 2740278633346680692),
+        name: 'modifiedAt',
         type: 10,
         flags: 0,
       ),
@@ -208,11 +220,13 @@ obx_int.ModelDefinition getObjectBoxModel() {
       objectToFB: (ImageObjectBox object, fb.Builder fbb) {
         final assetIdOffset = fbb.writeString(object.assetId);
         final embeddingOffset = fbb.writeListFloat32(object.embedding);
-        fbb.startTable(5);
+        fbb.startTable(7);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, assetIdOffset);
         fbb.addOffset(2, embeddingOffset);
         fbb.addInt64(3, object.indexedAt.millisecondsSinceEpoch);
+        fbb.addInt64(4, object.createdAt.millisecondsSinceEpoch);
+        fbb.addInt64(5, object.modifiedAt.millisecondsSinceEpoch);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -226,8 +240,19 @@ obx_int.ModelDefinition getObjectBoxModel() {
           fb.Float32Reader(),
           lazy: false,
         ).vTableGet(buffer, rootOffset, 8, []);
+        final createdAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 12, 0),
+        );
+        final modifiedAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 14, 0),
+        );
         final object =
-            ImageObjectBox(assetId: assetIdParam, embedding: embeddingParam)
+            ImageObjectBox(
+                assetId: assetIdParam,
+                embedding: embeddingParam,
+                createdAt: createdAtParam,
+                modifiedAt: modifiedAtParam,
+              )
               ..id = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0)
               ..indexedAt = DateTime.fromMillisecondsSinceEpoch(
                 const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0),
@@ -279,5 +304,15 @@ class ImageObjectBox_ {
   /// See [ImageObjectBox.indexedAt].
   static final indexedAt = obx.QueryDateProperty<ImageObjectBox>(
     _entities[1].properties[3],
+  );
+
+  /// See [ImageObjectBox.createdAt].
+  static final createdAt = obx.QueryDateProperty<ImageObjectBox>(
+    _entities[1].properties[4],
+  );
+
+  /// See [ImageObjectBox.modifiedAt].
+  static final modifiedAt = obx.QueryDateProperty<ImageObjectBox>(
+    _entities[1].properties[5],
   );
 }

@@ -5,8 +5,7 @@ import 'package:mobile_image_search/core/constants/route_constant.dart';
 import 'package:mobile_image_search/core/presentation/nested_navigation_widget.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/home_screen.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/full_image_view_screen.dart';
-import 'package:mobile_image_search/shared/domain/image_model.dart'
-    as image_model;
+import 'package:mobile_image_search/shared/domain/media.dart';
 
 // GlobalKey: unique identifier, provide access to `BuildContext`, `State`, `Widget`
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -74,8 +73,8 @@ final topLevelNavigationRouter = GoRouter(
       path: RouteConstants.imageViewer,
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
-        final image = extra?['image'] as image_model.Image;
-        return MediaViewScreen(image: image);
+        final image = extra?['image'] as Media;
+        return MediaViewScreen(media: image);
       },
     ),
   ],

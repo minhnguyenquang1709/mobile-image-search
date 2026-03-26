@@ -14,9 +14,13 @@ import 'package:mobile_image_search/shared/data/data_source/onnx_data_source.dar
 import 'package:mobile_image_search/shared/data/repository/ai_inference_repository.dart';
 import 'package:mobile_image_search/shared/data/repository/objectbox_store_repository.dart';
 import 'package:mobile_image_search/shared/domain/interface/store_repository_interface.dart';
+import 'package:mobile_image_search/shared/domain/media.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 
+/// Represent a background worker, the class instance itself is on main isolate
+///
+/// `_initWorker` is executed on worker isolate
 class IndexingWorker extends IWorker {
   Completer<void> initCompleter = Completer<void>();
 
@@ -109,12 +113,12 @@ class IndexingWorker extends IWorker {
         // perform indexing task
         try {
           final AssetEntity? imageAsset = await AssetEntity.fromId(
-            message.assetId,
+            message.media.assetId,
           );
 
           if (imageAsset == null) {
             config.mainSendPort.send(
-              IndexingResult.failure(message.assetId, 'Asset not found'),
+              IndexingResult.failure(message.media, 'Asset not found'),
             );
             return;
           }
@@ -122,7 +126,7 @@ class IndexingWorker extends IWorker {
           final File? imageFile = await imageAsset.file;
           if (imageFile == null) {
             config.mainSendPort.send(
-              IndexingResult.failure(message.assetId, 'File not found'),
+              IndexingResult.failure(message.media, 'File not found'),
             );
             return;
           }
@@ -130,14 +134,14 @@ class IndexingWorker extends IWorker {
               .encodeImage(imageFile);
 
           final IndexingResult result = IndexingResult.success(
-            message.assetId,
+            message.media,
             embedding,
           );
           config.mainSendPort.send(result);
         } catch (e, _) {
           // error throwing
           config.mainSendPort.send(
-            IndexingResult.failure(message.assetId, 'Error: $e'),
+            IndexingResult.failure(message.media, 'Error: $e'),
           );
         }
       }
@@ -160,6 +164,7 @@ class IndexingService {
   bool _isWorkerReady = false;
   bool _isProcessing = false;
 
+  /// Copy model files from assets to file system to allow worker isolate to read
   Future<void> initialize() async {
     try {
       // extract model to file system for worker to load
@@ -261,8 +266,8 @@ class IndexingService {
     }
   }
 
-  void enQueue(List<String> assetIds) {
-    taskQueue.addAll(assetIds.map((id) => IndexingTask(assetId: id)));
+  void enQueue(List<Media> assetIds) {
+    taskQueue.addAll(assetIds.map((id) => IndexingTask(media: id)));
     _logger.printLog('Enqueued indexing task for image $assetIds');
   }
 
@@ -275,9 +280,7 @@ class IndexingService {
     final task = taskQueue.removeFirst();
 
     // send task to worker
-    _logger.printLog(
-      'Start processing indexing task for image ${task.assetId}',
-    );
+    _logger.printLog('Start processing indexing task for image ${task.media}');
     _worker.workerSendPort?.send(task);
   }
 
@@ -285,15 +288,14 @@ class IndexingService {
     if (message is IndexingResult) {
       if (message.embedding != null) {
         // save to db
-        _storeRepository.saveImageEmbedding(
-          message.assetId,
-          message.embedding!,
+        _storeRepository.saveImageEmbedding(message.media, message.embedding!);
+        _logger.printLog(
+          'Indexed asset ${message.media.assetId} successfully!',
         );
-        _logger.printLog('Indexed asset ${message.assetId} successfully!');
       } else {
         // error handling
         _logger.printLog(
-          "Error indexing asset ${message.assetId}: ${message.errorMessage}",
+          "Error indexing asset ${message.media.assetId}: ${message.errorMessage}",
         );
       }
 

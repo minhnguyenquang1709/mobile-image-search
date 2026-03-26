@@ -1,17 +1,17 @@
 import 'dart:typed_data';
 
-// enum EIndexingStatus { pending, processing, failed }
+import 'package:mobile_image_search/shared/domain/media.dart';
 
 class IndexingTask {
-  final String assetId;
-  IndexingTask({required this.assetId});
+  final Media media;
+  IndexingTask({required this.media});
 }
 
 class IndexingResult {
-  final String assetId;
+  final Media media;
   final Float32List? embedding;
   final String? errorMessage;
 
-  IndexingResult.success(this.assetId, this.embedding) : errorMessage = null;
-  IndexingResult.failure(this.assetId, this.errorMessage) : embedding = null;
+  IndexingResult.success(this.media, this.embedding) : errorMessage = null;
+  IndexingResult.failure(this.media, this.errorMessage) : embedding = null;
 }

@@ -4,7 +4,7 @@ import 'package:mobile_image_search/core/config/config.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/gallery_controller.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/image_widget.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/selection_controller.dart';
-import 'package:mobile_image_search/shared/domain/image_model.dart';
+import 'package:mobile_image_search/shared/domain/media.dart';
 
 class SelectionStatusBar extends StatelessWidget {
   final int selectedCount;
@@ -24,7 +24,7 @@ class SelectionStatusBar extends StatelessWidget {
 }
 
 class ImageGroupWidget extends StatelessWidget {
-  final ImageGroup imageGroup;
+  final MediaGroup imageGroup;
   const ImageGroupWidget({super.key, required this.imageGroup});
 
   @override
@@ -38,10 +38,10 @@ class ImageGroupWidget extends StatelessWidget {
     final SliverGrid imageGrid = SliverGrid(
       delegate: SliverChildBuilderDelegate((context, index) {
         return ThumbnailWidget(
-          image: imageGroup.images[index],
-          key: Key(imageGroup.images[index].assetEntity.id),
+          media: imageGroup.mediaItems[index],
+          key: Key(imageGroup.mediaItems[index].assetId),
         );
-      }, childCount: imageGroup.images.length),
+      }, childCount: imageGroup.mediaItems.length),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: Config.imagesPerRow,
         crossAxisSpacing: Config.crossAxisSpacing,
@@ -103,9 +103,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             return const Center(child: Text("No images found in gallery"));
           }
 
-          final selectedImages = ref.watch(selectionControllerProvider);
-
-          // UI rebuild optimization: flatten image group list
+          // TODO: optimize this, currently it rebuilds the whole list when selection changes, which is not ideal for performance
           // this is eager loading, causes performance issue when the list is big
           final imageGroupWidgetList = imageGroups
               .map(
@@ -136,16 +134,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           );
 
-          final selectionStatusBar = SelectionStatusBar(
-            selectedCount: selectedImages.length,
-          );
-
-          final stack = Stack(
-            children: [
-              fullScreenImageList,
-              // if (selectedImages.isNotEmpty) selectionStatusBar,
-            ],
-          );
+          final stack = Stack(children: [fullScreenImageList]);
 
           return stack;
         },
