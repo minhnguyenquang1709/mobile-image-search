@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/core/constants/route_constant.dart';
 import 'package:mobile_image_search/core/presentation/nested_navigation_widget.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/home_screen.dart';
-import 'package:mobile_image_search/feature/gallery/presentation/full_image_view_screen.dart';
-import 'package:mobile_image_search/shared/domain/media.dart';
+import 'package:mobile_image_search/feature/gallery/presentation/full_media_view_screen.dart';
+import 'package:mobile_image_search/shared/domain/model/media.dart';
 
 // GlobalKey: unique identifier, provide access to `BuildContext`, `State`, `Widget`
 final _rootNavigatorKey = GlobalKey<NavigatorState>();

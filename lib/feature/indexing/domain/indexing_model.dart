@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:mobile_image_search/shared/domain/media.dart';
+import 'package:mobile_image_search/shared/domain/model/media.dart';
 
 class IndexingTask {
   final Media media;

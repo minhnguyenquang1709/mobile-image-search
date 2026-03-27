@@ -4,26 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/constants/common_constant.dart';
 // import 'package:mobile_image_search/core/constants/common.constant.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
+import 'package:mobile_image_search/core/utils/media_processing.dart';
 import 'package:mobile_image_search/feature/gallery/data/gallery_data_source.dart';
 import 'package:mobile_image_search/feature/gallery/domain/gallery_repository_interface.dart';
-import 'package:mobile_image_search/shared/domain/media.dart';
-import 'package:mobile_image_search/shared/domain/interface/image_interface.dart';
+import 'package:mobile_image_search/shared/domain/model/media.dart';
+import 'package:mobile_image_search/shared/domain/model/media_metadata.dart';
 import 'package:photo_manager/photo_manager.dart';
-
-IMediaMetadata fillMetadataFromAsset(AssetEntity asset) {
-  return IMediaMetadata(
-    name: asset.title!,
-    createDateTime: asset.createDateTime,
-    modifiedDateTime: asset.modifiedDateTime,
-    mediaType: asset.type == AssetType.image
-        ? EMediaType.image
-        : EMediaType.video,
-    duration: asset.duration,
-  );
-}
 
 class GalleryRepository implements IGalleryRepository {
   final GalleryDataSource _galleryDataSource;
+
+  static final Map<String, AssetEntity> _assetCache = {};
 
   GalleryRepository(this._galleryDataSource);
 
@@ -34,12 +25,12 @@ class GalleryRepository implements IGalleryRepository {
 
   bool isGallerySynced = false;
 
-  /// read gallery albums and cache them in memory and record the number of image files
+  /// Read gallery albums and cache them in memory and record the number of image files
   ///
-  /// return domain model
+  /// Return domain model
   @override
   Future<List<Media>> readGallery({required int page, int limit = 50}) async {
-    final sourceImages = await _galleryDataSource.getImages(
+    final List<AssetEntity> sourceImages = await _galleryDataSource.getImages(
       page: page,
       limit: limit,
     );
@@ -47,8 +38,9 @@ class GalleryRepository implements IGalleryRepository {
     final List<Media> assets = [];
 
     for (final asset in sourceImages) {
+      _assetCache[asset.id] = asset;
       if (asset.type == AssetType.image || asset.type == AssetType.video) {
-        final IMediaMetadata metadata = fillMetadataFromAsset(asset);
+        final MediaMetadata metadata = fillMetadataFromAsset(asset);
         assets.add(Media(assetId: asset.id, metadata: metadata));
       }
     }
@@ -103,12 +95,12 @@ class GalleryRepository implements IGalleryRepository {
   }
 
   @override
-  Future<void> getImageMetadata(String assetId) {
+  Future<MediaMetadata> getImageMetadata(String assetId) {
     return _galleryDataSource.getImageMetadata(assetId);
   }
 
   @override
-  Future<List<IMediaMetadata>> getAllMetadata() async {
+  Future<List<MediaMetadata>> getAllMetadata() async {
     final List<AssetEntity> allImageAssets = await _galleryDataSource
         .getAllImages();
     return allImageAssets.map((asset) {
@@ -133,7 +125,7 @@ class GalleryRepository implements IGalleryRepository {
         .getImagesFromAlbum(albumId: albumId, page: page, limit: limit);
 
     return albumImageAssets.map((asset) {
-      final IMediaMetadata metadata = IMediaMetadata(
+      final MediaMetadata metadata = MediaMetadata(
         name: asset.title!,
         createDateTime: asset.createDateTime,
         modifiedDateTime: asset.modifiedDateTime,

@@ -14,7 +14,7 @@ import 'package:mobile_image_search/shared/data/data_source/onnx_data_source.dar
 import 'package:mobile_image_search/shared/data/repository/ai_inference_repository.dart';
 import 'package:mobile_image_search/shared/data/repository/objectbox_store_repository.dart';
 import 'package:mobile_image_search/shared/domain/interface/store_repository_interface.dart';
-import 'package:mobile_image_search/shared/domain/media.dart';
+import 'package:mobile_image_search/shared/domain/model/media.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 

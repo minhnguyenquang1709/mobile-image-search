@@ -3,7 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/feature/gallery/data/gallery_repository.dart';
 import 'package:mobile_image_search/feature/gallery/domain/gallery_repository_interface.dart';
-import 'package:mobile_image_search/shared/domain/media.dart';
+import 'package:mobile_image_search/shared/domain/model/media_metadata.dart';
+import 'package:mobile_image_search/shared/domain/model/media.dart';
 
 class GalleryService {
   final IGalleryRepository _galleryRepository;
@@ -25,6 +26,10 @@ class GalleryService {
 
   Future<void> getImageMetadata(String assetId) async {
     await _galleryRepository.getImageMetadata(assetId);
+  }
+
+  Future<List<MediaMetadata>> getAllMetadata() async {
+    return await _galleryRepository.getAllMetadata();
   }
 }
 

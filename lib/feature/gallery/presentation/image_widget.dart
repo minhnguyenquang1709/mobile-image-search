@@ -9,7 +9,7 @@ import 'package:mobile_image_search/core/utils/string.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/selection_controller.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
-import 'package:mobile_image_search/shared/domain/media.dart';
+import 'package:mobile_image_search/shared/domain/model/media.dart';
 
 class ThumbnailWidget extends ConsumerStatefulWidget {
   final Media media;
@@ -21,16 +21,23 @@ class ThumbnailWidget extends ConsumerStatefulWidget {
   ConsumerState<ThumbnailWidget> createState() => _ThumbnailWidgetState();
 }
 
-class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget> {
+class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
+    with AutomaticKeepAliveClientMixin {
+  late Future<AssetEntity?> _assetEntityFuture;
+
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
 
-    // get
+    _assetEntityFuture = AssetEntity.fromId(widget.media.assetId);
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isImageSelected = ref.watch(
       selectionControllerProvider.select(
         (state) => state.contains(widget.media.assetId),
@@ -39,7 +46,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget> {
     final assetId = widget.media.assetId;
 
     return FutureBuilder(
-      future: AssetEntity.fromId(assetId),
+      future: _assetEntityFuture,
       builder: (context, snapshot) {
         // loading
         if (snapshot.connectionState == ConnectionState.waiting) {

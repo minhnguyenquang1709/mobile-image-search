@@ -1,4 +1,4 @@
-import 'package:mobile_image_search/shared/domain/interface/image_interface.dart';
+import 'package:mobile_image_search/shared/domain/model/media_metadata.dart';
 
 class Media {
   /// The ID of the asset.
@@ -7,7 +7,7 @@ class Media {
   ///
   /// - iOS/macOS: localIdentifier.
   final String assetId;
-  final IMediaMetadata metadata;
+  final MediaMetadata metadata;
 
   Media({required this.assetId, required this.metadata});
 }

@@ -1,12 +1,13 @@
-import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/core/config/theme.dart';
 import 'package:mobile_image_search/core/constants/common_constant.dart';
+import 'package:mobile_image_search/core/utils/media_processing.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
-import 'package:mobile_image_search/shared/domain/media.dart';
+import 'package:mobile_image_search/shared/domain/model/media.dart';
 import 'package:video_player/video_player.dart';
 
 class MediaViewScreen extends StatefulWidget {
@@ -30,13 +31,9 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
         children: [
           Expanded(
             child: GestureDetector(
-              child: InteractiveViewer(
-                constrained: true,
-                maxScale: 4.0,
-                child: isVideo
-                    ? VideoPlayerWidget(media: widget.media)
-                    : ImageViewWidget(image: widget.media),
-              ),
+              child: isVideo
+                  ? VideoPlayerWidget(media: widget.media)
+                  : ImageViewWidget(image: widget.media),
               onTap: () {
                 setState(() {
                   isFocused = !isFocused;
@@ -69,14 +66,39 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
   }
 }
 
-class ImageViewWidget extends StatelessWidget {
+class ImageViewWidget extends StatefulWidget {
   final Media image;
   const ImageViewWidget({super.key, required this.image});
 
   @override
+  State<StatefulWidget> createState() => _ImageViewWidgetState();
+}
+
+class _ImageViewWidgetState extends State<ImageViewWidget> {
+  late Future<AssetEntity?> _assetEntityFuture;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _assetEntityFuture = AssetEntity.fromId(widget.image.assetId);
+  }
+
+  @override
+  void didUpdateWidget(covariant ImageViewWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final oldMediaMetadata = oldWidget.image.metadata;
+    final newMediaMetadata = widget.image.metadata;
+    if (!isSameMediaMetadata(oldMediaMetadata, newMediaMetadata)) {
+      _assetEntityFuture = AssetEntity.fromId(widget.image.assetId);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: AssetEntity.fromId(image.assetId),
+      future: _assetEntityFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -85,11 +107,15 @@ class ImageViewWidget extends StatelessWidget {
           return const Center(child: Text('Failed to load image'));
         }
         final assetEntity = snapshot.data!;
-        return AssetEntityImage(
-          assetEntity,
-          isOriginal: true,
-          fit: BoxFit.contain,
-          width: double.infinity,
+        return InteractiveViewer(
+          constrained: true,
+          maxScale: 4,
+          child: AssetEntityImage(
+            assetEntity,
+            isOriginal: true,
+            fit: BoxFit.contain,
+            width: double.infinity,
+          ),
         );
       },
     );
@@ -108,11 +134,20 @@ class VideoPlayerWidget extends StatefulWidget {
 class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   VideoPlayerController? _controller;
   bool _isInitialized = false;
+  Timer? _loadVideoTimer;
+  bool _isLoadingFailed = false;
 
   @override
   void initState() {
     super.initState();
 
+    _loadVideoTimer = Timer(const Duration(seconds: 10), () {
+      if (!_isInitialized) {
+        setState(() {
+          _isLoadingFailed = true;
+        });
+      }
+    });
     try {
       final Future<AssetEntity?> assetEntityFuture = AssetEntity.fromId(
         widget.media.assetId,
@@ -129,6 +164,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           ..initialize().then((_) {
             setState(() {
               _isInitialized = true;
+              _loadVideoTimer?.cancel();
+              _isLoadingFailed = false;
             });
           });
       });
@@ -145,46 +182,54 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (_controller == null) {
+    if (_isLoadingFailed) {
       return const Center(child: Text('Failed to load video'));
     }
-    if (_controller != null && !_isInitialized) {
+    if (!_isInitialized) {
       return const Center(child: CircularProgressIndicator());
     }
     return Center(
       child: SizedBox.expand(
         child: Stack(
           children: [
-            Center(
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: SizedBox(
-                  width: _controller!.value.size.width,
-                  height: _controller!.value.size.height,
-                  child: VideoPlayer(_controller!),
+            InteractiveViewer(
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: SizedBox(
+                    width: _controller!.value.size.width,
+                    height: _controller!.value.size.height,
+                    child: VideoPlayer(_controller!),
+                  ),
                 ),
               ),
             ),
 
             // play/pause button
-            Positioned(
-              bottom: 100,
-              right: 20,
-              child: IconButton(
-                icon: Icon(
-                  _controller!.value.isPlaying
-                      ? Icons.pause_circle_filled
-                      : Icons.play_circle_filled,
-                  size: 48,
-                  color: CustomColors.onPrimary,
+            SafeArea(
+              child: Align(
+                alignment: Alignment.bottomRight,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        _controller!.value.isPlaying
+                            ? Icons.pause_circle_filled
+                            : Icons.play_circle_filled,
+                        size: 48,
+                        color: CustomColors.onPrimary,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _controller!.value.isPlaying
+                              ? _controller!.pause()
+                              : _controller!.play();
+                        });
+                      },
+                    ),
+                  ],
                 ),
-                onPressed: () {
-                  setState(() {
-                    _controller!.value.isPlaying
-                        ? _controller!.pause()
-                        : _controller!.play();
-                  });
-                },
               ),
             ),
           ],

@@ -1,13 +1,13 @@
 import 'package:mobile_image_search/core/constants/common_constant.dart';
 
-class IMediaMetadata {
+class MediaMetadata {
   final String name;
   final DateTime createDateTime;
   final DateTime modifiedDateTime;
   final EMediaType mediaType;
   int duration;
 
-  IMediaMetadata({
+  MediaMetadata({
     required this.name,
     required this.createDateTime,
     required this.modifiedDateTime,

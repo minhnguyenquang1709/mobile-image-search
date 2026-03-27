@@ -4,7 +4,7 @@ import 'package:mobile_image_search/core/config/config.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/gallery_controller.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/image_widget.dart';
 import 'package:mobile_image_search/feature/gallery/presentation/selection_controller.dart';
-import 'package:mobile_image_search/shared/domain/media.dart';
+import 'package:mobile_image_search/shared/domain/model/media.dart';
 
 class SelectionStatusBar extends StatelessWidget {
   final int selectedCount;
@@ -83,8 +83,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final galleryController = ref.watch(galleryControllerProvider);
 
-    return Scaffold(
-      body: galleryController.when(
+    return Container(
+      child: galleryController.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Column(
           mainAxisAlignment: MainAxisAlignment.center,

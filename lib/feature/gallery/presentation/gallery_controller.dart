@@ -1,7 +1,9 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
 import 'package:mobile_image_search/feature/gallery/application/gallery_service.dart';
-import 'package:mobile_image_search/shared/domain/media.dart';
+import 'package:mobile_image_search/shared/domain/model/media.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 /// Behave like ViewModel in MVVM
 ///
@@ -14,12 +16,16 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
   bool _isFetching = false; // prevent spam
   bool _hasReachedEnd = false; // end of gallery
 
-  Map<String, Media> _cachedMediaItems = {};
+  final Map<String, Media> _cachedMediaItems = {};
 
   final Logger _logger = loggers[LoggerName.galleryController]!;
 
   @override
   Future<List<MediaGroup>> build() async {
+    _init();
+
+    ref.onDispose(_dispose);
+
     final hasPermission = await ref
         .read(galleryServiceProvider)
         .requestGalleryAccess();
@@ -30,6 +36,36 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
     final newImages = await _fetchPage(_currentPage);
 
     return groupImagesByDate(newImages);
+  }
+
+  /// Refresh gallery when change detected
+  ///
+  /// Fire and forget
+  Future<void> _refresh(MethodCall call) async {
+    // _logger.printLog("\nGallery change detected: ${call.method}\n"); // android: "change"
+
+    // clear old state
+    state = AsyncValue.data([]);
+    _cachedMediaItems.clear();
+
+    // refresh
+    int refetchPages = _currentPage;
+    _currentPage = 0;
+    do {
+      await loadMore();
+    } while (_currentPage < refetchPages);
+  }
+
+  void _init() {
+    PhotoManager.addChangeCallback(_refresh);
+
+    PhotoManager.startChangeNotify();
+  }
+
+  void _dispose() {
+    PhotoManager.removeChangeCallback(_refresh);
+
+    PhotoManager.stopChangeNotify();
   }
 
   /// Group images

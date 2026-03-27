@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/core/utils/logger.dart';
+import 'package:mobile_image_search/core/utils/media_processing.dart';
+import 'package:mobile_image_search/shared/domain/model/media_metadata.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 
@@ -244,7 +246,7 @@ class GalleryDataSource {
     //   }
     // }
 
-    // // Sort by update date (newest first)
+    // Sort by update date (newest first)
     // allAssets.sort((a, b) => b.modifiedDateTime.compareTo(a.modifiedDateTime));
     // return allAssets;
 
@@ -279,12 +281,12 @@ class GalleryDataSource {
     return await assetEntity.file;
   }
 
-  Future<void> getImageMetadata(String assetId) async {
+  Future<MediaMetadata> getImageMetadata(String assetId) async {
     final assetEntity = await AssetEntity.fromId(assetId);
-    if (assetEntity != null) {
-      // _logger.printLog("\nMetadata for image ${assetEntity.title} is:\n");
-      // _logger.printLog("createDateTime:${assetEntity.createDateTime}\n");
-      // _logger.printLog("modifiedDateTime:${assetEntity.modifiedDateTime}\n");
+    try {
+      return fillMetadataFromAsset(assetEntity!);
+    } catch (e) {
+      rethrow;
     }
   }
 
