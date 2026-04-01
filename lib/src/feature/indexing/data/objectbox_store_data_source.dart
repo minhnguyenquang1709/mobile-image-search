@@ -39,8 +39,8 @@ class ObjectBoxStoreDataSource {
     ImageObjectBox image = ImageObjectBox(
       assetId: media.assetId,
       embedding: embedding,
-      createdAt: media.metadata.createDateTime,
-      modifiedAt: media.metadata.modifiedDateTime,
+      createdAt: media.createDateTime,
+      modifiedAt: media.modifiedDateTime,
     );
     imageBox.put(image);
   }

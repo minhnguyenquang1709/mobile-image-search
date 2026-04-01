@@ -116,8 +116,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
                   ),
                 );
 
-                final bool isVideo =
-                    widget.media.metadata.mediaType == EMediaType.video;
+                final bool isVideo = widget.media.mediaType == EMediaType.video;
                 final stack = Stack(
                   children: [
                     Positioned.fill(child: assetEntityImageWidget),
@@ -126,7 +125,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
                           ? Colors.black.withValues(alpha: 0.3)
                           : Colors.transparent,
                     ),
-                    if (isVideo && widget.media.metadata.duration > 0)
+                    if (isVideo && widget.media.duration > 0)
                       Positioned(
                         bottom: 4,
                         right: 4,
@@ -140,9 +139,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
                             size: const Size(40, 20),
                             child: Center(
                               child: Text(
-                                formatVideoDuration(
-                                  widget.media.metadata.duration,
-                                ),
+                                formatVideoDuration(widget.media.duration),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: CustomColors.textSecondary,

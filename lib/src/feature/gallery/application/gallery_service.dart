@@ -28,7 +28,7 @@ class GalleryService {
     await _galleryRepository.getImageMetadata(assetId);
   }
 
-  Future<List<MediaMetadata>> getAllMetadata() async {
+  Future<List<Media>> getAllMetadata() async {
     return await _galleryRepository.getAllMetadata();
   }
 }

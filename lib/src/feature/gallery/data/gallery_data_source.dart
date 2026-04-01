@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 import 'package:mobile_image_search/src/utils/logger.dart';
 import 'package:mobile_image_search/src/utils/media_processing.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_metadata.dart';
@@ -152,7 +153,7 @@ class GalleryDataSource {
       onlyAll: true,
       filterOption: filterOptions,
     );
-    _logger.printLog('Found ${albums.length} albums in the gallery.');
+    // _logger.printLog('Found ${albums.length} albums in the gallery.');
 
     if (albums.isEmpty) {
       _logger.printLog('No image found in the gallery.');
@@ -281,7 +282,7 @@ class GalleryDataSource {
     return await assetEntity.file;
   }
 
-  Future<MediaMetadata> getImageMetadata(String assetId) async {
+  Future<Media> getImageMetadata(String assetId) async {
     final assetEntity = await AssetEntity.fromId(assetId);
     try {
       return fillMetadataFromAsset(assetEntity!);

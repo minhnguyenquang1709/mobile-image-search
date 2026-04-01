@@ -42,8 +42,8 @@ class GalleryRepository implements IGalleryRepository {
     for (final asset in sourceImages) {
       _assetCache[asset.id] = asset;
       if (asset.type == AssetType.image || asset.type == AssetType.video) {
-        final MediaMetadata metadata = fillMetadataFromAsset(asset);
-        assets.add(Media(assetId: asset.id, metadata: metadata));
+        final Media media = fillMetadataFromAsset(asset);
+        assets.add(media);
       }
     }
 
@@ -97,19 +97,14 @@ class GalleryRepository implements IGalleryRepository {
   }
 
   @override
-  Future<MediaMetadata> getImageMetadata(String assetId) {
+  Future<Media> getImageMetadata(String assetId) {
     return _galleryDataSource.getImageMetadata(assetId);
   }
 
   @override
-  Future<List<MediaMetadata>> getAllMetadata() async {
-    final RootIsolateToken? rootIsolateToken = RootIsolateToken.instance;
-    final List<AssetEntity> allImageAssets = await Isolate.run(() async {
-      if (rootIsolateToken != null) {
-        BackgroundIsolateBinaryMessenger.ensureInitialized(rootIsolateToken);
-      }
-      return await _galleryDataSource.getAllImages();
-    });
+  Future<List<Media>> getAllMetadata() async {
+    final List<AssetEntity> allImageAssets = await _galleryDataSource
+        .getAllImages();
 
     _logger.printLog('Fetched all image assets!');
 
@@ -135,7 +130,8 @@ class GalleryRepository implements IGalleryRepository {
         .getImagesFromAlbum(albumId: albumId, page: page, limit: limit);
 
     return albumImageAssets.map((asset) {
-      final MediaMetadata metadata = MediaMetadata(
+      return Media(
+        assetId: asset.id,
         name: asset.title!,
         createDateTime: asset.createDateTime,
         modifiedDateTime: asset.modifiedDateTime,
@@ -143,7 +139,6 @@ class GalleryRepository implements IGalleryRepository {
             ? EMediaType.image
             : EMediaType.video,
       );
-      return Media(assetId: asset.id, metadata: metadata);
     }).toList();
   }
 

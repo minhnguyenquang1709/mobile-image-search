@@ -7,6 +7,8 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/constants/config_constant.dart';
+import 'package:mobile_image_search/src/feature/gallery/data/gallery_repository.dart';
+import 'package:mobile_image_search/src/feature/gallery/domain/gallery_repository_interface.dart';
 import 'package:mobile_image_search/src/feature/indexing/domain/background_worker_interface.dart';
 import 'package:mobile_image_search/src/utils/logger.dart';
 import 'package:mobile_image_search/src/feature/indexing/domain/indexing_model.dart';
@@ -159,14 +161,20 @@ class IndexingService {
   final Logger _logger = loggers[LoggerName.indexingService]!;
 
   final IStoreRepository _storeRepository;
+  final IGalleryRepository _galleryRepository;
 
-  IndexingService({required IStoreRepository storeRepository})
-    : _storeRepository = storeRepository;
+  IndexingService({
+    required IStoreRepository storeRepository,
+    required IGalleryRepository galleryRepository,
+  }) : _galleryRepository = galleryRepository,
+       _storeRepository = storeRepository;
 
   bool _isWorkerReady = false;
   bool _isProcessing = false;
 
   /// Copy model files from assets to file system to allow worker isolate to read
+  ///
+  /// Check for necessary gallery change and update indexing on app startup
   Future<void> initialize() async {
     try {
       // extract model to file system for worker to load
@@ -263,14 +271,49 @@ class IndexingService {
       _worker.onMessage.listen((message) {
         handleWorkerResult(message);
       });
+
+      // check for necessary gallery change and update indexing on app startup
+      // final List<Media> pendingAssets = [];
+      // final List<String> deletePendingAssetIds = [];
+
+      // _logger.printLog('Checking for gallery changes on startup...');
+      // final allGalleryMedia = await _galleryRepository.getAllMetadata();
+      // final allIndexedMedia = await _storeRepository
+      //     .getAllIndexedMediaMetadata();
+
+      // for (final media in allGalleryMedia) {
+      //   final indexedMedia = allIndexedMedia[media.assetId];
+      //   if (indexedMedia == null) {
+      //     // new asset, need indexing
+      //     pendingAssets.add(media);
+      //   } else {
+      //     // existing asset, check for modification
+      //     if (media.modifiedDateTime.isAfter(indexedMedia.modifiedDateTime)) {
+      //       // asset modified, need re-indexing
+      //       pendingAssets.add(media);
+      //     }
+      //   }
+      //   allIndexedMedia.remove(media.assetId);
+      // }
+
+      // // remaining items in allIndexedMedia are deleted from gallery, need to remove from index
+      // deletePendingAssetIds.addAll(allIndexedMedia.keys);
+
+      // enQueue(pendingAssets);
+      // processNextTask();
+      // _storeRepository.deleteImageEmbeddings(deletePendingAssetIds);
+
+      // _logger.printLog(
+      //   'Gallery change check completed. ${pendingAssets.length} assets pending indexing, ${deletePendingAssetIds.length} assets pending deletion from index.',
+      // );
     } catch (e, _) {
       rethrow;
     }
   }
 
-  void enQueue(List<Media> assetIds) {
-    taskQueue.addAll(assetIds.map((id) => IndexingTask(media: id)));
-    _logger.printLog('Enqueued indexing task for image $assetIds');
+  void enQueue(List<Media> media) {
+    taskQueue.addAll(media.map((item) => IndexingTask(media: item)));
+    _logger.printLog('Enqueued indexing task for image $media');
   }
 
   void processNextTask() {
@@ -309,7 +352,11 @@ class IndexingService {
 
 final indexingServiceProvider = FutureProvider((ref) async {
   final storeRepository = await ref.watch(objectBoxStoreRepoProvider.future);
-  final service = IndexingService(storeRepository: storeRepository);
+  final galleryRepository = ref.watch(galleryRepositoryProvider);
+  final service = IndexingService(
+    storeRepository: storeRepository,
+    galleryRepository: galleryRepository,
+  );
   await service.initialize();
   return service;
 });

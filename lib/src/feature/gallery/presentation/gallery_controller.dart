@@ -2,6 +2,7 @@ import 'dart:isolate';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_image_search/src/feature/indexing/application/indexing_service.dart';
 import 'package:mobile_image_search/src/utils/logger.dart';
 import 'package:mobile_image_search/src/feature/gallery/application/gallery_service.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
@@ -36,12 +37,13 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
       throw Exception('Gallery access permission denied');
     }
     final newImages = await _fetchPage(_currentPage);
+    final indexingService = await ref.read(indexingServiceProvider.future);
 
     // TODO: remove debug
-    _logger.printLog("Fire and forget fetching all metadata...");
-    final galleryService = ref.read(galleryServiceProvider);
-    galleryService.getAllMetadata();
-    _logger.printLog("All media metadata fetching called!");
+    // _logger.printLog("Fire and forget fetching all metadata...");
+    // final galleryService = ref.read(galleryServiceProvider);
+    // galleryService.getAllMetadata();
+    // _logger.printLog("All media metadata fetching called!");
 
     return groupImagesByDate(newImages);
   }
@@ -81,7 +83,7 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
     final Map<DateTime, List<Media>> groupedMap = {};
 
     for (var mediaItem in media) {
-      final DateTime dateTime = mediaItem.metadata.createDateTime;
+      final DateTime dateTime = mediaItem.createDateTime;
 
       // normalize to date
       final DateTime dateObj = DateTime(

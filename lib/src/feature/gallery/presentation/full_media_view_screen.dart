@@ -25,7 +25,7 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isVideo = widget.media.metadata.mediaType == EMediaType.video;
+    final isVideo = widget.media.mediaType == EMediaType.video;
     return Scaffold(
       body: Flex(
         direction: Axis.vertical,
@@ -59,7 +59,7 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
             )
           : null,
       bottomNavigationBar: !isFocused
-          ? BottomAppBar(child: Text(widget.media.metadata.name))
+          ? BottomAppBar(child: Text(widget.media.name))
           : null,
       extendBody: true, // allow content to extend behind bottom navigation bar
       extendBodyBehindAppBar: true,
@@ -89,9 +89,9 @@ class _ImageViewWidgetState extends State<ImageViewWidget> {
   void didUpdateWidget(covariant ImageViewWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final oldMediaMetadata = oldWidget.image.metadata;
-    final newMediaMetadata = widget.image.metadata;
-    if (!isSameMediaMetadata(oldMediaMetadata, newMediaMetadata)) {
+    final oldMediaMetadata = oldWidget.image;
+    final newMediaMetadata = widget.image;
+    if (!isSameMedia(oldMediaMetadata, newMediaMetadata)) {
       _assetEntityFuture = AssetEntity.fromId(widget.image.assetId);
     }
   }

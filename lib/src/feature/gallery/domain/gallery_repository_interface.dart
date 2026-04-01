@@ -14,12 +14,12 @@ abstract class IGalleryRepository {
   Future<bool> requestGalleryAccess();
   Future<bool> deleteImage(String imageId);
   Future<File> getImageFile(String assetId);
-  Future<MediaMetadata> getImageMetadata(String assetId);
+  Future<Media> getImageMetadata(String assetId);
 
   /// Get metadata of all images and videos
   ///
   /// Not block the main thread
-  Future<List<MediaMetadata>> getAllMetadata();
+  Future<List<Media>> getAllMetadata();
 
   // album management
   Future<List<Media>> readAlbum({
