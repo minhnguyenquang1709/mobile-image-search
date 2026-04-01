@@ -1,7 +1,7 @@
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_image_search/core/config/theme.dart';
-import 'package:mobile_image_search/core/router/router_config.dart';
+import 'package:mobile_image_search/src/constants/theme_constant.dart';
+import 'package:mobile_image_search/src/routing/router_config.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
