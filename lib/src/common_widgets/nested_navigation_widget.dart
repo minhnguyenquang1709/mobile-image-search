@@ -34,6 +34,9 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
       items: [
         PopupMenuItem(
           value: 'image_search',
+          onTap: () {
+            context.push(RouteConstants.searchByCaption);
+          },
           child: Row(
             children: [
               Icon(

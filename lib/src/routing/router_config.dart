@@ -6,6 +6,7 @@ import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/common_widgets/nested_navigation_widget.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/home_screen.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/full_media_view_screen.dart';
+import 'package:mobile_image_search/src/feature/search/presentation/image_search_screen.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 
 // GlobalKey: unique identifier, provide access to `BuildContext`, `State`, `Widget`
@@ -35,6 +36,7 @@ final topLevelNavigationRouter = GoRouter(
         StatefulShellBranch(
           navigatorKey: _shellNavigatorHomeKey,
           routes: [
+            // the GoRoutes at this level will be rendered inside ScaffoldWithNestedNavigation
             // root screen
             GoRoute(
               path: RouteConstants.home,
@@ -82,6 +84,14 @@ final topLevelNavigationRouter = GoRouter(
       path: RouteConstants.settings,
       builder: (context, state) {
         return SettingsScreen();
+      },
+    ),
+
+    // search by caption screen
+    GoRoute(
+      path: RouteConstants.searchByCaption,
+      builder: (context, state) {
+        return ImageSearchScreen();
       },
     ),
   ],

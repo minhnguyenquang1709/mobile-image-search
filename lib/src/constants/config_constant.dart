@@ -61,7 +61,10 @@ class AppConfig {
   static const int batchSize = 32;
 }
 
-class Config {
+abstract class UIConfig {
+  // common
+  static const double appBarHeight = 50;
+
   // Home Screen UI
   static const double gridViewGutter = 5;
   static const int thumbnailWidth = 100;
@@ -71,4 +74,9 @@ class Config {
   static const double crossAxisSpacing = 5;
   static const double mainAxisSpacing = 5;
   static const double imageGroupSpacing = 15;
+  static const double homeScreenScrollbarThumbMinHeight = 40;
+
+  // Image Search Screen UI
+  static const double searchButtonIconHeight = 50;
+  static const double searchBarHeight = 50;
 }

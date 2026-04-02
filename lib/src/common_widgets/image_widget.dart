@@ -7,7 +7,6 @@ import 'package:mobile_image_search/src/constants/common_constant.dart';
 import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/utils/string.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/selection_controller.dart';
-import 'package:mobile_image_search/src/feature/indexing/application/indexing_service.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
@@ -116,8 +115,8 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
                   isOriginal: false, // use thumbnail instead of original image
                   fit: BoxFit.cover,
                   thumbnailSize: const ThumbnailSize(
-                    Config.thumbnailWidth,
-                    Config.thumbnailHeight,
+                    UIConfig.thumbnailWidth,
+                    UIConfig.thumbnailHeight,
                   ),
                 );
 

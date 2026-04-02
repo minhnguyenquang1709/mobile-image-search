@@ -30,6 +30,8 @@ class SettingsScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             LinearProgressIndicator(
+                              color: CustomColors.primary,
+                              backgroundColor: CustomColors.divider,
                               value: data.totalToProcess == 0
                                   ? null
                                   : data.processedCount / data.totalToProcess,

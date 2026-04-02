@@ -1,4 +1,3 @@
-import 'package:mobile_image_search/src/feature/indexing/data/image_objectbox_model.dart';
 import 'package:objectbox/objectbox.dart';
 
 @Entity()
@@ -15,9 +14,9 @@ class SearchQuery {
   SearchQuery({this.id = 0, required this.text, required this.createdAt});
 }
 
-class SearchResult {
-  final ImageObjectBox image;
-  final double score;
+// class SearchResult {
+//   final ImageObjectBox image;
+//   final double score;
 
-  SearchResult({required this.image, required this.score});
-}
+//   SearchResult({required this.image, required this.score});
+// }

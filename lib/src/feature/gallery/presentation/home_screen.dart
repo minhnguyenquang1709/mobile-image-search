@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/constants/config_constant.dart';
+import 'package:mobile_image_search/src/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/gallery_controller.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/image_widget.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/selection_controller.dart';
+import 'package:mobile_image_search/src/common_widgets/image_widget.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 
 class SelectionStatusBar extends StatelessWidget {
@@ -24,34 +24,35 @@ class SelectionStatusBar extends StatelessWidget {
 }
 
 class ImageGroupWidget extends StatelessWidget {
-  final MediaGroup imageGroup;
-  const ImageGroupWidget({super.key, required this.imageGroup});
+  final MediaGroup _imageGroup;
+  const ImageGroupWidget({super.key, required MediaGroup imageGroup})
+    : _imageGroup = imageGroup;
 
   @override
   Widget build(BuildContext context) {
     // date
     final SliverToBoxAdapter dateHeader = SliverToBoxAdapter(
-      child: Text(imageGroup.date.toString().split(' ')[0]),
+      child: Text(_imageGroup.date.toString().split(' ')[0]),
     );
 
     // image grid
     final SliverGrid imageGrid = SliverGrid(
       delegate: SliverChildBuilderDelegate((context, index) {
         return ThumbnailWidget(
-          media: imageGroup.mediaItems[index],
-          key: Key(imageGroup.mediaItems[index].assetId),
+          media: _imageGroup.mediaItems[index],
+          key: Key(_imageGroup.mediaItems[index].assetId),
         );
-      }, childCount: imageGroup.mediaItems.length),
+      }, childCount: _imageGroup.mediaItems.length),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: Config.imagesPerRow,
-        crossAxisSpacing: Config.crossAxisSpacing,
-        mainAxisSpacing: Config.mainAxisSpacing,
+        crossAxisCount: UIConfig.imagesPerRow,
+        crossAxisSpacing: UIConfig.crossAxisSpacing,
+        mainAxisSpacing: UIConfig.mainAxisSpacing,
       ),
     );
 
     // spacing to next group
     const spacing = SliverToBoxAdapter(
-      child: SizedBox(height: Config.imageGroupSpacing),
+      child: SizedBox(height: UIConfig.imageGroupSpacing),
     );
 
     return SliverMainAxisGroup(slivers: [dateHeader, imageGrid, spacing]);
@@ -60,6 +61,7 @@ class ImageGroupWidget extends StatelessWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
+  bool _showScrollToTopButton = false;
 
   @override
   void initState() {
@@ -69,6 +71,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 500) {
         ref.read(galleryControllerProvider.notifier).loadMore();
+        setState(() {
+          _showScrollToTopButton = true;
+        });
       }
     });
   }
@@ -77,6 +82,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+    setState(() {
+      _showScrollToTopButton = false;
+    });
   }
 
   @override
@@ -93,7 +109,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             TextButton(
               child: const Text("Request Permission or Refresh"),
               onPressed: () {
-                ref.refresh(galleryControllerProvider);
+                final _ = ref.refresh(galleryControllerProvider);
               },
             ),
           ],
@@ -118,10 +134,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             direction: Axis.vertical,
             children: [
               Expanded(
-                child: Center(
+                child: RawScrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  thumbColor: CustomColors.primary,
+                  thickness: 20,
+                  radius: const Radius.circular(40),
+                  // padding: const EdgeInsets.only(top: 10),
+                  minThumbLength: UIConfig.homeScreenScrollbarThumbMinHeight,
+                  interactive: true,
+                  crossAxisMargin: UIConfig.gridViewGutter,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: Config.gridViewGutter,
+                      horizontal: UIConfig.gridViewGutter,
                     ),
                     child: CustomScrollView(
                       controller: _scrollController,
@@ -134,7 +159,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ],
           );
 
-          final stack = Stack(children: [fullScreenImageList]);
+          final stack = Stack(
+            children: [
+              fullScreenImageList,
+
+              if (_showScrollToTopButton)
+                Align(
+                  alignment: AlignmentGeometry.bottomCenter,
+                  child: ElevatedButton(
+                    onPressed: _scrollToTop,
+                    child: Icon(Icons.arrow_upward),
+                  ),
+                ),
+            ],
+          );
 
           return stack;
         },

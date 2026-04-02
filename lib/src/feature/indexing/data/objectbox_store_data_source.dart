@@ -34,7 +34,7 @@ class ObjectBoxStoreDataSource {
     }
   }
 
-  void saveImageEmbedding(Media media, Float32List embedding) {
+  Future<void> saveImageEmbedding(Media media, Float32List embedding) async {
     final imageBox = store.box<ImageObjectBox>();
     ImageObjectBox image = ImageObjectBox(
       assetId: media.assetId,
@@ -42,7 +42,7 @@ class ObjectBoxStoreDataSource {
       createdAt: media.createDateTime,
       modifiedAt: media.modifiedDateTime,
     );
-    imageBox.put(image);
+    await imageBox.putAsync(image);
   }
 }
 
