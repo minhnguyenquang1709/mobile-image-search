@@ -44,14 +44,19 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
         (state) => state.contains(widget.media.assetId),
       ),
     );
-    final assetId = widget.media.assetId;
+    final Media media = widget.media;
+    final assetId = media.assetId;
 
     return FutureBuilder(
       future: _assetEntityFuture,
       builder: (context, snapshot) {
         // loading
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          // skeleton placeholder
+          if (media.mediaType == EMediaType.video) {
+            return const Center(child: Icon(Icons.videocam));
+          }
+          return const Center(child: Icon(Icons.image));
         }
 
         // error
@@ -79,7 +84,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
                         .selectImage(assetId);
             } else {
               context.push(
-                RouteConstants.imageViewer,
+                RouteConstants.mediaViewer,
                 extra: {'image': widget.media},
               );
               if (widget.onTap != null) {

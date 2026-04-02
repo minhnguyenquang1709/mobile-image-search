@@ -39,12 +39,6 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
     final newImages = await _fetchPage(_currentPage);
     final indexingService = await ref.read(indexingServiceProvider.future);
 
-    // TODO: remove debug
-    // _logger.printLog("Fire and forget fetching all metadata...");
-    // final galleryService = ref.read(galleryServiceProvider);
-    // galleryService.getAllMetadata();
-    // _logger.printLog("All media metadata fetching called!");
-
     return groupImagesByDate(newImages);
   }
 
@@ -114,15 +108,6 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
       page: page,
       limit: _limit,
     );
-
-    // TODO: remove debug
-    // final indexingService = await ref.read(indexingServiceProvider.future);
-    // final List<String> assetIds = [];
-    // for (int i = 0; i < 5; i++) {
-    //   assetIds.add(images[i].assetEntity.id);
-    // }
-    // indexingService.enQueue(assetIds);
-    // indexingService.processNextTask();
 
     // cache
     for (final media in newMediaItems) {

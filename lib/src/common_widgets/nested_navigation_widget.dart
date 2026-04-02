@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/selection_controller.dart';
 
@@ -60,6 +61,25 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
                 color: lightTheme.colorScheme.primary,
                 size: 30,
               ),
+              Text(
+                "Smart Cleanup",
+                style: TextStyle(
+                  color: lightTheme.colorScheme.primary,
+                  fontFamily: CustomTextStyles.fontFamily,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'settings',
+          onTap: () {
+            context.push(RouteConstants.settings);
+          },
+          child: Row(
+            children: [
+              Icon(Icons.settings, color: CustomColors.textPrimary, size: 30),
               Text(
                 "Smart Cleanup",
                 style: TextStyle(

@@ -1,5 +1,4 @@
 import 'package:mobile_image_search/src/constants/common_constant.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media_metadata.dart';
 
 class Media {
   /// The ID of the asset.

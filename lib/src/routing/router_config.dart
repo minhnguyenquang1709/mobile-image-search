@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_image_search/src/common_widgets/settings_screen.dart';
 import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/common_widgets/nested_navigation_widget.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/home_screen.dart';
@@ -65,16 +66,22 @@ final topLevelNavigationRouter = GoRouter(
         ),
       ],
     ),
-    // GoRoute(
-    //   path: RouteConstants.home,
-    //   builder: (context, state) => HomeScreen(),
-    // ),
+    // route outside of shell, full screen dialog
+    // full media viewer
     GoRoute(
-      path: RouteConstants.imageViewer,
+      path: RouteConstants.mediaViewer,
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final image = extra?['image'] as Media;
         return MediaViewScreen(media: image);
+      },
+    ),
+
+    // settings screen
+    GoRoute(
+      path: RouteConstants.settings,
+      builder: (context, state) {
+        return SettingsScreen();
       },
     ),
   ],

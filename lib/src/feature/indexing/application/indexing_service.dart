@@ -153,8 +153,23 @@ class IndexingWorker extends IWorker {
   }
 }
 
+class IndexingProgress {
+  final int total;
+  final int processed;
+  IndexingProgress({required this.total, required this.processed});
+
+  double get progress => total == 0 ? 0 : processed / total;
+}
+
 class IndexingService {
   final Queue<IndexingTask> taskQueue = Queue<IndexingTask>();
+
+  final StreamController<IndexingProgress> _progressController =
+      StreamController<IndexingProgress>.broadcast();
+  Stream<IndexingProgress> get progressStream => _progressController.stream;
+
+  int _total = 0;
+  int _processed = 0;
 
   final IndexingWorker _worker = IndexingWorker();
 
@@ -312,8 +327,16 @@ class IndexingService {
   }
 
   void enQueue(List<Media> media) {
+    _total += media.length;
     taskQueue.addAll(media.map((item) => IndexingTask(media: item)));
     _logger.printLog('Enqueued indexing task for image $media');
+    _notifyProgress();
+  }
+
+  void _notifyProgress() {
+    _progressController.add(
+      IndexingProgress(total: _total, processed: _processed),
+    );
   }
 
   void processNextTask() {
@@ -343,6 +366,9 @@ class IndexingService {
           "Error indexing asset ${message.media.assetId}: ${message.errorMessage}",
         );
       }
+
+      _processed++;
+      _notifyProgress();
 
       _isProcessing = false;
       processNextTask();
