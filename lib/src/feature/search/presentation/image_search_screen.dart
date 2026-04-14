@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/common_widgets/image_widget.dart';
 import 'package:mobile_image_search/src/constants/config_constant.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
+import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
 import 'package:mobile_image_search/src/feature/search/presentation/image_search_controller.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 
 class ImageSearchScreen extends ConsumerStatefulWidget {
   const ImageSearchScreen({super.key});
@@ -41,7 +41,7 @@ class _ImageSearchScreenState extends ConsumerState<ImageSearchScreen> {
                 color: Theme.of(context).cardColor,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 4,
                     offset: const Offset(0, -2),
                   ),
@@ -101,7 +101,6 @@ class SearchResultWidget extends ConsumerStatefulWidget {
 
 class _SearchResultWidgetState extends ConsumerState<SearchResultWidget> {
   final ScrollController _scrollController = ScrollController();
-  bool _showScrollToTopButton = false;
 
   @override
   void initState() {
@@ -110,9 +109,7 @@ class _SearchResultWidgetState extends ConsumerState<SearchResultWidget> {
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 500) {
-        setState(() {
-          _showScrollToTopButton = true;
-        });
+        // scroll to top button logic if needed
       }
     });
   }
@@ -126,22 +123,24 @@ class _SearchResultWidgetState extends ConsumerState<SearchResultWidget> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) =>
             Center(child: Text("Error loading search results: $error")),
-        data: (List<Media> mediaList) {
+        data: (List<SearchResultMatch> resultItems) {
           if (ref.read(imageSearchController.notifier).searchQuery.isEmpty) {
             return const Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text("Describe the image you want to find"),
+                  SizedBox(height: 8),
                   Text("Example: \"white cat\""),
                 ],
               ),
             );
           }
-          if (mediaList.isEmpty) {
+          if (resultItems.isEmpty) {
             return const Center(child: Text("No results found"));
           }
 
-          // build list of search results
+          // build list of search results with similarity scores
           return RawScrollbar(
             controller: _scrollController,
             child: CustomScrollView(
@@ -153,16 +152,54 @@ class _SearchResultWidgetState extends ConsumerState<SearchResultWidget> {
                     crossAxisSpacing: UIConfig.mainAxisSpacing,
                   ),
                   itemBuilder: (context, index) {
-                    final media = mediaList[index];
-                    return ThumbnailWidget(media: media);
+                    final resultItem = resultItems[index];
+                    return SearchResultThumbnailWidget(resultItem: resultItem);
                   },
-                  itemCount: mediaList.length,
+                  itemCount: resultItems.length,
                 ),
               ],
             ),
           );
         },
       ),
+    );
+  }
+}
+
+/// Thumbnail widget with similarity score badge
+class SearchResultThumbnailWidget extends StatelessWidget {
+  final SearchResultMatch resultItem;
+
+  const SearchResultThumbnailWidget({super.key, required this.resultItem});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Image
+        ThumbnailWidget(assetId: resultItem.assetId),
+
+        // Similarity score badge
+        Positioned(
+          top: 4,
+          right: 4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              resultItem.cosineScore.toStringAsFixed(2),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

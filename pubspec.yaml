@@ -49,6 +49,7 @@ dependencies:
   # google_mlkit_translation: ^0.13.1
   path_provider: ^2.1.5
   video_player: ^2.10.1
+  logger: ^2.7.0
 
 dev_dependencies:
   flutter_test:

@@ -1,21 +1,21 @@
 import 'package:mobile_image_search/src/constants/common_constant.dart';
 
-class Media {
+class MediaAsset {
   /// The ID of the asset.
   ///
   /// - Android: _id column in MediaStore database.
   ///
   /// - iOS/macOS: localIdentifier.
   final String assetId;
-  final String name;
+  final String title;
   final DateTime createDateTime;
   final DateTime modifiedDateTime;
   final EMediaType mediaType;
   int duration;
 
-  Media({
+  MediaAsset({
     required this.assetId,
-    required this.name,
+    required this.title,
     required this.createDateTime,
     required this.modifiedDateTime,
     required this.mediaType,
@@ -24,7 +24,7 @@ class Media {
 }
 
 class MediaGroup {
-  final List<Media> mediaItems;
+  final List<MediaAsset> mediaItems;
   final DateTime date;
 
   MediaGroup({required this.date, required this.mediaItems});

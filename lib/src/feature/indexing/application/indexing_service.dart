@@ -1,27 +1,24 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/gallery_repository.dart';
-import 'package:mobile_image_search/src/feature/gallery/domain/gallery_repository_interface.dart';
+import 'package:mobile_image_search/src/shared/data/repository/background_worker_repository.dart';
+import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
+import 'package:mobile_image_search/src/feature/indexing/domain/indexing_progress.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/background_worker_interface.dart';
 import 'package:mobile_image_search/src/shared/application/inference_worker_repository.dart';
 import 'package:mobile_image_search/src/utils/logger.dart';
-import 'package:mobile_image_search/src/feature/indexing/domain/indexing_model.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_repository.dart';
 import 'package:mobile_image_search/src/feature/indexing/domain/store_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 
-class IndexingProgress {
-  final int total;
-  final int processed;
-  IndexingProgress({required this.total, required this.processed});
-
-  double get progress => total == 0 ? 0 : processed / total;
-}
-
 class IndexingService {
-  final Queue<IndexingTask> taskQueue = Queue<IndexingTask>();
+  final Queue<MediaAsset> taskQueue = Queue<MediaAsset>();
+
+  /// Queue for pending embeddings to save - deferred from main indexing loop
+  final Queue<Map<String, dynamic>> _saveQueue = Queue();
 
   final StreamController<IndexingProgress> _progressController =
       StreamController<IndexingProgress>.broadcast();
@@ -30,7 +27,7 @@ class IndexingService {
   int _total = 0;
   int _processed = 0;
 
-  final IInferenceWorkerRepository _workerRepo;
+  final IBackgroundWorkerRepository _workerRepo;
 
   final Logger _logger = loggers[LoggerName.indexingService]!;
 
@@ -40,22 +37,21 @@ class IndexingService {
   IndexingService({
     required IStoreRepository storeRepository,
     required IGalleryRepository galleryRepository,
-    required IInferenceWorkerRepository workerRepo,
+    required IBackgroundWorkerRepository workerRepo,
   }) : _galleryRepo = galleryRepository,
        _storeRepo = storeRepository,
        _workerRepo = workerRepo;
 
   bool _isProcessing = false;
+  bool _isSaving = false; // Prevent concurrent saves
 
   /// Copy model files from assets to file system to allow worker isolate to read
   ///
   /// Check for necessary gallery change and update indexing on app startup
+  ///
+  /// Change status and display to user
   Future<void> initialize() async {
     try {
-      _workerRepo.onMessage.listen((message) {
-        handleWorkerResult(message);
-      });
-
       // check for necessary gallery change and update indexing on app startup
       _syncIndexingInBackground();
     } catch (e, _) {
@@ -64,20 +60,22 @@ class IndexingService {
   }
 
   Future<void> _syncIndexingInBackground() async {
-    final List<Media> pendingAssets = [];
+    final List<MediaAsset> pendingAssets = [];
     final List<String> deletePendingAssetIds = [];
 
     _logger.printLog('Checking for gallery changes on startup...');
-    final allGalleryMedia = await _galleryRepo.getAllMetadata();
-    final allIndexedMedia = await _storeRepo.getAllIndexedMediaMetadata();
+    final List<MediaAsset> allGalleryMedia = await _galleryRepo
+        .getAllMetadata();
+    final Map<String, MediaAsset> allIndexedMedia = await _storeRepo
+        .getAllIndexedMediaMetadata();
 
-    int count = 0;
+    // int count = 0;
     for (final media in allGalleryMedia) {
-      count++;
+      // count++;
 
-      if (count % 500 == 0) {
-        await Future.delayed(Duration.zero);
-      }
+      // if (count % 500 == 0) {
+      //   await Future.delayed(Duration.zero);
+      // }
 
       final indexedMedia = allIndexedMedia[media.assetId];
       if (indexedMedia == null) {
@@ -105,16 +103,20 @@ class IndexingService {
     );
   }
 
-  void enQueue(List<Media> media) {
+  void enQueue(List<MediaAsset> media) {
     _total += media.length;
-    taskQueue.addAll(media.map((item) => IndexingTask(media: item)));
+    taskQueue.addAll(media);
     _logger.printLog('Enqueued indexing task for image $media');
     _notifyProgress();
   }
 
   void _notifyProgress() {
     _progressController.add(
-      IndexingProgress(total: _total, processed: _processed),
+      IndexingProgress(
+        total: _total,
+        processed: _processed,
+        isIndexing: taskQueue.isNotEmpty || _isProcessing,
+      ),
     );
   }
 
@@ -124,41 +126,84 @@ class IndexingService {
     }
 
     _isProcessing = true;
-    final task = taskQueue.removeFirst();
+    final media = taskQueue.removeFirst();
 
-    // send task to worker
-    _logger.printLog('Start processing indexing task for image ${task.media}');
-    _workerRepo.workerSendPort?.send(task);
+    // use public API to ensure proper taskId tracking
+    _logger.printLog('Start processing indexing task for image $media');
+    // _workerRepo
+    //     .indexImage(media)
+    //     .then(
+    //       (result) {
+    //         if (result.embedding != null) {
+    //           // Queue the save instead of doing it synchronously - prevents UI jank
+    //           _saveQueue.add({
+    //             'media': result.media,
+    //             'embedding': result.embedding!,
+    //           });
+    //           _logger.printLog(
+    //             'Indexed asset ${result.media.assetId} (queued for save)',
+    //           );
+    //           _processSaveQueue(); // Start async save process
+    //         } else {
+    //           // error handling
+    //           _logger.printLog(
+    //             "Error indexing asset ${result.media.assetId}: ${result.errorMessage}",
+    //           );
+    //         }
+
+    //         _processed++;
+    //         _notifyProgress();
+
+    //         _isProcessing = false;
+    //         processNextTask();
+    //       },
+    //       onError: (e) {
+    //         _logger.printLog("Error processing task for ${media.assetId}: $e");
+    //         _processed++;
+    //         _notifyProgress();
+
+    //         _isProcessing = false;
+    //         processNextTask();
+    //       },
+    //     );
   }
 
-  void handleWorkerResult(dynamic message) {
-    if (message is IndexingResult) {
-      if (message.embedding != null) {
-        // save to db
-        _storeRepo.saveImageEmbedding(message.media, message.embedding!);
-        _logger.printLog(
-          'Indexed asset ${message.media.assetId} successfully!',
-        );
-      } else {
-        // error handling
-        _logger.printLog(
-          "Error indexing asset ${message.media.assetId}: ${message.errorMessage}",
-        );
-      }
-
-      _processed++;
-      _notifyProgress();
-
-      _isProcessing = false;
-      processNextTask();
+  /// Process queued embeddings in background without blocking main indexing loop
+  void _processSaveQueue() {
+    if (_saveQueue.isEmpty || _isSaving) {
+      return;
     }
+
+    _isSaving = true;
+    final item = _saveQueue.removeFirst();
+
+    _storeRepo
+        .saveImageEmbedding(
+          item['media'] as MediaAsset,
+          item['embedding'] as Float32List,
+        )
+        .then((_) {
+          _isSaving = false;
+          // Process next queued save
+          if (_saveQueue.isNotEmpty) {
+            _processSaveQueue();
+          }
+        })
+        .catchError((e) {
+          _logger.printLog('Error saving embedding: $e');
+          _isSaving = false;
+          // Continue with next save even on error
+          if (_saveQueue.isNotEmpty) {
+            _processSaveQueue();
+          }
+        });
   }
 }
 
 final indexingServiceProvider = FutureProvider((ref) async {
   final storeRepository = await ref.watch(objectBoxStoreRepoProvider.future);
   final galleryRepository = ref.watch(galleryRepositoryProvider);
-  final worker = await ref.watch(aiInferenceWorkerRepoProvider.future);
+  final worker = await ref.watch(backgroundWorkerRepoProvider.future);
 
   final service = IndexingService(
     storeRepository: storeRepository,

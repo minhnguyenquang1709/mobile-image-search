@@ -74,7 +74,7 @@ final topLevelNavigationRouter = GoRouter(
       path: RouteConstants.mediaViewer,
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
-        final image = extra?['image'] as Media;
+        final image = extra?['image'] as MediaAsset;
         return MediaViewScreen(media: image);
       },
     ),

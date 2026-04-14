@@ -12,10 +12,10 @@ import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 
 class ThumbnailWidget extends ConsumerStatefulWidget {
-  final Media media;
+  final String assetId;
   final Function(String assetId)? onTap;
 
-  const ThumbnailWidget({super.key, required this.media, this.onTap});
+  const ThumbnailWidget({super.key, required this.assetId, this.onTap});
 
   @override
   ConsumerState<ThumbnailWidget> createState() => _ThumbnailWidgetState();
@@ -32,7 +32,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
   void initState() {
     super.initState();
 
-    _assetEntityFuture = AssetEntity.fromId(widget.media.assetId);
+    _assetEntityFuture = AssetEntity.fromId(widget.assetId);
   }
 
   @override
@@ -40,11 +40,10 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
     super.build(context);
     final isImageSelected = ref.watch(
       selectionControllerProvider.select(
-        (state) => state.contains(widget.media.assetId),
+        (state) => state.contains(widget.assetId),
       ),
     );
-    final Media media = widget.media;
-    final assetId = media.assetId;
+    final assetId = widget.assetId;
 
     return FutureBuilder(
       future: _assetEntityFuture,
@@ -52,9 +51,9 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
         // loading
         if (snapshot.connectionState == ConnectionState.waiting) {
           // skeleton placeholder
-          if (media.mediaType == EMediaType.video) {
-            return const Center(child: Icon(Icons.videocam));
-          }
+          // if (media.mediaType == EMediaType.video) {
+          //   return const Center(child: Icon(Icons.videocam));
+          // }
           return const Center(child: Icon(Icons.image));
         }
 
@@ -68,6 +67,16 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
         }
 
         final AssetEntity assetEntity = snapshot.data!;
+        final MediaAsset mediaAsset = MediaAsset(
+          assetId: assetId,
+          title: assetEntity.title!,
+          createDateTime: assetEntity.createDateTime,
+          modifiedDateTime: assetEntity.modifiedDateTime,
+          mediaType: assetEntity.type == AssetType.video
+              ? EMediaType.video
+              : EMediaType.image,
+          duration: assetEntity.duration,
+        );
         return GestureDetector(
           onTap: () {
             final isInSelectionMode = ref
@@ -84,7 +93,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
             } else {
               context.push(
                 RouteConstants.mediaViewer,
-                extra: {'image': widget.media},
+                extra: {'image': widget.assetId},
               );
               if (widget.onTap != null) {
                 widget.onTap!(assetId);
@@ -120,7 +129,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
                   ),
                 );
 
-                final bool isVideo = widget.media.mediaType == EMediaType.video;
+                final bool isVideo = mediaAsset.mediaType == EMediaType.video;
                 final stack = Stack(
                   children: [
                     Positioned.fill(child: assetEntityImageWidget),
@@ -129,7 +138,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
                           ? Colors.black.withValues(alpha: 0.3)
                           : Colors.transparent,
                     ),
-                    if (isVideo && widget.media.duration > 0)
+                    if (isVideo && mediaAsset.duration > 0)
                       Positioned(
                         bottom: 4,
                         right: 4,
@@ -143,7 +152,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
                             size: const Size(40, 20),
                             child: Center(
                               child: Text(
-                                formatVideoDuration(widget.media.duration),
+                                formatVideoDuration(mediaAsset.duration),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: CustomColors.textSecondary,

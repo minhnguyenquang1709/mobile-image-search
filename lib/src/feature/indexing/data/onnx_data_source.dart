@@ -50,9 +50,9 @@ class OnnxDataSource {
 
       final OrtSessionOptions options = OrtSessionOptions(
         providers: [
+          OrtProvider.NNAPI,
+          OrtProvider.CORE_ML,
           OrtProvider.XNNPACK,
-          // OrtProvider.NNAPI,
-          // OrtProvider.CORE_ML,
           OrtProvider.CPU,
         ],
         intraOpNumThreads: 4,

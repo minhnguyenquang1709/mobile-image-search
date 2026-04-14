@@ -52,6 +52,7 @@ class LoggerName {
 
   // presentation layer
   static const String galleryController = "GalleryController";
+  static const String imageSearchController = "ImageSearchController";
   static const String tokenizer = "Tokenizer";
 }
 
@@ -73,4 +74,5 @@ final Map<String, Logger> loggers = {
 
   // Presentation layer
   LoggerName.galleryController: Logger(LoggerName.galleryController),
+  LoggerName.imageSearchController: Logger(LoggerName.imageSearchController),
 };

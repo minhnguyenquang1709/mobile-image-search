@@ -1,15 +1,14 @@
 import 'dart:typed_data';
 
+import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
-import 'package:mobile_image_search/src/shared/domain/model/search_model.dart';
 
 abstract class IStoreRepository {
-  Future<Float32List> getImageEmbedding(String assetId);
-  Future<void> saveImageEmbedding(Media media, Float32List embedding);
-  void deleteImageEmbeddings(List<String> assetId);
-  Future<Map<String, Media>> getAllIndexedMediaMetadata();
-  Future<List<SearchResult>> semanticSearch(
+  Future<bool> saveImageEmbedding(MediaAsset mediaAsset, Float32List embedding);
+  Future<bool> deleteImageEmbeddings(List<String> assetIds);
+  Future<List<SearchResultMatch>> semanticSearch(
     Float32List queryEmbedding,
     int topK,
   );
+  Future<Map<String, MediaAsset>> getAllIndexedMediaMetadata();
 }

@@ -39,7 +39,7 @@ class ImageGroupWidget extends StatelessWidget {
     final SliverGrid imageGrid = SliverGrid(
       delegate: SliverChildBuilderDelegate((context, index) {
         return ThumbnailWidget(
-          media: _imageGroup.mediaItems[index],
+          assetId: _imageGroup.mediaItems[index].assetId,
           key: Key(_imageGroup.mediaItems[index].assetId),
         );
       }, childCount: _imageGroup.mediaItems.length),

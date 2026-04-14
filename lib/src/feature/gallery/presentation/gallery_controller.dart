@@ -1,9 +1,6 @@
-import 'dart:isolate';
-
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/feature/indexing/application/indexing_service.dart';
-import 'package:mobile_image_search/src/utils/logger.dart';
 import 'package:mobile_image_search/src/feature/gallery/application/gallery_service.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -19,9 +16,7 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
   bool _isFetching = false; // prevent spam
   bool _hasReachedEnd = false; // end of gallery
 
-  final Map<String, Media> _cachedMediaItems = {};
-
-  final Logger _logger = loggers[LoggerName.galleryController]!;
+  final Map<String, MediaAsset> _cachedMediaItems = {};
 
   @override
   Future<List<MediaGroup>> build() async {
@@ -73,8 +68,8 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
   }
 
   /// Group images
-  List<MediaGroup> groupImagesByDate(List<Media> media) {
-    final Map<DateTime, List<Media>> groupedMap = {};
+  List<MediaGroup> groupImagesByDate(List<MediaAsset> media) {
+    final Map<DateTime, List<MediaAsset>> groupedMap = {};
 
     for (var mediaItem in media) {
       final DateTime dateTime = mediaItem.createDateTime;
@@ -101,10 +96,10 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
     return groups;
   }
 
-  Future<List<Media>> _fetchPage(int page) async {
+  Future<List<MediaAsset>> _fetchPage(int page) async {
     final galleryService = ref.read(galleryServiceProvider);
 
-    final List<Media> newMediaItems = await galleryService.readGallery(
+    final List<MediaAsset> newMediaItems = await galleryService.readGallery(
       page: page,
       limit: _limit,
     );
@@ -162,7 +157,6 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
         }
       }
     } catch (e, _) {
-      _logger.printLog("\nError fetching page $_currentPage: $e\n");
     } finally {
       _isFetching = false;
     }
@@ -176,8 +170,8 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
 
   /// print metadata of image
   Future<void> printImageMetadata(String assetId) async {
-    final galleryService = ref.read(galleryServiceProvider);
-    await galleryService.getImageMetadata(assetId);
+    // final galleryService = ref.read(galleryServiceProvider);
+    // await galleryService.getImageMetadata(assetId);
   }
 
   Future<void> requestGalleryAccess() async {

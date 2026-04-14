@@ -1,14 +1,11 @@
 import 'dart:io';
-import 'dart:isolate';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/constants/common_constant.dart';
 // import 'package:mobile_image_search/core/constants/common.constant.dart';
-import 'package:mobile_image_search/src/utils/logger.dart';
 import 'package:mobile_image_search/src/utils/media_processing.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source.dart';
-import 'package:mobile_image_search/src/feature/gallery/domain/gallery_repository_interface.dart';
+import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_metadata.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -23,26 +20,27 @@ class GalleryRepository implements IGalleryRepository {
   // bool _hasPermission = false;
   // get hasPermission => _hasPermission;
 
-  final Logger _logger = loggers[LoggerName.galleryRepository]!;
-
   bool isGallerySynced = false;
 
   /// Read gallery albums and cache them in memory and record the number of image files
   ///
   /// Return domain model
   @override
-  Future<List<Media>> readGallery({required int page, int limit = 50}) async {
+  Future<List<MediaAsset>> readGallery({
+    required int page,
+    int limit = 50,
+  }) async {
     final List<AssetEntity> sourceImages = await _galleryDataSource.getImages(
       page: page,
       limit: limit,
     );
 
-    final List<Media> assets = [];
+    final List<MediaAsset> assets = [];
 
     for (final asset in sourceImages) {
       _assetCache[asset.id] = asset;
       if (asset.type == AssetType.image || asset.type == AssetType.video) {
-        final Media media = fillMetadataFromAsset(asset);
+        final MediaAsset media = fillMetadataFromAsset(asset);
         assets.add(media);
       }
     }
@@ -70,15 +68,9 @@ class GalleryRepository implements IGalleryRepository {
     try {
       final result = await _galleryDataSource.deleteImages([imageId]);
       if (result) {
-        _logger.printLog('Deleted image with id $imageId from gallery');
-      } else {
-        _logger.printLog(
-          'Failed to delete image with id $imageId from gallery',
-        );
-      }
+      } else {}
       return result;
     } catch (e) {
-      _logger.printLog('Error deleting image with id $imageId: $e');
       return false;
     }
   }
@@ -86,10 +78,8 @@ class GalleryRepository implements IGalleryRepository {
   @override
   Future<File> getImageFile(String assetId) async {
     final file = await _galleryDataSource.getImageFile(assetId);
-    _logger.printLog('Retrieved file for assetId $assetId');
 
     if (file == null) {
-      _logger.printLog('File for assetId $assetId is null');
       throw FileSystemException('File not found for assetId $assetId');
     }
 
@@ -97,16 +87,14 @@ class GalleryRepository implements IGalleryRepository {
   }
 
   @override
-  Future<Media> getImageMetadata(String assetId) {
+  Future<MediaAsset> getImageMetadata(String assetId) {
     return _galleryDataSource.getImageMetadata(assetId);
   }
 
   @override
-  Future<List<Media>> getAllMetadata() async {
+  Future<List<MediaAsset>> getAllMetadata() async {
     final List<AssetEntity> allImageAssets = await _galleryDataSource
         .getAllImages();
-
-    _logger.printLog('Fetched all image assets!');
 
     return allImageAssets.map((asset) {
       return fillMetadataFromAsset(asset);
@@ -114,14 +102,13 @@ class GalleryRepository implements IGalleryRepository {
   }
 
   @override
-  Future<List<AssetPathEntity>> getAlbumList() async {
-    final List<AssetPathEntity> albumLists = await _galleryDataSource
-        .getAllAlbums();
-    return albumLists;
+  Future<bool> moveMediaToTrash(List<String> assetIds) {
+    // TODO: implement moveMediaToTrash
+    throw UnimplementedError();
   }
 
   @override
-  Future<List<Media>> readAlbum({
+  Future<List<MediaAsset>> readAlbum({
     required String albumId,
     required int page,
     int limit = 50,
@@ -130,9 +117,9 @@ class GalleryRepository implements IGalleryRepository {
         .getImagesFromAlbum(albumId: albumId, page: page, limit: limit);
 
     return albumImageAssets.map((asset) {
-      return Media(
+      return MediaAsset(
         assetId: asset.id,
-        name: asset.title!,
+        title: asset.title!,
         createDateTime: asset.createDateTime,
         modifiedDateTime: asset.modifiedDateTime,
         mediaType: asset.type == AssetType.image
@@ -143,21 +130,21 @@ class GalleryRepository implements IGalleryRepository {
   }
 
   @override
-  Future<void> createAlbum(String albumName) async {
-    await _galleryDataSource.createAlbum(albumName);
+  Future<bool> createAlbum(String albumName) async {
+    return await _galleryDataSource.createAlbum(albumName);
   }
 
   @override
-  Future<void> moveImagesToAlbum(
+  Future<bool> moveMediaToAlbum(
     List<String> assetIds,
     String targetAlbumId,
   ) async {
-    // TODO: implement moveImagesToAlbum
+    // TODO: implement deleteAlbum
     throw UnimplementedError();
   }
 
   @override
-  Future<void> deleteAlbum(String albumId) async {
+  Future<bool> deleteAlbum(String albumId) async {
     // TODO: implement deleteAlbum
     throw UnimplementedError();
   }

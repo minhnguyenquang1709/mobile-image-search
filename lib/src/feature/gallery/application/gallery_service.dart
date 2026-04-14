@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/gallery_repository.dart';
-import 'package:mobile_image_search/src/feature/gallery/domain/gallery_repository_interface.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media_metadata.dart';
+import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 
 class GalleryService {
@@ -11,7 +10,10 @@ class GalleryService {
 
   GalleryService(this._galleryRepository);
 
-  Future<List<Media>> readGallery({required int page, int limit = 100}) async {
+  Future<List<MediaAsset>> readGallery({
+    required int page,
+    int limit = 100,
+  }) async {
     return await _galleryRepository.readGallery(page: page, limit: limit);
   }
 
@@ -21,14 +23,12 @@ class GalleryService {
 
   /// delete image from gallery and remove from vector store
   Future<bool> deleteImage(String imageId) async {
-    return await _galleryRepository.deleteImage(imageId);
+    throw UnimplementedError(
+      "GalleryService.deleteImage is not implemented yet",
+    );
   }
 
-  Future<void> getImageMetadata(String assetId) async {
-    await _galleryRepository.getImageMetadata(assetId);
-  }
-
-  Future<List<Media>> getAllMetadata() async {
+  Future<List<MediaAsset>> getAllMetadata() async {
     return await _galleryRepository.getAllMetadata();
   }
 }

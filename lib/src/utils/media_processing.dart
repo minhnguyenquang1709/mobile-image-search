@@ -2,10 +2,10 @@ import 'package:mobile_image_search/src/constants/common_constant.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 import 'package:photo_manager/photo_manager.dart';
 
-Media fillMetadataFromAsset(AssetEntity asset) {
-  return Media(
+MediaAsset fillMetadataFromAsset(AssetEntity asset) {
+  return MediaAsset(
     assetId: asset.id,
-    name: asset.title!,
+    title: asset.title!,
     createDateTime: asset.createDateTime,
     modifiedDateTime: asset.modifiedDateTime,
     mediaType: asset.type == AssetType.image
@@ -15,8 +15,8 @@ Media fillMetadataFromAsset(AssetEntity asset) {
   );
 }
 
-bool isSameMedia(Media metadata1, Media metadata2) {
-  return metadata1.name == metadata2.name &&
+bool isSameMedia(MediaAsset metadata1, MediaAsset metadata2) {
+  return metadata1.title == metadata2.title &&
       metadata1.createDateTime == metadata2.createDateTime &&
       metadata1.modifiedDateTime == metadata2.modifiedDateTime &&
       metadata1.mediaType == metadata2.mediaType &&

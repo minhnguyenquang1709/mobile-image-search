@@ -1,28 +1,36 @@
 import 'dart:async';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
-import 'package:mobile_image_search/src/feature/indexing/domain/indexing_model.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
-import 'package:mobile_image_search/src/shared/domain/model/search_model.dart';
 
-abstract class IInferenceWorkerRepository {
-  ReceivePort? mainReceivePort;
-  SendPort? workerSendPort;
-  Isolate? isolate;
-  Future<void> init(Map<String, dynamic> params);
+abstract class IBackgroundWorkerRepository {
+  /// initialize worker isolate with necessary file paths, message handlers
+  Future<void> init();
+
+  /// dispose worker isolate and resources
   void dispose();
 
-  /// stream for receiving messages from worker
+  /// expose stream of message that the presentation layer can listen to
   Stream<dynamic> get onMessage;
 
   /// encode text and return embedding
-  Future<EncodeTextResult> encodeText(String text);
+  Future<Float32List> encodeText(String text);
 
-  ///
-  Future<IndexingResult> indexImage(Media media);
+  /// encode image and return embedding
+  Future<Float32List> encodeImage(Uint8List imageBytes);
+
+  /// sync gallery changes in background
+  Future<void> syncGallery();
+
+  // /// save indexed image to vector store in background
+  // Future<bool> saveImageEmbedding();
+
+  // /// delete image embedding from vector store in background
+  // Future<bool> deleteImageEmbeddings(List<String> assetIds);
 }
 
+/// Encapsulate background isolate setup config
 class WorkerSetupConfig {
   final SendPort mainSendPort;
   final RootIsolateToken rootIsolateToken;

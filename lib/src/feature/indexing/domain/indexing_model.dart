@@ -4,13 +4,13 @@ import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 
 class IndexingTask {
   final String taskId;
-  final Media media;
+  final MediaAsset media;
   IndexingTask({required this.taskId, required this.media});
 }
 
 class IndexingResult {
   final String taskId;
-  final Media media;
+  final MediaAsset media;
   final Float32List? embedding;
   final String? errorMessage;
 

@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:mobile_image_search/src/constants/config_constant.dart';
-import 'package:mobile_image_search/src/utils/logger.dart';
 
 class BpeTokenizer {
   static final int contextLength = Model.specs.contextLength;
@@ -13,8 +11,6 @@ class BpeTokenizer {
   late final Map<String, int> _vocab;
   late final Map<String, int> _bpeRanks;
   bool _isInitialized = false;
-
-  final Logger _logger = loggers[LoggerName.tokenizer]!;
 
   static final BpeTokenizer _instance = BpeTokenizer._internal();
   factory BpeTokenizer() => _instance;
@@ -32,7 +28,6 @@ class BpeTokenizer {
       final vocabFile = File(
         vocabExtractedPath ?? '${Model.tokenizerDir}/vocab.json',
       );
-      _logger.printLog("Initializing tokenizer vocab from ${vocabFile.path}");
       final mergesFile = File(
         mergesExtractedPath ?? '${Model.tokenizerDir}/merges.txt',
       );
@@ -61,17 +56,9 @@ class BpeTokenizer {
       }
 
       _isInitialized = true;
-      _logger.printLog(
-        "Tokenizer initialized: ${_vocab.length} vocab, ${_bpeRanks.length} merges.",
-      );
 
-      for (int i = 0; i < 5; i++) {
-        _logger.printLog(
-          "BPE Rank for ${_bpeRanks.keys.toList()[i]}: ${_bpeRanks.values.toList()[i]}",
-        );
-      }
+      for (int i = 0; i < 5; i++) {}
     } catch (e) {
-      _logger.printLog("Failed to initialize Tokenizer: $e");
       rethrow;
     }
   }
@@ -93,7 +80,6 @@ class BpeTokenizer {
     }
 
     final List<String> words = cleanText.split(' ');
-    _logger.printLog("Preprocessed text: '$cleanText', words: $words");
 
     // 2. process each word
     for (String word in words) {
@@ -101,13 +87,10 @@ class BpeTokenizer {
       final List<String> subWords = _applyBPE(word);
 
       // get ID
-      _logger.printLog("Sub-words for '$word': $subWords");
       for (String subWord in subWords) {
         if (_vocab.containsKey(subWord)) {
           tokens.add(_vocab[subWord]!);
-        } else {
-          _logger.printLog("Warning: Unknown subword '$subWord'");
-        }
+        } else {}
       }
 
       if (tokens.length >= contextLength - 1) break;
@@ -140,7 +123,6 @@ class BpeTokenizer {
         chars.add(wordWithEnd[i]);
       }
     }
-    _logger.printLog("chars for '$word': $chars");
 
     // merge loop
     while (true) {
@@ -199,9 +181,7 @@ class BpeTokenizer {
       if (_vocab.containsValue(id)) {
         String token = _vocab.keys.firstWhere((k) => _vocab[k] == id);
         result += token;
-      } else {
-        _logger.printLog("Warning: Unknown token ID '$id'");
-      }
+      } else {}
     }
 
     return result;

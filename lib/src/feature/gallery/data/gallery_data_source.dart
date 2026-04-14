@@ -3,16 +3,12 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media.dart';
-import 'package:mobile_image_search/src/utils/logger.dart';
 import 'package:mobile_image_search/src/utils/media_processing.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media_metadata.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 /// Get images from device storage
 class GalleryDataSource {
-  final _logger = loggers[LoggerName.galleryDataSource]!;
-
   /// Call photo_manager to check permission
   Future<bool> checkGalleryPermission() async {
     if (Platform.isAndroid) {
@@ -38,7 +34,6 @@ class GalleryDataSource {
 
   /// Request gallery access
   Future<bool> requestGalleryAccess() async {
-    _logger.printLog('Requesting gallery access permission');
     bool result = false;
 
     if (Platform.isAndroid) {
@@ -53,7 +48,6 @@ class GalleryDataSource {
         }
         if (storagePermission.isDenied) {
           final PermissionStatus status = await Permission.storage.request();
-          _logger.printLog('Gallery access granted: ${status.isGranted}');
 
           return status.isGranted;
         }
@@ -64,9 +58,7 @@ class GalleryDataSource {
 
           // recheck
           final PermissionStatus newStatus = await Permission.storage.status;
-          _logger.printLog(
-            'Gallery access granted after opening settings: ${newStatus.isGranted}',
-          );
+
           return newStatus.isGranted;
         }
       } else {
@@ -78,7 +70,7 @@ class GalleryDataSource {
         // }
         // if (photoStorage.isDenied) {
         //   final status = await Permission.photos.request();
-        //   _logger.printLog('Gallery access granted: ${status.isGranted}');
+        //   appLogger.i('Gallery access granted: ${status.isGranted}');
         //   return status.isGranted;
         // }
         // if (photoStorage.isPermanentlyDenied || photoStorage.isRestricted) {
@@ -86,7 +78,7 @@ class GalleryDataSource {
 
         //   // recheck
         //   final PermissionStatus newStatus = await Permission.photos.status;
-        //   _logger.printLog(
+        //   appLogger.i(
         //     'Gallery access granted after opening settings: ${newStatus.isGranted}',
         //   );
         //   return newStatus.isGranted;
@@ -115,12 +107,10 @@ class GalleryDataSource {
     } else if (Platform.isIOS) {
       final photoStorage = await Permission.photos.status;
       if (photoStorage.isGranted) {
-        _logger.printLog('Gallery access granted: ${photoStorage.isGranted}');
         return true;
       }
       if (photoStorage.isDenied) {
         final PermissionStatus status = await Permission.photos.request();
-        _logger.printLog('Gallery access granted: ${status.isGranted}');
         return status.isGranted;
       }
       if (photoStorage.isPermanentlyDenied || photoStorage.isRestricted) {
@@ -128,9 +118,7 @@ class GalleryDataSource {
 
         // recheck
         final PermissionStatus newStatus = await Permission.photos.status;
-        _logger.printLog(
-          'Gallery access granted after opening settings: ${newStatus.isGranted}',
-        );
+
         return newStatus.isGranted;
       }
     }
@@ -153,17 +141,14 @@ class GalleryDataSource {
       onlyAll: true,
       filterOption: filterOptions,
     );
-    // _logger.printLog('Found ${albums.length} albums in the gallery.');
+    // appLogger.i('Found ${albums.length} albums in the gallery.');
 
-    if (albums.isEmpty) {
-      _logger.printLog('No image found in the gallery.');
-    }
+    if (albums.isEmpty) {}
 
     final Set<String> assetIds = {};
     final List<AssetEntity> allAssets = [];
 
     for (final album in albums) {
-      _logger.printLog("Syncing album: ${album.name}");
       final int assetCount = await album.assetCountAsync;
       if (assetCount > 0) {
         final assets = await album.getAssetListRange(start: 0, end: assetCount);
@@ -204,32 +189,30 @@ class GalleryDataSource {
     );
 
     // TODO: remove debug print
-    // _logger.printLog('Found ${albums.length} albums in the gallery.');
+    // appLogger.i('Found ${albums.length} albums in the gallery.');
     // final List<AssetPathEntity> allAlbums = await PhotoManager.getAssetPathList(
     //   type: RequestType.common,
     //   onlyAll: false, // get all albums
     //   filterOption: filterOptions,
     // );
-    // _logger.printLog(
+    // appLogger.i(
     //   "Found ${allAlbums.length} albums in the gallery (including non-root albums).",
     // );
     // for (int i = 0; i < allAlbums.length; i++) {
     //   final album = allAlbums[i];
     //   final assetCount = await album.assetCountAsync;
-    //   _logger.printLog(
+    //   appLogger.i(
     //     "Album ${i + 1}: ${album.name}, asset count: $assetCount",
     //   );
     // }
 
-    if (albums.isEmpty) {
-      _logger.printLog('No image found in the gallery.');
-    }
+    if (albums.isEmpty) {}
 
     // final Set<String> assetIds = {};
     // final List<AssetEntity> allAssets = [];
 
     // for (final album in albums) {
-    //   _logger.printLog("Syncing album: ${album.name}");
+    //   appLogger.i("Syncing album: ${album.name}");
     //   final int assetCount = await album.assetCountAsync;
     //   if (assetCount > 0) {
     //     final start = page * limit;
@@ -266,7 +249,6 @@ class GalleryDataSource {
       await PhotoManager.editor.deleteWithIds(imageIds);
       return true;
     } catch (e) {
-      _logger.printLog('Error deleting image with id $imageIds: $e');
       return false;
     }
   }
@@ -275,14 +257,13 @@ class GalleryDataSource {
     final assetEntity = await AssetEntity.fromId(assetId);
 
     if (assetEntity == null) {
-      _logger.printLog('AssetEntity not found for assetId $assetId');
       return null;
     }
 
     return await assetEntity.file;
   }
 
-  Future<Media> getImageMetadata(String assetId) async {
+  Future<MediaAsset> getImageMetadata(String assetId) async {
     final assetEntity = await AssetEntity.fromId(assetId);
     try {
       return fillMetadataFromAsset(assetEntity!);
@@ -297,11 +278,9 @@ class GalleryDataSource {
       onlyAll: false, // get all albums
       hasAll: true, // include "All Photos"/"Recent" album
     );
-    // _logger.printLog('Found ${albums.length} albums in the gallery.');
+    // appLogger.i('Found ${albums.length} albums in the gallery.');
 
-    if (albums.isEmpty) {
-      _logger.printLog('No album found in the gallery.');
-    }
+    if (albums.isEmpty) {}
 
     return albums;
   }
@@ -326,7 +305,9 @@ class GalleryDataSource {
     return assetPage;
   }
 
-  Future<void> createAlbum(String albumName) async {}
+  Future<bool> createAlbum(String albumName) async {
+    return true;
+  }
 }
 
 final galleryDataSourceProvider = Provider((ref) {

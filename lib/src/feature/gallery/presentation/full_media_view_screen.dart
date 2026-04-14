@@ -12,7 +12,7 @@ import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 import 'package:video_player/video_player.dart';
 
 class MediaViewScreen extends StatefulWidget {
-  final Media media;
+  final MediaAsset media;
 
   const MediaViewScreen({super.key, required this.media});
 
@@ -59,7 +59,7 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
             )
           : null,
       bottomNavigationBar: !isFocused
-          ? BottomAppBar(child: Text(widget.media.name))
+          ? BottomAppBar(child: Text(widget.media.title))
           : null,
       extendBody: true, // allow content to extend behind bottom navigation bar
       extendBodyBehindAppBar: true,
@@ -68,7 +68,7 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
 }
 
 class ImageViewWidget extends StatefulWidget {
-  final Media image;
+  final MediaAsset image;
   const ImageViewWidget({super.key, required this.image});
 
   @override
@@ -124,7 +124,7 @@ class _ImageViewWidgetState extends State<ImageViewWidget> {
 }
 
 class VideoPlayerWidget extends StatefulWidget {
-  final Media media;
+  final MediaAsset media;
 
   VideoPlayerWidget({super.key, required this.media});
 
