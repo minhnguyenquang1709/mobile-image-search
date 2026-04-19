@@ -52,7 +52,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(4, 5043420744528449525),
     name: 'ImageObjectBox',
-    lastPropertyId: const obx_int.IdUid(6, 2740278633346680692),
+    lastPropertyId: const obx_int.IdUid(7, 8584243545755849456),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -92,6 +92,12 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(6, 2740278633346680692),
         name: 'modifiedAt',
         type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 8584243545755849456),
+        name: 'title',
+        type: 9,
         flags: 0,
       ),
     ],
@@ -220,13 +226,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
       objectToFB: (ImageObjectBox object, fb.Builder fbb) {
         final assetIdOffset = fbb.writeString(object.assetId);
         final embeddingOffset = fbb.writeListFloat32(object.embedding);
-        fbb.startTable(7);
+        final titleOffset = fbb.writeString(object.title);
+        fbb.startTable(8);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, assetIdOffset);
         fbb.addOffset(2, embeddingOffset);
         fbb.addInt64(3, object.indexedAt.millisecondsSinceEpoch);
         fbb.addInt64(4, object.createdAt.millisecondsSinceEpoch);
         fbb.addInt64(5, object.modifiedAt.millisecondsSinceEpoch);
+        fbb.addOffset(6, titleOffset);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -236,6 +244,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final assetIdParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 6, '');
+        final titleParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 16, '');
         final embeddingParam = const fb.ListReader<double>(
           fb.Float32Reader(),
           lazy: false,
@@ -249,6 +260,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final object =
             ImageObjectBox(
                 assetId: assetIdParam,
+                title: titleParam,
                 embedding: embeddingParam,
                 createdAt: createdAtParam,
                 modifiedAt: modifiedAtParam,
@@ -314,5 +326,10 @@ class ImageObjectBox_ {
   /// See [ImageObjectBox.modifiedAt].
   static final modifiedAt = obx.QueryDateProperty<ImageObjectBox>(
     _entities[1].properties[5],
+  );
+
+  /// See [ImageObjectBox.title].
+  static final title = obx.QueryStringProperty<ImageObjectBox>(
+    _entities[1].properties[6],
   );
 }

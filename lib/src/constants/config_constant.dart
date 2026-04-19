@@ -42,7 +42,23 @@ class Model {
     contextLength: 77,
   );
 
-  static const ModelSpecs specs = vitBase16QuickGelu_224;
+  static const vitBase16Dfn2b_224 = ModelSpecs(
+    folderName: "ViT-B-16_dfn2b",
+    mean: [0.48145466, 0.4578275, 0.40821073],
+    std: [0.26862954, 0.26130258, 0.27577711],
+    imageSize: 224,
+    contextLength: 77,
+  );
+
+  static const vitLarge14QuickGelu_224 = ModelSpecs(
+    folderName: "ViT-L-14-quickgelu",
+    mean: [0.48145466, 0.4578275, 0.40821073],
+    std: [0.26862954, 0.26130258, 0.27577711],
+    imageSize: 224,
+    contextLength: 77,
+  );
+
+  static const ModelSpecs specs = vitBase16Dfn2b_224;
 
   static String get textEncoderAssetPath =>
       'assets/openclip/${specs.folderName}/text_encoder_quant.onnx';

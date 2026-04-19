@@ -2,6 +2,7 @@ class IndexingProgress {
   final int total;
   final int processed;
   final bool isIndexing;
+
   IndexingProgress({
     required this.total,
     required this.processed,

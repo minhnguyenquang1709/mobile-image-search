@@ -13,7 +13,7 @@ class OnnxInferenceRepository implements IAiInferenceRepository {
 
   @override
   Future<Float32List> encodeImage(File imageFile) async {
-    return await _onnxDataSource.encodeImage(imageFile);
+    throw UnimplementedError("Image encoding not implemented yet");
   }
 
   @override

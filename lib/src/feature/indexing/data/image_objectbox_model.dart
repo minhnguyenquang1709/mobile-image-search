@@ -10,6 +10,8 @@ class ImageObjectBox {
   @Unique(onConflict: ConflictStrategy.replace)
   String assetId;
 
+  String title;
+
   @HnswIndex(
     dimensions: AppConfig.embeddingDimensions,
     distanceType: VectorDistanceType.cosine,
@@ -28,6 +30,7 @@ class ImageObjectBox {
 
   ImageObjectBox({
     required this.assetId,
+    required this.title,
     required this.embedding,
     required this.createdAt,
     required this.modifiedAt,

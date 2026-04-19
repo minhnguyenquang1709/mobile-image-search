@@ -35,3 +35,7 @@ class ImageEncodingResult {
   ImageEncodingResult.failure(this.taskId, this.assetId, this.errorMessage)
     : embedding = Float32List(0);
 }
+
+class ScanGalleryCommand {
+  ScanGalleryCommand();
+}

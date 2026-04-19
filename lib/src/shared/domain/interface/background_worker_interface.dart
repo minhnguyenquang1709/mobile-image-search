@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
+import 'package:mobile_image_search/src/shared/domain/model/indexing_progress.dart';
 
 abstract class IBackgroundWorkerRepository {
   /// initialize worker isolate with necessary file paths, message handlers
@@ -12,7 +13,8 @@ abstract class IBackgroundWorkerRepository {
   void dispose();
 
   /// expose stream of message that the presentation layer can listen to
-  Stream<dynamic> get onMessage;
+  Stream<IndexingProgress> get progressStream;
+  IndexingProgress get currentIndexingProgress;
 
   /// encode text and return embedding
   Future<Float32List> encodeText(String text);

@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/feature/indexing/application/indexing_service.dart';
-import 'package:mobile_image_search/src/feature/indexing/domain/indexing_progress.dart';
+import 'package:mobile_image_search/src/shared/domain/model/indexing_progress.dart';
 
 class AppSettings {
   // indexing state

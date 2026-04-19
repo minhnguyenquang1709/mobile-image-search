@@ -1,11 +1,13 @@
+import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 import 'package:mobile_image_search/src/constants/config_constant.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 import 'package:mobile_image_search/src/utils/logger.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:mobile_image_search/src/utils/bpe_tokenizer.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 /// OnnxRuntime: Main entry point for creating sessions and configuring global options
 ///
@@ -48,14 +50,21 @@ class OnnxDataSource {
       final providers = await ort.getAvailableProviders();
       _logger.printLog('Available ONNX Runtime providers: $providers');
 
+      List<OrtProvider> availableProviders = [];
+      for (final provider in [
+        // OrtProvider.NNAPI, // error
+        OrtProvider.CORE_ML,
+        OrtProvider.XNNPACK,
+        OrtProvider.CPU,
+      ]) {
+        if (providers.contains(provider)) {
+          availableProviders.add(provider);
+        }
+      }
+
       final OrtSessionOptions options = OrtSessionOptions(
-        providers: [
-          OrtProvider.NNAPI,
-          OrtProvider.CORE_ML,
-          OrtProvider.XNNPACK,
-          OrtProvider.CPU,
-        ],
-        intraOpNumThreads: 4,
+        providers: availableProviders,
+        interOpNumThreads: 2,
       );
 
       textEncoder = await ort.createSession(textEncoderPath, options: options);
@@ -83,14 +92,12 @@ class OnnxDataSource {
 
       // DEBUG
       // tokenizer test
-      final testText = "white dog";
-      final tokenIds = tokenizer!.tokenize(testText);
-      _logger.printLog('Token IDs for "$testText": $tokenIds');
-      _logger.printLog('Decoded: ${tokenizer!.decode(tokenIds)}');
-
-      // embedding test
-      final encodedTestText = await encodeText(testText);
-      _logger.printLog('Vector: $encodedTestText');
+      // final testText = "white dog";
+      // final tokenIds = tokenizer!.tokenize(testText);
+      // _logger.printLog('Token IDs for "$testText": $tokenIds');
+      // _logger.printLog('Decoded: ${tokenizer!.decode(tokenIds)}');
+      // final encodedTestText = await encodeText(testText);
+      // _logger.printLog('Vector: $encodedTestText');
 
       // final File testImageFile = await rootBundle
       //     .load('assets/images/rider-187.jpg')
@@ -208,70 +215,173 @@ class OnnxDataSource {
   /// transform image into model's expected input
   ///
   /// create tensor
-  Future<Float32List> encodeImage(File imageFile) async {
+  Future<Float32List> encodeImage(MediaAsset mediaAsset) async {
+    final task = TimelineTask()..start('Encode Image Pipeline');
+
     if (imageEncoder == null) {
       throw Exception('Image encoder model is not initialized');
     }
 
     try {
-      _logger.printLog('Encoding image: ${imageFile.path}');
+      // _logger.printLog(
+      //   'Encoding image: ${mediaAsset.title}, assetId: ${mediaAsset.assetId}',
+      // );
 
-      // Read and decode image using image package
-      final imageBytes = await imageFile.readAsBytes();
-      final decodedImage = img.decodeImage(imageBytes);
-      if (decodedImage == null) {
-        throw Exception('Failed to decode image');
-      }
-
-      // preprocess image: resize, normalize, convert to CHW format
-      // Resize to target size
-      final resizedImage = img.copyResize(
-        decodedImage,
-        width: imageSize,
-        height: imageSize,
-        interpolation: img.Interpolation.linear,
+      // FAST
+      // read and preprocess image
+      final AssetEntity? assetEntity = await AssetEntity.fromId(
+        mediaAsset.assetId,
       );
 
-      // Prepare normalized input [1, 3, imageSize, imageSize]
-      final inputData = Float32List(1 * 3 * imageSize * imageSize);
+      if (assetEntity == null) {
+        throw Exception(
+          'AssetEntity not found for assetId: ${mediaAsset.assetId}',
+        );
+      }
+      // END FAST
 
+      // FAST
+      const ThumbnailOption thumbnailOption = ThumbnailOption(
+        size: ThumbnailSize(500, 500),
+      );
+
+      // measure platform channel
+      final fetchTask = TimelineTask(parent: task)
+        ..start('Fetch Thumbnail from Platform Channel');
+
+      // platform channel call goes through Flutter Platform Thread (OS main thread)
+      Uint8List? thumbnailBytes = await assetEntity.thumbnailDataWithOption(
+        thumbnailOption,
+      );
+      fetchTask.finish();
+
+      if (thumbnailBytes == null) {
+        throw Exception(
+          'Failed to get thumbnail for assetId: ${mediaAsset.assetId}',
+        );
+      }
+      // END FAST
+
+      // get physical file pathway
+      // final File? imageFile = await assetEntity.file;
+
+      // if (imageFile == null) {
+      //   throw Exception(
+      //     'Failed to get image file for assetId: ${mediaAsset.assetId}',
+      //   );
+      // }
+
+      // final Uint8List imageBytes = await imageFile.readAsBytes();
+
+      // FAST (a bit slower but no UI jank, negligible difference)
+      // measure dart image decoding (CPU)
+      final decodeTask = TimelineTask(parent: task)..start('Decode Image');
+
+      // decode
+      final img.Image? decodedImage = img.decodeJpg(thumbnailBytes);
+      decodeTask.finish();
+
+      if (decodedImage == null) {
+        throw Exception(
+          'Failed to decode image for assetId: ${mediaAsset.assetId}',
+        );
+      }
+      // END FAST
+
+      // measure image resizing (CPU)
+      final resizeTask = TimelineTask(parent: task)..start('Resize Image');
+
+      // resize
+      final int targetSize = Model.specs.imageSize;
+      // get shorter image side
+      final bool isWidthShorter = decodedImage.width < decodedImage.height;
+
+      // FAST (a bit slower but also no UI jank, negligible difference)
+      final resizedImage = img.copyResize(
+        decodedImage,
+        width: isWidthShorter ? targetSize : null,
+        height: isWidthShorter ? null : targetSize,
+        interpolation: img.Interpolation.average,
+      );
+      // END FAST
+
+      // FAST
+      // center crop
+      final int xOffset = (resizedImage.width - targetSize) ~/ 2; // center crop
+      final int yOffset =
+          (resizedImage.height - targetSize) ~/ 2; // center crop
+      final img.Image croppedImage = img.copyCrop(
+        resizedImage,
+        x: xOffset,
+        y: yOffset,
+        width: targetSize,
+        height: targetSize,
+      );
+      // END FAST
+      resizeTask.finish();
+
+      // FAST
+      // measure image normalization and CHW conversion (CPU)
+      final normalizeTask = TimelineTask(parent: task)
+        ..start('Normalize and Convert Image Data to CHW');
+
+      // convert to CHW (channels, height, width) and normalize
+      final Float32List imageInputData = Float32List(
+        1 * 3 * croppedImage.width * croppedImage.height,
+      );
       int idx = 0;
-      // Convert to CHW format (channels, height, width) and normalize
+      final List<double> mean = Model.specs.mean;
+      final List<double> std = Model.specs.std;
       for (int c = 0; c < 3; c++) {
-        for (int h = 0; h < imageSize; h++) {
-          for (int w = 0; w < imageSize; w++) {
-            final pixel = resizedImage.getPixel(w, h);
+        for (int h = 0; h < croppedImage.height; h++) {
+          for (int w = 0; w < croppedImage.width; w++) {
+            final pixel = croppedImage.getPixel(w, h);
             final int pixelValue;
             switch (c) {
               case 0:
                 pixelValue = pixel.r.toInt();
                 break;
+
               case 1:
                 pixelValue = pixel.g.toInt();
                 break;
+
               case 2:
                 pixelValue = pixel.b.toInt();
                 break;
+
               default:
                 pixelValue = 0;
             }
-            // Normalize: (pixel/255.0 - mean) / std
-            inputData[idx++] = (pixelValue / 255.0 - mean[c]) / std[c];
+            imageInputData[idx++] = (pixelValue / 255.0 - mean[c]) / std[c];
           }
         }
       }
+      normalizeTask.finish();
+      // END FAST
 
-      // Create input tensor
-      final inputOrt = await OrtValue.fromList(inputData, [
+      // BLOCKING UI
+      // measure ONNX runtime inference time
+      final onnxTask = TimelineTask(parent: task)
+        ..start('ONNX Runtime Inference for Image');
+
+      // create tensor
+      final OrtValue inputImageOrt = await OrtValue.fromList(imageInputData, [
         1,
         3,
-        imageSize,
-        imageSize,
+        croppedImage.height,
+        croppedImage.width,
       ]);
 
-      // Run inference - using actual input name 'image'
-      final inputs = {'image': inputOrt};
+      // run inference
+      final inputs = {'image': inputImageOrt};
       final outputs = await imageEncoder!.run(inputs);
+      onnxTask.finish();
+      // END BLOCKING UI
+
+      // measure output processing
+      final outputProcessTask = TimelineTask(parent: task)
+        ..start('Process ONNX Output');
 
       // Get output embedding - output name is 'image_output'
       final outputOrt = outputs['image_output']!;
@@ -281,25 +391,32 @@ class OnnxDataSource {
       final result = Float32List.fromList(
         embeddings.map((e) => e as double).toList(),
       );
+      outputProcessTask.finish();
 
       // DEBUG: Print first few pixel values to verify they differ
-      _logger.printLog(
-        'First 12 bytes (3 pixels RGBA): ${[for (int i = 0; i < 12; i++) imageBytes[i]]}',
-      );
-      _logger.printLog('First 12 vector values: ${result.sublist(0, 12)}');
-      _logger.printLog(
-        'Image encoded successfully, embedding size: ${result.length}',
-      );
+      // TODO: remove this debug
+      // _logger.printLog('First 12 vector values: ${result.sublist(0, 12)}');
+      // _logger.printLog(
+      //   'Image encoded successfully, embedding size: ${result.length}',
+      // );
 
-      // Cleanup
-      await inputOrt.dispose();
+      // measure disposal time
+      final disposeTask = TimelineTask(parent: task)
+        ..start('Dispose OrtValues');
+
+      // cleanup
+      await inputImageOrt.dispose();
       for (final output in outputs.values) {
         await output.dispose();
       }
+      disposeTask.finish();
+
+      task.finish();
 
       return result;
     } catch (e) {
       _logger.printLog('Error encoding image: $e');
+      task.finish();
       rethrow;
     }
     // throw UnimplementedError();

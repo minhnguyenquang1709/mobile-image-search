@@ -49,6 +49,7 @@ class LoggerName {
   static const String indexingRepository = "IndexingRepository";
   static const String onnxDataSource = "OnnxDataSource";
   static const String inferenceWorker = "InferenceWorker";
+  static const String backgroundWorkerRepo = "BackgroundWorkerRepo";
 
   // presentation layer
   static const String galleryController = "GalleryController";
@@ -71,6 +72,7 @@ final Map<String, Logger> loggers = {
   LoggerName.indexingRepository: Logger(LoggerName.indexingRepository),
   LoggerName.onnxDataSource: Logger(LoggerName.onnxDataSource),
   LoggerName.inferenceWorker: Logger(LoggerName.inferenceWorker),
+  LoggerName.backgroundWorkerRepo: Logger(LoggerName.backgroundWorkerRepo),
 
   // Presentation layer
   LoggerName.galleryController: Logger(LoggerName.galleryController),
