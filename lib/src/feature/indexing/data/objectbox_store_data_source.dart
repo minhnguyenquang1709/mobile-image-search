@@ -2,8 +2,9 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/objectbox.g.dart';
+import 'package:mobile_image_search/src/constants/common_constant.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/image_objectbox_model.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
@@ -32,6 +33,10 @@ class ObjectBoxStoreDataSource {
     if (Admin.isAvailable()) {
       admin = Admin(store);
     }
+
+    // TODO: remove this debug database cleanup
+    final imageEmbeddingBox = store.box<ImageObjectBox>();
+    imageEmbeddingBox.removeAll();
   }
 
   Future<void> saveImageEmbedding(
@@ -45,6 +50,7 @@ class ObjectBoxStoreDataSource {
       embedding: embedding,
       createdAt: mediaAsset.createDateTime,
       modifiedAt: mediaAsset.modifiedDateTime,
+      mediaType: mediaAsset.mediaType == EMediaType.video ? 1 : 0,
     );
     await imageBox.putAsync(image);
   }

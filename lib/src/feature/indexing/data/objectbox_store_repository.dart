@@ -6,9 +6,8 @@ import 'package:mobile_image_search/src/constants/common_constant.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_data_source.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/image_objectbox_model.dart';
 import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/feature/indexing/domain/store_repository_interface.dart';
-import 'package:mobile_image_search/src/feature/search/domain/model/background_isolate_command.dart';
 
 class ObjectBoxStoreRepository implements IStoreRepository {
   final ObjectBoxStoreDataSource _dataSource;
@@ -60,7 +59,8 @@ class ObjectBoxStoreRepository implements IStoreRepository {
     }
   }
 
-  Future<Map<String, MediaAsset>> getAllIndexedMediaMetadata() async {
+  @override
+  Future<Map<String, MediaAsset>> getAllIndexedImageMetadata() async {
     final imageBox = _dataSource.store.box<ImageObjectBox>();
     final allIndexedImages = imageBox.getAll();
 
@@ -96,7 +96,7 @@ class ObjectBoxStoreRepository implements IStoreRepository {
     for (final result in results) {
       searchResults.add(
         SearchResultMatch(
-          assetId: result.object.assetId,
+          mediaAsset: result.object.toMediaAsset(),
           cosineScore: result.score,
         ),
       );

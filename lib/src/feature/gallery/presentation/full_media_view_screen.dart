@@ -8,7 +8,7 @@ import 'package:mobile_image_search/src/utils/media_processing.dart';
 import 'package:mobile_image_search/src/utils/string.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:video_player/video_player.dart';
 
 class MediaViewScreen extends StatefulWidget {
@@ -34,7 +34,7 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
             child: GestureDetector(
               child: isVideo
                   ? VideoPlayerWidget(media: widget.media)
-                  : ImageViewWidget(image: widget.media),
+                  : ImageViewWidget(mediaAsset: widget.media),
               onTap: () {
                 setState(() {
                   isFocused = !isFocused;
@@ -68,8 +68,8 @@ class _MediaViewScreenState extends State<MediaViewScreen> {
 }
 
 class ImageViewWidget extends StatefulWidget {
-  final MediaAsset image;
-  const ImageViewWidget({super.key, required this.image});
+  final MediaAsset mediaAsset;
+  const ImageViewWidget({super.key, required this.mediaAsset});
 
   @override
   State<StatefulWidget> createState() => _ImageViewWidgetState();
@@ -82,17 +82,17 @@ class _ImageViewWidgetState extends State<ImageViewWidget> {
   void initState() {
     super.initState();
 
-    _assetEntityFuture = AssetEntity.fromId(widget.image.assetId);
+    _assetEntityFuture = AssetEntity.fromId(widget.mediaAsset.assetId);
   }
 
   @override
   void didUpdateWidget(covariant ImageViewWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final oldMediaMetadata = oldWidget.image;
-    final newMediaMetadata = widget.image;
+    final oldMediaMetadata = oldWidget.mediaAsset;
+    final newMediaMetadata = widget.mediaAsset;
     if (!isSameMedia(oldMediaMetadata, newMediaMetadata)) {
-      _assetEntityFuture = AssetEntity.fromId(widget.image.assetId);
+      _assetEntityFuture = AssetEntity.fromId(widget.mediaAsset.assetId);
     }
   }
 
@@ -126,7 +126,7 @@ class _ImageViewWidgetState extends State<ImageViewWidget> {
 class VideoPlayerWidget extends StatefulWidget {
   final MediaAsset media;
 
-  VideoPlayerWidget({super.key, required this.media});
+  const VideoPlayerWidget({super.key, required this.media});
 
   @override
   State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();

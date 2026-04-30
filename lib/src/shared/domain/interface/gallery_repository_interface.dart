@@ -1,4 +1,5 @@
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 abstract class IGalleryRepository {
   /// permission to access gallery
@@ -17,11 +18,16 @@ abstract class IGalleryRepository {
   });
 
   // write operations
-  Future<bool> createAlbum(String albumName);
-  Future<bool> deleteAlbum(String albumId);
-  Future<bool> moveMediaToAlbum(List<String> assetIds, String targetAlbumId);
-  Future<bool> moveMediaToTrash(List<String> assetIds);
+  Future<bool> createAlbum(String albumName, List<MediaAsset> mediaAssets);
+  Future<bool> deleteAlbum(String albumId, {bool deleteMedia = false});
+  Future<bool> moveMediaToAlbum(
+    List<MediaAsset> mediaAssets,
+    String targetAlbumId,
+  );
+  Future<bool> moveMediaToTrash(List<MediaAsset> mediaAssets);
 
   /// Get metadata of all images and videos
   Future<List<MediaAsset>> getAllMetadata();
+
+  AssetEntity? getCachedEntity(String assetId);
 }

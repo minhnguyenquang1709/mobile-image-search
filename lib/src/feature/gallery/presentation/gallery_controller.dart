@@ -1,8 +1,9 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_image_search/src/constants/common_constant.dart';
 import 'package:mobile_image_search/src/feature/indexing/application/indexing_service.dart';
 import 'package:mobile_image_search/src/feature/gallery/application/gallery_service.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 /// Behave like ViewModel in MVVM
@@ -16,7 +17,71 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
   bool _isFetching = false; // prevent spam
   bool _hasReachedEnd = false; // end of gallery
 
-  final Map<String, MediaAsset> _cachedMediaItems = {};
+  // TODO: remove this debug
+  // to test creating album
+  final List<MediaAsset> _testMediaAssetsToMoveToAlbum = [
+    MediaAsset(
+      assetId: "1000058150",
+      title: "",
+      createDateTime: DateTime.now(),
+      modifiedDateTime: DateTime.now(),
+      mediaType: EMediaType.image,
+    ),
+    MediaAsset(
+      assetId: "1000058152",
+      title: "",
+      createDateTime: DateTime.now(),
+      modifiedDateTime: DateTime.now(),
+      mediaType: EMediaType.image,
+    ),
+    MediaAsset(
+      assetId: "1000058155",
+      title: "",
+      createDateTime: DateTime.now(),
+      modifiedDateTime: DateTime.now(),
+      mediaType: EMediaType.image,
+    ),
+  ];
+
+  final List<MediaAsset> _testMediaAssetsToThrowToTrash = [
+    MediaAsset(
+      assetId: "1000058148",
+      title: "",
+      createDateTime: DateTime.now(),
+      modifiedDateTime: DateTime.now(),
+      mediaType: EMediaType.image,
+    ),
+    MediaAsset(
+      assetId: "1000058149",
+      title: "",
+      createDateTime: DateTime.now(),
+      modifiedDateTime: DateTime.now(),
+      mediaType: EMediaType.image,
+    ),
+    MediaAsset(
+      assetId: "1000058150",
+      title: "",
+      createDateTime: DateTime.now(),
+      modifiedDateTime: DateTime.now(),
+      mediaType: EMediaType.image,
+    ),
+    MediaAsset(
+      assetId: "1000058152",
+      title: "",
+      createDateTime: DateTime.now(),
+      modifiedDateTime: DateTime.now(),
+      mediaType: EMediaType.image,
+    ),
+    MediaAsset(
+      assetId: "1000058155",
+      title: "",
+      createDateTime: DateTime.now(),
+      modifiedDateTime: DateTime.now(),
+      mediaType: EMediaType.image,
+    ),
+  ];
+
+  // final Map<String, MediaAsset> _cachedMediaItems = {};
 
   @override
   Future<List<MediaGroup>> build() async {
@@ -32,7 +97,6 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
       throw Exception('Gallery access permission denied');
     }
     final newImages = await _fetchPage(_currentPage);
-    final indexingService = await ref.read(indexingServiceProvider.future);
 
     return groupImagesByDate(newImages);
   }
@@ -45,7 +109,7 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
 
     // clear old state
     state = AsyncValue.data([]);
-    _cachedMediaItems.clear();
+    // _cachedMediaItems.clear();
 
     // refresh
     int refetchPages = _currentPage;
@@ -91,8 +155,6 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
       return MediaGroup(date: entry.key, mediaItems: entry.value);
     }).toList();
 
-    // groups.sort((a, b) => b.date.compareTo(a.date));
-
     return groups;
   }
 
@@ -105,9 +167,9 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
     );
 
     // cache
-    for (final media in newMediaItems) {
-      _cachedMediaItems[media.assetId] = media;
-    }
+    // for (final media in newMediaItems) {
+    //   _cachedMediaItems[media.assetId] = media;
+    // }
 
     return newMediaItems;
   }
@@ -156,7 +218,6 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
           state = AsyncValue.data([...currentGroups, ...newImageGroups]);
         }
       }
-    } catch (e, _) {
     } finally {
       _isFetching = false;
     }
@@ -177,6 +238,22 @@ class GalleryController extends AsyncNotifier<List<MediaGroup>> {
   Future<void> requestGalleryAccess() async {
     final galleryService = ref.read(galleryServiceProvider);
     await galleryService.requestGalleryAccess();
+  }
+
+  Future<void> createAlbum(String albumName) async {
+    final galleryService = ref.read(galleryServiceProvider);
+    await galleryService.createAlbum(albumName, _testMediaAssetsToMoveToAlbum);
+  }
+
+  Future<void> moveToTrash() async {
+    final galleryService = ref.read(galleryServiceProvider);
+    await galleryService.moveToTrash(_testMediaAssetsToThrowToTrash);
+  }
+
+  void moveMediaToAlbum() {
+    final galleryService = ref.read(galleryServiceProvider);
+    final String opId = galleryService.newOperationId;
+    galleryService.moveMediaToAlbum(opId: opId);
   }
 }
 

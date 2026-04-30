@@ -1,26 +1,21 @@
-import 'dart:io';
+import 'dart:collection';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/constants/common_constant.dart';
-// import 'package:mobile_image_search/core/constants/common.constant.dart';
 import 'package:mobile_image_search/src/utils/media_processing.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media_metadata.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class GalleryRepository implements IGalleryRepository {
   final GalleryDataSource _galleryDataSource;
 
-  static final Map<String, AssetEntity> _assetCache = {};
+  /// ordered in-memory cache
+  static final LinkedHashMap<String, AssetEntity> _assetEntityCache =
+      LinkedHashMap<String, AssetEntity>();
 
   GalleryRepository(this._galleryDataSource);
-
-  // bool _hasPermission = false;
-  // get hasPermission => _hasPermission;
-
-  bool isGallerySynced = false;
 
   /// Read gallery albums and cache them in memory and record the number of image files
   ///
@@ -30,15 +25,13 @@ class GalleryRepository implements IGalleryRepository {
     required int page,
     int limit = 50,
   }) async {
-    final List<AssetEntity> sourceImages = await _galleryDataSource.getImages(
-      page: page,
-      limit: limit,
-    );
+    final List<AssetEntity> assetEntities = await _galleryDataSource
+        .getImagesPaginationSupport(page: page, limit: limit);
 
     final List<MediaAsset> assets = [];
 
-    for (final asset in sourceImages) {
-      _assetCache[asset.id] = asset;
+    for (final AssetEntity asset in assetEntities) {
+      _addEntityToCache(asset);
       if (asset.type == AssetType.image || asset.type == AssetType.video) {
         final MediaAsset media = fillMetadataFromAsset(asset);
         assets.add(media);
@@ -46,49 +39,20 @@ class GalleryRepository implements IGalleryRepository {
     }
 
     return assets;
+  }
 
-    // return sourceImages.map((asset) {
-    //   if (asset.type != AssetType.image && asset.type != AssetType.video) {}
-    //   final IImageMetadata metadata = IImageMetadata(
-    //     name: asset.title!,
-    //     createDateTime: asset.createDateTime,
-    //     modifiedDateTime: asset.modifiedDateTime,
-    //   );
-    //   return Image(assetEntity: asset, metadata: metadata);
-    // }).toList();
+  /// Helper method to add asset entity to cache with LRU eviction
+  void _addEntityToCache(AssetEntity asset) {
+    if (_assetEntityCache.length > 3000) {
+      _assetEntityCache.remove(_assetEntityCache.keys.first);
+    }
+
+    _assetEntityCache[asset.id] = asset;
   }
 
   @override
   Future<bool> requestGalleryAccess() async {
     return await _galleryDataSource.requestGalleryAccess();
-  }
-
-  @override
-  Future<bool> deleteImage(String imageId) async {
-    try {
-      final result = await _galleryDataSource.deleteImages([imageId]);
-      if (result) {
-      } else {}
-      return result;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  @override
-  Future<File> getImageFile(String assetId) async {
-    final file = await _galleryDataSource.getImageFile(assetId);
-
-    if (file == null) {
-      throw FileSystemException('File not found for assetId $assetId');
-    }
-
-    return file;
-  }
-
-  @override
-  Future<MediaAsset> getImageMetadata(String assetId) {
-    return _galleryDataSource.getImageMetadata(assetId);
   }
 
   @override
@@ -102,9 +66,8 @@ class GalleryRepository implements IGalleryRepository {
   }
 
   @override
-  Future<bool> moveMediaToTrash(List<String> assetIds) {
-    // TODO: implement moveMediaToTrash
-    throw UnimplementedError();
+  Future<bool> moveMediaToTrash(List<MediaAsset> mediaAssets) {
+    return _galleryDataSource.moveMediaToTrash(mediaAssets);
   }
 
   @override
@@ -130,27 +93,44 @@ class GalleryRepository implements IGalleryRepository {
   }
 
   @override
-  Future<bool> createAlbum(String albumName) async {
-    return await _galleryDataSource.createAlbum(albumName);
+  Future<bool> createAlbum(
+    String albumName,
+    List<MediaAsset> mediaAssets,
+  ) async {
+    return await _galleryDataSource.createAlbum(albumName, mediaAssets);
   }
 
+  /// Move multiple images or videos to a specific album
   @override
   Future<bool> moveMediaToAlbum(
-    List<String> assetIds,
+    List<MediaAsset> mediaAssets,
     String targetAlbumId,
   ) async {
+    try {
+      bool isSuccess = false;
+
+      isSuccess = await _galleryDataSource.moveMediaToAlbum(
+        mediaAssets: mediaAssets,
+        targetAlbumId: targetAlbumId,
+      );
+
+      return isSuccess;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> deleteAlbum(String albumId, {bool deleteMedia = false}) async {
     // TODO: implement deleteAlbum
     throw UnimplementedError();
   }
 
   @override
-  Future<bool> deleteAlbum(String albumId) async {
-    // TODO: implement deleteAlbum
-    throw UnimplementedError();
+  AssetEntity? getCachedEntity(String assetId) {
+    return _assetEntityCache[assetId];
   }
 }
-
-final galleryRepository = GalleryRepository(GalleryDataSource());
 
 final galleryRepositoryProvider = Provider((ref) {
   final dataSource = ref.watch(galleryDataSourceProvider);

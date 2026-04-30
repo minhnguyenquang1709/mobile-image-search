@@ -114,7 +114,7 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedAssetIds = ref.watch(selectionControllerProvider);
+    final selectedAssetIds = ref.watch(homeScreenSelectionControllerProvider);
     return Scaffold(
       appBar: (navigationShell.currentIndex == 0 && selectedAssetIds.isNotEmpty)
           ? AppBar(
@@ -130,7 +130,7 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
                     // ),
                     onPressed: () {
                       ref
-                          .read(selectionControllerProvider.notifier)
+                          .read(homeScreenSelectionControllerProvider.notifier)
                           .clearSelection();
                     },
                   ),

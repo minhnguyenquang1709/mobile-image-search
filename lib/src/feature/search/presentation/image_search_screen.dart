@@ -54,7 +54,7 @@ class _ImageSearchScreenState extends ConsumerState<ImageSearchScreen> {
                     child: TextField(
                       showCursor: true,
                       autocorrect: false,
-                      autofocus: true,
+                      autofocus: false,
                       onChanged: (value) {
                         setState(() {
                           _searchQuery = value;
@@ -177,7 +177,7 @@ class SearchResultThumbnailWidget extends StatelessWidget {
     return Stack(
       children: [
         // Image
-        ThumbnailWidget(assetId: resultItem.assetId),
+        ThumbnailWidget(mediaAsset: resultItem.mediaAsset),
 
         // Similarity score badge
         Positioned(

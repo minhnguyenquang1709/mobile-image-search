@@ -52,7 +52,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(4, 5043420744528449525),
     name: 'ImageObjectBox',
-    lastPropertyId: const obx_int.IdUid(7, 8584243545755849456),
+    lastPropertyId: const obx_int.IdUid(9, 2842926343622553362),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -98,6 +98,18 @@ final _entities = <obx_int.ModelEntity>[
         id: const obx_int.IdUid(7, 8584243545755849456),
         name: 'title',
         type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 678764103683112610),
+        name: 'mediaType',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 2842926343622553362),
+        name: 'duration',
+        type: 6,
         flags: 0,
       ),
     ],
@@ -227,7 +239,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final assetIdOffset = fbb.writeString(object.assetId);
         final embeddingOffset = fbb.writeListFloat32(object.embedding);
         final titleOffset = fbb.writeString(object.title);
-        fbb.startTable(8);
+        fbb.startTable(10);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, assetIdOffset);
         fbb.addOffset(2, embeddingOffset);
@@ -235,6 +247,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
         fbb.addInt64(4, object.createdAt.millisecondsSinceEpoch);
         fbb.addInt64(5, object.modifiedAt.millisecondsSinceEpoch);
         fbb.addOffset(6, titleOffset);
+        fbb.addInt64(7, object.mediaType);
+        fbb.addInt64(8, object.duration);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -247,6 +261,18 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final titleParam = const fb.StringReader(
           asciiOptimization: true,
         ).vTableGet(buffer, rootOffset, 16, '');
+        final mediaTypeParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          18,
+          0,
+        );
+        final durationParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          20,
+          0,
+        );
         final embeddingParam = const fb.ListReader<double>(
           fb.Float32Reader(),
           lazy: false,
@@ -261,6 +287,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
             ImageObjectBox(
                 assetId: assetIdParam,
                 title: titleParam,
+                mediaType: mediaTypeParam,
+                duration: durationParam,
                 embedding: embeddingParam,
                 createdAt: createdAtParam,
                 modifiedAt: modifiedAtParam,
@@ -331,5 +359,15 @@ class ImageObjectBox_ {
   /// See [ImageObjectBox.title].
   static final title = obx.QueryStringProperty<ImageObjectBox>(
     _entities[1].properties[6],
+  );
+
+  /// See [ImageObjectBox.mediaType].
+  static final mediaType = obx.QueryIntegerProperty<ImageObjectBox>(
+    _entities[1].properties[7],
+  );
+
+  /// See [ImageObjectBox.duration].
+  static final duration = obx.QueryIntegerProperty<ImageObjectBox>(
+    _entities[1].properties[8],
   );
 }

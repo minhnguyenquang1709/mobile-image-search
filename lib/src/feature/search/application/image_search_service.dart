@@ -7,11 +7,11 @@ import 'package:mobile_image_search/src/feature/search/domain/model/search_resul
 import 'package:mobile_image_search/src/shared/data/repository/background_worker_repository.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/background_worker_interface.dart';
 
-class ImageSearchService {
+class SearchService {
   final IStoreRepository _storeRepo;
   final IBackgroundWorkerRepository _workerRepo;
 
-  ImageSearchService({
+  SearchService({
     required IStoreRepository storeRepository,
     required IBackgroundWorkerRepository workerRepository,
   }) : _storeRepo = storeRepository,
@@ -30,7 +30,7 @@ final imageSearchServiceProvider = FutureProvider((ref) async {
   final storeRepository = await ref.watch(objectBoxStoreRepoProvider.future);
   final workerRepository = await ref.watch(backgroundWorkerRepoProvider.future);
 
-  return ImageSearchService(
+  return SearchService(
     storeRepository: storeRepository,
     workerRepository: workerRepository,
   );

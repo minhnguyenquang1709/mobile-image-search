@@ -4,10 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/src/common_widgets/settings_screen.dart';
 import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/common_widgets/nested_navigation_widget.dart';
+import 'package:mobile_image_search/src/feature/gallery/presentation/album_screen.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/home_screen.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/full_media_view_screen.dart';
 import 'package:mobile_image_search/src/feature/search/presentation/image_search_screen.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 // GlobalKey: unique identifier, provide access to `BuildContext`, `State`, `Widget`
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -26,7 +27,6 @@ final topLevelNavigationRouter = GoRouter(
             StatefulNavigationShell navigationShell,
           ) {
             // the UI shell that holds the navigation branches (tabs) and the content of the current branch
-            // return ScaffoldWithNestedNavigation(navigationShell: navigationShell);
             return ScaffoldWithNestedNavigation(
               navigationShell: navigationShell,
             );
@@ -36,7 +36,7 @@ final topLevelNavigationRouter = GoRouter(
         StatefulShellBranch(
           navigatorKey: _shellNavigatorHomeKey,
           routes: [
-            // the GoRoutes at this level will be rendered inside ScaffoldWithNestedNavigation
+            // the GoRoutes at this level will be rendered inside [navigationShell]
             // root screen
             GoRoute(
               path: RouteConstants.home,
@@ -51,6 +51,13 @@ final topLevelNavigationRouter = GoRouter(
               //     },
               //   ),
               // ],
+            ),
+            // album screen
+            GoRoute(
+              path: RouteConstants.albums,
+              builder: (context, state) {
+                return AlbumScreen();
+              },
             ),
           ],
         ),
@@ -74,7 +81,7 @@ final topLevelNavigationRouter = GoRouter(
       path: RouteConstants.mediaViewer,
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
-        final image = extra?['image'] as MediaAsset;
+        final image = extra?['media'] as MediaAsset;
         return MediaViewScreen(media: image);
       },
     ),

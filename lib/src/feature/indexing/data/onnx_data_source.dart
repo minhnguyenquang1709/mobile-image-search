@@ -1,12 +1,14 @@
 import 'dart:developer';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:mobile_image_search/src/constants/config_constant.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
+import 'package:mobile_image_search/src/utils/debug.dart';
 import 'package:mobile_image_search/src/utils/logger.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:mobile_image_search/src/utils/bpe_tokenizer.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 /// OnnxRuntime: Main entry point for creating sessions and configuring global options
@@ -31,6 +33,26 @@ class OnnxDataSource {
   final List<double> std = Model.specs.std;
 
   final _logger = loggers[LoggerName.onnxDataSource]!;
+
+  // performance tracking
+  int _totalImagesProcessed = 0;
+  int _totalProcessingTimeMs = 0;
+  Directory? _performanceLogDirectory;
+
+  /// Helper method to save in-processing images to device cache
+  Future<void> _saveDebugImage(
+    img.Image image,
+    String title,
+    String stepName,
+  ) async {
+    if (!Platform.isAndroid) return;
+
+    final directory = await getExternalStorageDirectory();
+    if (directory == null) return;
+
+    final filePath = '${directory.path}/$title-$stepName.jpg';
+    File(filePath).writeAsBytesSync(img.encodeJpg(image, quality: 100));
+  }
 
   /// load the models
   Future<void> init({
@@ -216,7 +238,12 @@ class OnnxDataSource {
   ///
   /// create tensor
   Future<Float32List> encodeImage(MediaAsset mediaAsset) async {
-    final task = TimelineTask()..start('Encode Image Pipeline');
+    final TimelineTask task = TimelineTask();
+    final Stopwatch stopwatch = Stopwatch();
+    if (isDebugOrProfileMode) {
+      task.start('Encode Image Pipeline');
+      stopwatch.start();
+    }
 
     if (imageEncoder == null) {
       throw Exception('Image encoder model is not initialized');
@@ -242,18 +269,26 @@ class OnnxDataSource {
 
       // FAST
       const ThumbnailOption thumbnailOption = ThumbnailOption(
-        size: ThumbnailSize(500, 500),
+        size: ThumbnailSize(
+          500,
+          500,
+        ), // return thumbnail with max width or height of 500px
       );
 
       // measure platform channel
-      final fetchTask = TimelineTask(parent: task)
-        ..start('Fetch Thumbnail from Platform Channel');
+      final fetchTask = TimelineTask(parent: task);
+
+      if (isDebugOrProfileMode) {
+        fetchTask.start('Fetch Thumbnail from Platform Channel');
+      }
 
       // platform channel call goes through Flutter Platform Thread (OS main thread)
       Uint8List? thumbnailBytes = await assetEntity.thumbnailDataWithOption(
         thumbnailOption,
       );
-      fetchTask.finish();
+      if (isDebugOrProfileMode) {
+        fetchTask.finish();
+      }
 
       if (thumbnailBytes == null) {
         throw Exception(
@@ -273,39 +308,42 @@ class OnnxDataSource {
 
       // final Uint8List imageBytes = await imageFile.readAsBytes();
 
-      // FAST (a bit slower but no UI jank, negligible difference)
       // measure dart image decoding (CPU)
-      final decodeTask = TimelineTask(parent: task)..start('Decode Image');
+      final decodeTask = TimelineTask(parent: task);
+      if (isDebugOrProfileMode) {
+        decodeTask.start('Decode Image');
+      }
 
       // decode
-      final img.Image? decodedImage = img.decodeJpg(thumbnailBytes);
-      decodeTask.finish();
+      final img.Image? decodedImage = img.decodeImage(thumbnailBytes);
+      if (isDebugOrProfileMode) {
+        decodeTask.finish();
+      }
 
       if (decodedImage == null) {
         throw Exception(
           'Failed to decode image for assetId: ${mediaAsset.assetId}',
         );
       }
-      // END FAST
 
       // measure image resizing (CPU)
-      final resizeTask = TimelineTask(parent: task)..start('Resize Image');
+      final resizeTask = TimelineTask(parent: task);
+      if (isDebugOrProfileMode) {
+        resizeTask.start('Resize Image');
+      }
 
       // resize
       final int targetSize = Model.specs.imageSize;
       // get shorter image side
       final bool isWidthShorter = decodedImage.width < decodedImage.height;
 
-      // FAST (a bit slower but also no UI jank, negligible difference)
-      final resizedImage = img.copyResize(
+      final img.Image resizedImage = img.copyResize(
         decodedImage,
         width: isWidthShorter ? targetSize : null,
         height: isWidthShorter ? null : targetSize,
         interpolation: img.Interpolation.average,
       );
-      // END FAST
 
-      // FAST
       // center crop
       final int xOffset = (resizedImage.width - targetSize) ~/ 2; // center crop
       final int yOffset =
@@ -317,13 +355,15 @@ class OnnxDataSource {
         width: targetSize,
         height: targetSize,
       );
-      // END FAST
-      resizeTask.finish();
+      if (isDebugOrProfileMode) {
+        resizeTask.finish();
+      }
 
-      // FAST
       // measure image normalization and CHW conversion (CPU)
-      final normalizeTask = TimelineTask(parent: task)
-        ..start('Normalize and Convert Image Data to CHW');
+      final normalizeTask = TimelineTask(parent: task);
+      if (isDebugOrProfileMode) {
+        normalizeTask.start('Normalize and Convert Image Data to CHW');
+      }
 
       // convert to CHW (channels, height, width) and normalize
       final Float32List imageInputData = Float32List(
@@ -335,7 +375,10 @@ class OnnxDataSource {
       for (int c = 0; c < 3; c++) {
         for (int h = 0; h < croppedImage.height; h++) {
           for (int w = 0; w < croppedImage.width; w++) {
-            final pixel = croppedImage.getPixel(w, h);
+            final pixel = croppedImage.getPixel(
+              w,
+              h,
+            ); // need another method, getPixel returns a new Pixel object, expensive
             final int pixelValue;
             switch (c) {
               case 0:
@@ -357,13 +400,16 @@ class OnnxDataSource {
           }
         }
       }
-      normalizeTask.finish();
-      // END FAST
+      if (isDebugOrProfileMode) {
+        normalizeTask.finish();
+      }
 
-      // BLOCKING UI
+      // BLOCKING UI (flutter_onnxruntime version < 1.7.0 does not have taskQueue in native code)
       // measure ONNX runtime inference time
-      final onnxTask = TimelineTask(parent: task)
-        ..start('ONNX Runtime Inference for Image');
+      final onnxTask = TimelineTask(parent: task);
+      if (isDebugOrProfileMode) {
+        onnxTask.start('ONNX Runtime Inference for Image');
+      }
 
       // create tensor
       final OrtValue inputImageOrt = await OrtValue.fromList(imageInputData, [
@@ -376,12 +422,16 @@ class OnnxDataSource {
       // run inference
       final inputs = {'image': inputImageOrt};
       final outputs = await imageEncoder!.run(inputs);
-      onnxTask.finish();
+      if (isDebugOrProfileMode) {
+        onnxTask.finish();
+      }
       // END BLOCKING UI
 
       // measure output processing
-      final outputProcessTask = TimelineTask(parent: task)
-        ..start('Process ONNX Output');
+      final outputProcessTask = TimelineTask(parent: task);
+      if (isDebugOrProfileMode) {
+        outputProcessTask.start('Process ONNX Output');
+      }
 
       // Get output embedding - output name is 'image_output'
       final outputOrt = outputs['image_output']!;
@@ -391,27 +441,81 @@ class OnnxDataSource {
       final result = Float32List.fromList(
         embeddings.map((e) => e as double).toList(),
       );
-      outputProcessTask.finish();
-
-      // DEBUG: Print first few pixel values to verify they differ
-      // TODO: remove this debug
-      // _logger.printLog('First 12 vector values: ${result.sublist(0, 12)}');
-      // _logger.printLog(
-      //   'Image encoded successfully, embedding size: ${result.length}',
-      // );
+      if (isDebugOrProfileMode) {
+        outputProcessTask.finish();
+      }
 
       // measure disposal time
-      final disposeTask = TimelineTask(parent: task)
-        ..start('Dispose OrtValues');
+      final disposeTask = TimelineTask(parent: task);
+      if (isDebugOrProfileMode) {
+        disposeTask.start('Dispose OrtValues');
+      }
 
       // cleanup
       await inputImageOrt.dispose();
       for (final output in outputs.values) {
         await output.dispose();
       }
-      disposeTask.finish();
+      if (isDebugOrProfileMode) {
+        disposeTask.finish();
+        task.finish();
+      }
 
-      task.finish();
+      // performance logging
+      if (isDebugOrProfileMode) {
+        _performanceLogDirectory ??= await getExternalStorageDirectory();
+
+        if (_performanceLogDirectory != null) {
+          final logFile = File(
+            '${_performanceLogDirectory!.path}/indexing_performance_log.csv',
+          );
+
+          final elapsedMs = stopwatch.elapsedMilliseconds;
+          _totalImagesProcessed++;
+          _totalProcessingTimeMs += elapsedMs;
+          final avgMs = (_totalProcessingTimeMs / _totalImagesProcessed)
+              .round();
+          final imageResolution = '${assetEntity.width}x${assetEntity.height}';
+
+          if (!logFile.existsSync()) {
+            logFile.writeAsStringSync('Title,Resolution,Time (s),Avg (s)\n');
+          }
+          logFile.writeAsStringSync(
+            '${mediaAsset.title},$imageResolution,${elapsedMs / 1000},${avgMs / 1000}\n',
+            mode: FileMode.append,
+          );
+        }
+      }
+
+      // save debug step images for inspection
+      if (isDebugOrProfileMode) {
+        // original image
+        final File? originImage = await assetEntity.originFile;
+        if (originImage != null) {
+          await _saveDebugImage(
+            img.decodeImage(originImage.readAsBytesSync())!,
+            mediaAsset.title,
+            '00_original_image',
+          );
+        }
+
+        // DEBUG: thumbnail
+        await _saveDebugImage(decodedImage, mediaAsset.title, '01_thumbnail');
+
+        // DEBUG: resized image
+        await _saveDebugImage(
+          resizedImage,
+          mediaAsset.title,
+          '02_resized_image',
+        );
+
+        // DEBUG: cropped image
+        await _saveDebugImage(
+          croppedImage,
+          mediaAsset.title,
+          '03_cropped_image',
+        );
+      }
 
       return result;
     } catch (e) {
@@ -419,7 +523,6 @@ class OnnxDataSource {
       task.finish();
       rethrow;
     }
-    // throw UnimplementedError();
   }
 
   Future<void> dispose() async {

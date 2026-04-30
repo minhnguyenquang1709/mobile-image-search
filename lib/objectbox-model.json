@@ -31,7 +31,7 @@
     },
     {
       "id": "4:5043420744528449525",
-      "lastPropertyId": "7:8584243545755849456",
+      "lastPropertyId": "9:2842926343622553362",
       "name": "ImageObjectBox",
       "properties": [
         {
@@ -73,6 +73,16 @@
           "id": "7:8584243545755849456",
           "name": "title",
           "type": 9
+        },
+        {
+          "id": "8:678764103683112610",
+          "name": "mediaType",
+          "type": 6
+        },
+        {
+          "id": "9:2842926343622553362",
+          "name": "duration",
+          "type": 6
         }
       ],
       "relations": []

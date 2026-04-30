@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/constants/common_constant.dart';
 import 'package:mobile_image_search/src/constants/config_constant.dart';
 import 'package:mobile_image_search/src/constants/method_param_constant.dart';
+import 'package:mobile_image_search/src/core/platform_image_method_channel.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/image_objectbox_model.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_data_source.dart';
@@ -17,7 +18,7 @@ import 'package:mobile_image_search/src/feature/indexing/data/onnx_data_source.d
 import 'package:mobile_image_search/src/feature/search/domain/model/background_isolate_command.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/background_worker_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/indexing_progress.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/utils/logger.dart';
 import 'package:mobile_image_search/src/utils/media_processing.dart';
 import 'package:path_provider/path_provider.dart';
@@ -50,6 +51,7 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
     isIndexing: false,
   );
 
+  @override
   IndexingProgress get currentIndexingProgress => _currentIndexingProgress;
 
   static final Logger _logger = loggers[LoggerName.backgroundWorkerRepo]!;
@@ -70,113 +72,17 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
     // prepare model file paths
     // extract model to file system to allow bg isolate to load
     final directory = await getApplicationSupportDirectory();
-
-    final spawnArgs = <String, dynamic>{};
-    spawnArgs[MethodParams.mainIsolateConfig] = workerSetupConfig;
-    // spawnArgs[MethodParams.bpeMergesExtractedPath] = bpeMergesFilePath;
-    // spawnArgs[MethodParams.bpeVocabExtractedPath] = bpeVocabFilePath;
-    // spawnArgs[MethodParams.imageEncoderExtractedPath] = imageEncoderFilePath;
-    // spawnArgs[MethodParams.textEncoderExtractedPath] = textEncoderFilePath;
-    spawnArgs[MethodParams.applicationSupportDirPath] = directory.path;
-
-    final isolateReadyCompleter = Completer<void>();
-    _backgroundIsolate = await Isolate.spawn(_initBackgroundIsolate, spawnArgs);
-
-    // setup message listener
-    _mainReceivePort!.listen((message) {
-      if (message is SendPort) {
-        _workerSendPort = message;
-        if (!isolateReadyCompleter.isCompleted) {
-          isolateReadyCompleter.complete();
-        }
-      }
-
-      // handle text encoding result
-      if (message is TextEncodingResult) {}
-
-      // handle update indexing progress
-      if (message is IndexingProgress) {
-        _currentIndexingProgress = message;
-        _messageController.add(message);
-      }
-    });
-
-    await isolateReadyCompleter.future;
-    _logger.printLog("Background worker isolate initialized");
-  }
-
-  @override
-  void dispose() {
-    _backgroundIsolate?.kill(priority: Isolate.immediate);
-    _backgroundIsolate = null;
-    _mainReceivePort?.close();
-    _mainReceivePort = null;
-    _workerSendPort = null;
-    _messageController.close();
-  }
-
-  @override
-  Future<Float32List> encodeImage(Uint8List imageBytes) {
-    // TODO: implement encodeImage
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Float32List> encodeText(String text) async {
-    final id = _getNextTaskId();
-    final completer = Completer<TextEncodingResult>();
-
-    _pendingIndexingTasks[id] = completer;
-
-    _workerSendPort?.send(TextEncodingCommand(taskId: id, query: text));
-
-    // wait for isolate to respond
-    final result = await completer.future;
-    return result.embedding;
-  }
-
-  /// Send command to background isolate to start the sync process
-  @override
-  Future<void> syncGallery() async {
-    // create task
-    _workerSendPort?.send(ScanGalleryCommand());
-  }
-
-  static Future<void> _initBackgroundIsolate(
-    Map<String, dynamic> params,
-  ) async {
-    // extract params
-    final WorkerSetupConfig workerConfig =
-        params[MethodParams.mainIsolateConfig] as WorkerSetupConfig;
-    // final String textEncoderExtractedPath =
-    //     params[MethodParams.textEncoderExtractedPath] as String;
-    // final String imageEncoderExtractedPath =
-    //     params[MethodParams.imageEncoderExtractedPath] as String;
-    // final String bpeVocabExtractedPath =
-    //     params[MethodParams.bpeVocabExtractedPath] as String;
-    // final String bpeMergesExtractedPath =
-    //     params[MethodParams.bpeMergesExtractedPath] as String;
-    final String applicationSupportDirPath =
-        params[MethodParams.applicationSupportDirPath] as String;
-
-    // register isolate to allow using plugins
-    BackgroundIsolateBinaryMessenger.ensureInitialized(
-      workerConfig.rootIsolateToken,
-    );
-
-    // set up communication channel
-    final workerReceivePort = ReceivePort();
-    workerConfig.mainSendPort.send(workerReceivePort.sendPort);
+    final applicationSupportDirPath = directory.path;
 
     // copy model files from assets to file system and initialize data sources
     final textEncoderFilePath =
-        '${applicationSupportDirPath}${Platform.pathSeparator}${Model.textEncoderAssetPath}';
+        '$applicationSupportDirPath${Platform.pathSeparator}${Model.textEncoderAssetPath}';
     final imageEncoderFilePath =
-        '${applicationSupportDirPath}${Platform.pathSeparator}${Model.imageEncoderAssetPath}';
+        '$applicationSupportDirPath${Platform.pathSeparator}${Model.imageEncoderAssetPath}';
     final bpeVocabFilePath =
-        '${applicationSupportDirPath}${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}vocab.json';
+        '$applicationSupportDirPath${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}vocab.json';
     final bpeMergesFilePath =
-        '${applicationSupportDirPath}${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}merges.txt';
+        '$applicationSupportDirPath${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}merges.txt';
 
     // check if files exit
     final textEncoderFile = File(textEncoderFilePath);
@@ -237,6 +143,158 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
       );
     }
 
+    final spawnArgs = <String, dynamic>{};
+    spawnArgs[MethodParams.mainIsolateConfig] = workerSetupConfig;
+    // spawnArgs[MethodParams.bpeMergesExtractedPath] = bpeMergesFilePath;
+    // spawnArgs[MethodParams.bpeVocabExtractedPath] = bpeVocabFilePath;
+    // spawnArgs[MethodParams.imageEncoderExtractedPath] = imageEncoderFilePath;
+    // spawnArgs[MethodParams.textEncoderExtractedPath] = textEncoderFilePath;
+    spawnArgs[MethodParams.applicationSupportDirPath] = directory.path;
+
+    final isolateReadyCompleter = Completer<void>();
+    _backgroundIsolate = await Isolate.spawn(_initBackgroundIsolate, spawnArgs);
+
+    // setup message listener
+    _mainReceivePort!.listen((message) {
+      if (message is SendPort) {
+        _workerSendPort = message;
+        if (!isolateReadyCompleter.isCompleted) {
+          isolateReadyCompleter.complete();
+        }
+      }
+
+      // handle text encoding result
+      if (message is TextEncodingResult) {
+        final completer = _pendingIndexingTasks.remove(message.taskId);
+        if (completer != null) {
+          if (message.errorMessage != null) {
+            completer.complete(
+              TextEncodingResult.failure(message.taskId, message.errorMessage!),
+            );
+          } else {
+            completer.complete(
+              TextEncodingResult.success(message.taskId, message.embedding),
+            );
+          }
+        }
+      }
+
+      // handle image encoding result
+      if (message is ImageEncodingResult) {
+        final completer = _pendingIndexingTasks.remove(message.taskId);
+        if (completer != null) {
+          if (message.errorMessage != null) {
+            completer.complete(
+              ImageEncodingResult.failure(
+                message.taskId,
+                message.assetId,
+                message.errorMessage!,
+              ),
+            );
+          } else {
+            completer.complete(
+              ImageEncodingResult.success(
+                message.taskId,
+                message.assetId,
+                message.embedding,
+              ),
+            );
+          }
+        }
+      }
+
+      // handle update indexing progress
+      if (message is IndexingProgress) {
+        _currentIndexingProgress = message;
+        _messageController.add(message);
+      }
+    });
+
+    await isolateReadyCompleter.future;
+    _logger.printLog("Background worker isolate initialized");
+  }
+
+  @override
+  void dispose() {
+    _backgroundIsolate?.kill(priority: Isolate.immediate);
+    _backgroundIsolate = null;
+    _mainReceivePort?.close();
+    _mainReceivePort = null;
+    _workerSendPort = null;
+    _messageController.close();
+  }
+
+  @override
+  Future<Float32List> encodeImage(Uint8List imageBytes) async {
+    final id = _getNextTaskId();
+    final completer = Completer<ImageEncodingResult>();
+
+    _pendingIndexingTasks[id] = completer;
+
+    _workerSendPort?.send(ImageEncodingCommand(taskId: id, assetId: id));
+
+    // wait for isolate to respond
+    final result = await completer.future;
+    return result.embedding;
+  }
+
+  @override
+  Future<Float32List> encodeText(String text) async {
+    final id = _getNextTaskId();
+    final completer = Completer<TextEncodingResult>();
+
+    _pendingIndexingTasks[id] = completer;
+
+    _workerSendPort?.send(TextEncodingCommand(taskId: id, query: text));
+
+    // yield execution until isolate responds
+    final result = await completer.future;
+    return result.embedding;
+  }
+
+  /// Send command to background isolate to start the sync process
+  @override
+  Future<void> syncGallery() async {
+    // create task
+    _workerSendPort?.send(ScanGalleryCommand());
+  }
+
+  static Future<void> _initBackgroundIsolate(
+    Map<String, dynamic> params,
+  ) async {
+    // extract params
+    final WorkerSetupConfig workerConfig =
+        params[MethodParams.mainIsolateConfig] as WorkerSetupConfig;
+    // final String textEncoderExtractedPath =
+    //     params[MethodParams.textEncoderExtractedPath] as String;
+    // final String imageEncoderExtractedPath =
+    //     params[MethodParams.imageEncoderExtractedPath] as String;
+    // final String bpeVocabExtractedPath =
+    //     params[MethodParams.bpeVocabExtractedPath] as String;
+    // final String bpeMergesExtractedPath =
+    //     params[MethodParams.bpeMergesExtractedPath] as String;
+    final String applicationSupportDirPath =
+        params[MethodParams.applicationSupportDirPath] as String;
+
+    // register isolate to allow using plugins
+    BackgroundIsolateBinaryMessenger.ensureInitialized(
+      workerConfig.rootIsolateToken,
+    );
+
+    // set up communication channel
+    final workerReceivePort = ReceivePort();
+    workerConfig.mainSendPort.send(workerReceivePort.sendPort);
+
+    // copy model files from assets to file system and initialize data sources
+    final textEncoderFilePath =
+        '$applicationSupportDirPath${Platform.pathSeparator}${Model.textEncoderAssetPath}';
+    final imageEncoderFilePath =
+        '$applicationSupportDirPath${Platform.pathSeparator}${Model.imageEncoderAssetPath}';
+    final bpeVocabFilePath =
+        '$applicationSupportDirPath${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}vocab.json';
+    final bpeMergesFilePath =
+        '$applicationSupportDirPath${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}merges.txt';
+
     // init models
     OnnxDataSource onnxDataSource = OnnxDataSource();
     await onnxDataSource.init(
@@ -252,13 +310,16 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
     await objectBoxStoreDataSource.init();
 
     // init gallery data source
-    GalleryDataSource galleryDataSource = GalleryDataSource();
+    MediaPlatformChannel mediaPlatformChannel = MediaPlatformChannel();
+    GalleryDataSource galleryDataSource = GalleryDataSource(
+      mediaPlatformChannel,
+    );
 
     Queue<MediaAsset> pendingIndexingAssetQueue = Queue();
 
     bool isIndexingQueueProcessing = false;
 
-    IndexingProgress _currentIndexingProgress = IndexingProgress(
+    IndexingProgress currentIndexingProgress = IndexingProgress(
       total: 0,
       processed: 0,
       isIndexing: false,
@@ -271,12 +332,12 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
 
       isIndexingQueueProcessing = true;
 
-      _currentIndexingProgress = IndexingProgress(
-        total: _currentIndexingProgress.total,
-        processed: _currentIndexingProgress.processed,
+      currentIndexingProgress = IndexingProgress(
+        total: currentIndexingProgress.total,
+        processed: currentIndexingProgress.processed,
         isIndexing: false,
       );
-      workerConfig.mainSendPort.send(_currentIndexingProgress);
+      workerConfig.mainSendPort.send(currentIndexingProgress);
       while (pendingIndexingAssetQueue.isNotEmpty) {
         final mediaAsset = pendingIndexingAssetQueue.removeFirst();
 
@@ -302,24 +363,26 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
         }
 
         // update progress
-        _currentIndexingProgress = IndexingProgress(
-          total: _currentIndexingProgress.total,
-          processed: _currentIndexingProgress.processed + 1,
+        currentIndexingProgress = IndexingProgress(
+          total: currentIndexingProgress.total,
+          processed: currentIndexingProgress.processed + 1,
           isIndexing: true,
         );
-        workerConfig.mainSendPort.send(_currentIndexingProgress);
+        workerConfig.mainSendPort.send(currentIndexingProgress);
 
-        _logger.printLog("Finished indexing image ${mediaAsset.title}");
+        _logger.printLog(
+          "Finished indexing image ${mediaAsset.title}, id: ${mediaAsset.assetId}",
+        );
       }
 
       isIndexingQueueProcessing = false;
 
-      _currentIndexingProgress = IndexingProgress(
-        total: _currentIndexingProgress.total,
-        processed: _currentIndexingProgress.processed,
+      currentIndexingProgress = IndexingProgress(
+        total: currentIndexingProgress.total,
+        processed: currentIndexingProgress.processed,
         isIndexing: false,
       );
-      workerConfig.mainSendPort.send(_currentIndexingProgress);
+      workerConfig.mainSendPort.send(currentIndexingProgress);
     }
 
     // listen for messages from main isolate
@@ -343,6 +406,7 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
 
       // if message is gallery sync request
       if (message is ScanGalleryCommand) {
+        _logger.printLog("Start gallery sync process in background isolate");
         final List<MediaAsset> pendingIndexingAssetList = [];
         final List<String> pendingDeleteAssetIdList = [];
 
@@ -393,7 +457,7 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
         pendingDeleteAssetIdList.addAll(indexedImagesMap.keys);
 
         // start processing queue
-        _currentIndexingProgress = IndexingProgress(
+        currentIndexingProgress = IndexingProgress(
           total: pendingIndexingAssetQueue.length,
           processed: 0,
           isIndexing: true,

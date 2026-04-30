@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/feature/gallery/application/gallery_service.dart';
 import 'package:mobile_image_search/src/feature/search/application/image_search_service.dart';
 import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
 
 class ImageSearchController extends AsyncNotifier<List<SearchResultMatch>> {
   String searchQuery = "";

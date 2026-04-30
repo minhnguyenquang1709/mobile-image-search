@@ -4,7 +4,7 @@ import 'package:mobile_image_search/src/constants/config_constant.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/gallery_controller.dart';
 import 'package:mobile_image_search/src/common_widgets/image_widget.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 class SelectionStatusBar extends StatelessWidget {
   final int selectedCount;
@@ -39,7 +39,7 @@ class ImageGroupWidget extends StatelessWidget {
     final SliverGrid imageGrid = SliverGrid(
       delegate: SliverChildBuilderDelegate((context, index) {
         return ThumbnailWidget(
-          assetId: _imageGroup.mediaItems[index].assetId,
+          mediaAsset: _imageGroup.mediaItems[index],
           key: Key(_imageGroup.mediaItems[index].assetId),
         );
       }, childCount: _imageGroup.mediaItems.length),

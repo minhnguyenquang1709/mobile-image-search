@@ -1,14 +1,18 @@
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logger/logger.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/routing/router_config.dart';
 import 'package:flutter/material.dart';
+
+final logger = Logger(printer: PrettyPrinter(methodCount: 0));
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
     runApp(ProviderScope(child: AppLifecycleWrapper()));
+    logger.i("main() - App started successfully");
   } catch (e) {
     runApp(
       MaterialApp(

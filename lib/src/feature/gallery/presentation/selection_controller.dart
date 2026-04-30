@@ -1,31 +1,37 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
-class SelectionController extends Notifier<Set<String>> {
+class SelectionController extends Notifier<Set<MediaAsset>> {
   @override
-  Set<String> build() {
-    return <String>{};
+  Set<MediaAsset> build() {
+    return <MediaAsset>{};
   }
 
-  void selectImage(String assetId) {
-    state = {...state, assetId};
+  void selectMedia(MediaAsset mediaAsset) {
+    state = {...state, mediaAsset};
   }
 
-  void deselectImage(String assetId) {
-    if (_isImageSelected(assetId)) {
-      state = state.where((id) => id != assetId).toSet();
+  void deselectMedia(MediaAsset mediaAsset) {
+    if (_isMediaAssetSelected(mediaAsset)) {
+      state = state.where((id) => id != mediaAsset).toSet();
     }
   }
 
-  bool _isImageSelected(String assetId) {
-    return state.contains(assetId);
+  bool _isMediaAssetSelected(MediaAsset mediaAsset) {
+    return state.contains(mediaAsset);
   }
 
   void clearSelection() {
-    state = <String>{};
+    state = <MediaAsset>{};
   }
 }
 
-final selectionControllerProvider =
-    NotifierProvider<SelectionController, Set<String>>(
+final homeScreenSelectionControllerProvider =
+    NotifierProvider<SelectionController, Set<MediaAsset>>(
+      () => SelectionController(),
+    );
+
+final albumScreenSelectionControllerProvider =
+    NotifierProvider<SelectionController, Set<MediaAsset>>(
       () => SelectionController(),
     );

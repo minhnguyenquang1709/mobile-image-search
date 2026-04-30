@@ -22,7 +22,8 @@ class IndexingService {
   Future<void> initialize() async {
     try {
       // check for necessary gallery change and update indexing on app startup
-      _workerRepo.syncGallery();
+      // fire-and-forget
+      // _workerRepo.syncGallery();
     } catch (e, _) {
       rethrow;
     }
