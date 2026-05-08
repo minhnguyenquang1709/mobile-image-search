@@ -85,10 +85,10 @@ abstract class UIConfig {
   static const double gridViewGutter = 5;
   static const int thumbnailWidth = 100;
   static const int thumbnailHeight = 100;
-  static const int imagesPerRow = 4;
+  static const int thumbnailsPerRow = 4;
   static const double gridViewCacheExtent = 1000;
-  static const double crossAxisSpacing = 5;
-  static const double mainAxisSpacing = 5;
+  static const double gridCrossAxisSpacing = 5;
+  static const double gridMainAxisSpacing = 5;
   static const double imageGroupSpacing = 15;
   static const double homeScreenScrollbarThumbMinHeight = 40;
 

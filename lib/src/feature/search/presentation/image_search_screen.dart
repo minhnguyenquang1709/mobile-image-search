@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_image_search/src/common_widgets/image_widget.dart';
+import 'package:mobile_image_search/src/common_widgets/thumbnail_widget.dart';
 import 'package:mobile_image_search/src/constants/config_constant.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
@@ -147,9 +147,9 @@ class _SearchResultWidgetState extends ConsumerState<SearchResultWidget> {
               slivers: [
                 SliverGrid.builder(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: UIConfig.imagesPerRow,
-                    mainAxisSpacing: UIConfig.crossAxisSpacing,
-                    crossAxisSpacing: UIConfig.mainAxisSpacing,
+                    crossAxisCount: UIConfig.thumbnailsPerRow,
+                    mainAxisSpacing: UIConfig.gridCrossAxisSpacing,
+                    crossAxisSpacing: UIConfig.gridMainAxisSpacing,
                   ),
                   itemBuilder: (context, index) {
                     final resultItem = resultItems[index];

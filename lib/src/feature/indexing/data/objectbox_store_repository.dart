@@ -61,21 +61,25 @@ class ObjectBoxStoreRepository implements IStoreRepository {
 
   @override
   Future<Map<String, MediaAsset>> getAllIndexedImageMetadata() async {
-    final imageBox = _dataSource.store.box<ImageObjectBox>();
-    final allIndexedImages = imageBox.getAll();
+    throw UnimplementedError();
+    // final imageBox = _dataSource.store.box<ImageObjectBox>();
+    // final allIndexedImages = imageBox.getAll();
 
-    final Map<String, MediaAsset> metadataMap = {};
-    for (final image in allIndexedImages) {
-      final media = MediaAsset(
-        assetId: image.assetId,
-        title: "",
-        mediaType: EMediaType.image,
-        createDateTime: image.createdAt,
-        modifiedDateTime: image.modifiedAt,
-      );
-      metadataMap[image.assetId] = media;
-    }
-    return metadataMap;
+    // final Map<String, MediaAsset> metadataMap = {};
+    // for (final image in allIndexedImages) {
+    //   final media = MediaAsset(
+    //     assetId: image.assetId,
+    //     title: "",
+    //     mediaType: EMediaType.image,
+    //     createDateTime: image.createdAt,
+    //     modifiedDateTime: image.modifiedAt,
+    //     width: null,
+    //     height: null,
+    //     format: null,
+    //   );
+    //   metadataMap[image.assetId] = media;
+    // }
+    // return metadataMap;
   }
 
   @override
@@ -83,26 +87,27 @@ class ObjectBoxStoreRepository implements IStoreRepository {
     Float32List queryEmbedding,
     int topK,
   ) async {
-    List<SearchResultMatch> searchResults = [];
-    final query = _dataSource.store
-        .box<ImageObjectBox>()
-        .query(
-          ImageObjectBox_.embedding.nearestNeighborsF32(queryEmbedding, topK),
-        )
-        .build();
+    throw UnimplementedError();
+    // List<SearchResultMatch> searchResults = [];
+    // final query = _dataSource.store
+    //     .box<ImageObjectBox>()
+    //     .query(
+    //       ImageObjectBox_.embedding.nearestNeighborsF32(queryEmbedding, topK),
+    //     )
+    //     .build();
 
-    final results = await query.findWithScoresAsync();
+    // final results = await query.findWithScoresAsync();
 
-    for (final result in results) {
-      searchResults.add(
-        SearchResultMatch(
-          mediaAsset: result.object.toMediaAsset(),
-          cosineScore: result.score,
-        ),
-      );
-    }
+    // for (final result in results) {
+    //   searchResults.add(
+    //     SearchResultMatch(
+    //       mediaAsset: result.object.toImageAsset(),
+    //       cosineScore: result.score,
+    //     ),
+    //   );
+    // }
 
-    return searchResults;
+    // return searchResults;
   }
 }
 

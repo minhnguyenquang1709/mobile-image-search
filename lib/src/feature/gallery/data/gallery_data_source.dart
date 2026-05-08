@@ -244,7 +244,7 @@ class GalleryDataSource {
   Future<MediaAsset> getImageMetadata(String assetId) async {
     final assetEntity = await AssetEntity.fromId(assetId);
     try {
-      return fillMetadataFromAsset(assetEntity!);
+      return toMediaAsset(assetEntity!);
     } catch (e) {
       rethrow;
     }

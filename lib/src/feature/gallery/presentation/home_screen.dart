@@ -1,85 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mobile_image_search/src/common_widgets/thumbnail_widget.dart';
 import 'package:mobile_image_search/src/constants/config_constant.dart';
+import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/gallery_controller.dart';
-import 'package:mobile_image_search/src/common_widgets/image_widget.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
-
-class SelectionStatusBar extends StatelessWidget {
-  final int selectedCount;
-  const SelectionStatusBar({super.key, required this.selectedCount});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black54,
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-      child: Text(
-        '$selectedCount selected',
-        style: const TextStyle(color: Colors.black, fontSize: 16),
-      ),
-    );
-  }
-}
-
-class ImageGroupWidget extends StatelessWidget {
-  final MediaGroup _imageGroup;
-  const ImageGroupWidget({super.key, required MediaGroup imageGroup})
-    : _imageGroup = imageGroup;
-
-  @override
-  Widget build(BuildContext context) {
-    // date
-    final SliverToBoxAdapter dateHeader = SliverToBoxAdapter(
-      child: Text(_imageGroup.date.toString().split(' ')[0]),
-    );
-
-    // image grid
-    final SliverGrid imageGrid = SliverGrid(
-      delegate: SliverChildBuilderDelegate((context, index) {
-        return ThumbnailWidget(
-          mediaAsset: _imageGroup.mediaItems[index],
-          key: Key(_imageGroup.mediaItems[index].assetId),
-        );
-      }, childCount: _imageGroup.mediaItems.length),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: UIConfig.imagesPerRow,
-        crossAxisSpacing: UIConfig.crossAxisSpacing,
-        mainAxisSpacing: UIConfig.mainAxisSpacing,
-      ),
-    );
-
-    // spacing to next group
-    const spacing = SliverToBoxAdapter(
-      child: SizedBox(height: UIConfig.imageGroupSpacing),
-    );
-
-    return SliverMainAxisGroup(slivers: [dateHeader, imageGrid, spacing]);
-  }
-}
+import 'package:mobile_image_search/src/utils/debug.dart';
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
-  bool _showScrollToTopButton = false;
+
+  final ValueNotifier<bool> _showTopButton = ValueNotifier(false);
 
   @override
   void initState() {
     super.initState();
 
     _scrollController.addListener(() {
+      final pixels = _scrollController.position.pixels;
+      final bool nextValue = pixels >= 120
+          ? true
+          : (pixels <= 60 ? false : _showTopButton.value);
+
+      if (nextValue != _showTopButton.value) {
+        _showTopButton.value = nextValue;
+      }
+
       if (_scrollController.position.pixels >=
           _scrollController.position.maxScrollExtent - 500) {
         ref.read(galleryControllerProvider.notifier).loadMore();
-        setState(() {
-          _showScrollToTopButton = true;
-        });
       }
+
+      // final shouldShowButton = _scrollController.position.pixels >= 100;
+      // if (shouldShowButton != _showScrollToTopButton) {
+      //   setState(() {
+      //     _showScrollToTopButton = shouldShowButton;
+      //   });
+      // }
     });
   }
 
   @override
   void dispose() {
+    _showTopButton.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -90,92 +55,191 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
-    setState(() {
-      _showScrollToTopButton = false;
-    });
+  }
+
+  List<Widget> _buildGroupSlivers(
+    List<DailyMediaGroup> mediaGroups,
+    GalleryState state,
+  ) {
+    final slivers = <Widget>[];
+
+    for (final group in mediaGroups) {
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(group.datetime.toString().split(' ')[0]),
+          ),
+        ),
+      );
+
+      slivers.add(
+        SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: UIConfig.thumbnailsPerRow,
+            crossAxisSpacing: UIConfig.gridCrossAxisSpacing,
+            mainAxisSpacing: UIConfig.gridMainAxisSpacing,
+          ),
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final mediaAsset = group.mediaAssets[index];
+            final thumbnail = ThumbnailWidget(
+              mediaAsset: mediaAsset,
+              key: ValueKey(mediaAsset.assetId),
+            );
+
+            final isSelected = state.selectedAssetIds.contains(
+              mediaAsset.assetId,
+            );
+            final isSelectionMode = state.isSelectionMode;
+            final selectionOverlay = GestureDetector(
+              child: Container(
+                color: isSelected
+                    ? Colors.blue.withAlpha(100)
+                    : Colors.transparent,
+              ),
+              onLongPress: () {
+                ref
+                    .read(galleryControllerProvider.notifier)
+                    .toggleSelectMedia(mediaAsset.assetId);
+              },
+              onTap: () {
+                if (isSelectionMode) {
+                  ref
+                      .read(galleryControllerProvider.notifier)
+                      .toggleSelectMedia(mediaAsset.assetId);
+                } else {
+                  context.push(
+                    RouteConstants.mediaView,
+                    extra: {'media': mediaAsset},
+                  );
+                }
+              },
+            );
+
+            final stack = Stack(children: [thumbnail, selectionOverlay]);
+
+            return stack;
+          }, childCount: group.mediaAssets.length),
+        ),
+      );
+    }
+
+    return slivers;
   }
 
   @override
   Widget build(BuildContext context) {
-    final galleryController = ref.watch(galleryControllerProvider);
+    final galleryState = ref.watch(galleryControllerProvider);
 
-    return Container(
-      child: galleryController.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Center(child: Text("Error loading images: $err")),
-            TextButton(
-              child: const Text("Request Permission or Refresh"),
-              onPressed: () {
-                final _ = ref.refresh(galleryControllerProvider);
-              },
-            ),
-          ],
-        ),
-        data: (imageGroups) {
-          if (imageGroups.isEmpty) {
-            return const Center(child: Text("No images found in gallery"));
-          }
-
-          // TODO: optimize this, currently it rebuilds the whole list when selection changes, which is not ideal for performance
-          // this is eager loading, causes performance issue when the list is big
-          final imageGroupWidgetList = imageGroups
-              .map(
-                (group) => ImageGroupWidget(
-                  imageGroup: group,
-                  key: ValueKey(group.date),
-                ),
-              )
-              .toList();
-
-          final fullScreenImageList = Flex(
-            direction: Axis.vertical,
+    return Scaffold(
+      body: Container(
+        child: galleryState.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: RawScrollbar(
-                  controller: _scrollController,
-                  thumbVisibility: true,
-                  thumbColor: CustomColors.primary,
-                  thickness: 20,
-                  radius: const Radius.circular(40),
-                  // padding: const EdgeInsets.only(top: 10),
-                  minThumbLength: UIConfig.homeScreenScrollbarThumbMinHeight,
-                  interactive: true,
-                  crossAxisMargin: UIConfig.gridViewGutter,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: UIConfig.gridViewGutter,
-                    ),
-                    child: CustomScrollView(
-                      controller: _scrollController,
-                      slivers: imageGroupWidgetList,
-                      scrollDirection: Axis.vertical,
-                    ),
-                  ),
-                ),
+              Center(child: Text("Error loading images: $err")),
+              TextButton(
+                child: const Text("Request Permission or Refresh"),
+                onPressed: () {
+                  final _ = ref.refresh(galleryControllerProvider);
+                },
               ),
             ],
-          );
+          ),
+          data: (GalleryState state) {
+            final mediaGroups = state.mediaGroups;
 
-          final stack = Stack(
-            children: [
-              fullScreenImageList,
+            if (mediaGroups.isEmpty) {
+              return const Center(child: Text("No images found in gallery"));
+            }
 
-              if (_showScrollToTopButton)
-                Align(
-                  alignment: AlignmentGeometry.bottomCenter,
-                  child: ElevatedButton(
-                    onPressed: _scrollToTop,
-                    child: Icon(Icons.arrow_upward),
+            // final mediaGroupSliverList = SliverList(
+            //   delegate: SliverChildBuilderDelegate((context, index) {
+            //     final DailyMediaGroup group = mediaGroups[index];
+            //     return DailyMediaGroupWidget(
+            //       mediaGroup: group,
+            //       key: ValueKey(group.datetime),
+            //     );
+            //   }, childCount: mediaGroups.length),
+            // );
+
+            final fullScreenImageList = Flex(
+              direction: Axis.vertical,
+              children: [
+                Expanded(
+                  child: RawScrollbar(
+                    controller: _scrollController,
+                    thumbVisibility: true,
+                    thumbColor: CustomColors.primary,
+                    thickness: 20, // thumb width
+                    radius: const Radius.circular(40),
+                    // padding: const EdgeInsets.only(top: 10),
+                    minThumbLength: UIConfig.homeScreenScrollbarThumbMinHeight,
+                    interactive: true,
+                    crossAxisMargin: UIConfig.gridViewGutter,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: UIConfig.gridViewGutter,
+                      ),
+                      child: CustomScrollView(
+                        controller: _scrollController,
+                        slivers: _buildGroupSlivers(mediaGroups, state),
+                        scrollDirection: Axis.vertical,
+                      ),
+                    ),
                   ),
                 ),
-            ],
-          );
+              ],
+            );
 
-          return stack;
-        },
+            final stack = Stack(
+              children: [
+                fullScreenImageList,
+
+                ValueListenableBuilder<bool>(
+                  valueListenable: _showTopButton,
+                  builder: (context, visible, _) {
+                    return Positioned(
+                      bottom: 16,
+                      left: 0,
+                      right: 0,
+                      child: IgnorePointer(
+                        ignoring: !visible,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 120),
+                          opacity: visible ? 1 : 0,
+                          child: Center(
+                            child: ElevatedButton(
+                              onPressed: _scrollToTop,
+                              child: const Icon(Icons.arrow_upward),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                if (isDebugOrProfileMode)
+                  Positioned(
+                    top: 40,
+                    right: 20,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        ref
+                            .read(galleryControllerProvider.notifier)
+                            .moveSelectedToTrash();
+                      },
+                      child: const Text("Move to Trash"),
+                    ),
+                  ),
+              ],
+            );
+
+            return stack;
+          },
+        ),
       ),
     );
   }

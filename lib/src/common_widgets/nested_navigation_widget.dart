@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/selection_controller.dart';
+import 'package:mobile_image_search/src/utils/debug.dart';
 
 class ScaffoldWithNestedNavigation extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
@@ -35,7 +36,7 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
         PopupMenuItem(
           value: 'image_search',
           onTap: () {
-            context.push(RouteConstants.searchByCaption);
+            context.push(RouteConstants.searchByCaptionResultView);
           },
           child: Row(
             children: [
@@ -84,7 +85,7 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
             children: [
               Icon(Icons.settings, color: CustomColors.textPrimary, size: 30),
               Text(
-                "Smart Cleanup",
+                "Settings",
                 style: TextStyle(
                   color: lightTheme.colorScheme.primary,
                   fontFamily: CustomTextStyles.fontFamily,
@@ -99,7 +100,7 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
   }
 
   void _goBranch(int index) {
-    if (index >= 2) {
+    if (index == 2) {
       return;
     }
     navigationShell.goBranch(
@@ -114,47 +115,47 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedAssetIds = ref.watch(homeScreenSelectionControllerProvider);
     return Scaffold(
-      appBar: (navigationShell.currentIndex == 0 && selectedAssetIds.isNotEmpty)
-          ? AppBar(
-              title: Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.arrow_back),
-                    color: lightTheme.colorScheme.primary,
-                    // style: ButtonStyle(
-                    //   backgroundColor: MaterialStateProperty.all(
-                    //     lightTheme.colorScheme.error,
-                    //   ),
-                    // ),
-                    onPressed: () {
-                      ref
-                          .read(homeScreenSelectionControllerProvider.notifier)
-                          .clearSelection();
-                    },
-                  ),
-                  Text("${selectedAssetIds.length} selected"),
-                ],
-              ),
-              titleTextStyle: TextStyle(
-                fontFamily: CustomTextStyles.fontFamily,
-                color: lightTheme.colorScheme.onSurfaceVariant,
-                fontSize: 20,
-                fontWeight: FontWeight.w400,
-              ),
-              toolbarHeight: 50,
-              backgroundColor: lightTheme.colorScheme.surface,
-              titleSpacing: 0,
-              surfaceTintColor: Colors.transparent,
-            )
-          : null,
+      // appBar: (navigationShell.currentIndex == 0 && selectedAssetIds.isNotEmpty)
+      //     ? AppBar(
+      //         title: Row(
+      //           children: [
+      //             IconButton(
+      //               icon: Icon(Icons.arrow_back),
+      //               color: lightTheme.colorScheme.primary,
+      //               // style: ButtonStyle(
+      //               //   backgroundColor: MaterialStateProperty.all(
+      //               //     lightTheme.colorScheme.error,
+      //               //   ),
+      //               // ),
+      //               onPressed: () {
+      //                 ref
+      //                     .read(homeScreenSelectionControllerProvider.notifier)
+      //                     .clearSelection();
+      //               },
+      //             ),
+      //             Text("${selectedAssetIds.length} selected"),
+      //           ],
+      //         ),
+      //         titleTextStyle: TextStyle(
+      //           fontFamily: CustomTextStyles.fontFamily,
+      //           color: lightTheme.colorScheme.onSurfaceVariant,
+      //           fontSize: 20,
+      //           fontWeight: FontWeight.w400,
+      //         ),
+      //         toolbarHeight: 50,
+      //         backgroundColor: lightTheme.colorScheme.surface,
+      //         titleSpacing: 0,
+      //         surfaceTintColor: Colors.transparent,
+      //       )
+      //     : null,
       body: SafeArea(child: navigationShell),
       bottomNavigationBar: NavigationBar(
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.photo_album), label: 'Albums'),
           NavigationDestination(icon: Icon(Icons.menu), label: 'More'),
+          NavigationDestination(icon: Icon(Icons.delete), label: 'Trash'),
         ],
         onDestinationSelected: (int index) {
           _goBranch(index);
@@ -166,4 +167,11 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
       ),
     );
   }
+}
+
+class MainBottomNavigationBarProvider extends StateNotifier<bool> {
+  MainBottomNavigationBarProvider() : super(false);
+
+  void show() => state = true;
+  void hide() => state = false;
 }

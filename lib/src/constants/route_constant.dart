@@ -1,8 +1,12 @@
-class RouteConstants {
+abstract class RouteConstants {
   static const String home = '/home';
-  static const String mediaViewer = '/full-media-viewer';
+  static const String mediaView = '/full-media-view';
   static const String settings = '/settings';
   static const String cleanup = '/cleanup';
-  static const String searchByCaption = '/search-by-caption';
+  static const String searchByCaptionResultView =
+      '/search-by-caption-result-view';
   static const String albums = '/albums';
+  static const String albumView = '/album-view';
+
+  static const String trashScreen = '/trash';
 }

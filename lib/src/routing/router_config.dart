@@ -4,16 +4,20 @@ import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/src/common_widgets/settings_screen.dart';
 import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/common_widgets/nested_navigation_widget.dart';
+import 'package:mobile_image_search/src/feature/gallery/presentation/album_opened_screen.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/album_screen.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/home_screen.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/full_media_view_screen.dart';
+import 'package:mobile_image_search/src/feature/gallery/presentation/trash_screen.dart';
 import 'package:mobile_image_search/src/feature/search/presentation/image_search_screen.dart';
+import 'package:mobile_image_search/src/shared/domain/model/album.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 // GlobalKey: unique identifier, provide access to `BuildContext`, `State`, `Widget`
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorHomeKey = GlobalKey<NavigatorState>();
 final _shellNavigatorAlbumsKey = GlobalKey<NavigatorState>();
+final _shellNavigatorTrashKey = GlobalKey<NavigatorState>();
 
 final topLevelNavigationRouter = GoRouter(
   initialLocation: RouteConstants.home,
@@ -73,12 +77,25 @@ final topLevelNavigationRouter = GoRouter(
             ),
           ],
         ),
+
+        // 3rd top-level branch
+        StatefulShellBranch(
+          navigatorKey: _shellNavigatorTrashKey,
+          routes: [
+            GoRoute(
+              path: RouteConstants.trashScreen,
+              builder: (context, state) {
+                return TrashScreen();
+              },
+            ),
+          ],
+        ),
       ],
     ),
-    // route outside of shell, full screen dialog
+    // route outside of shell, full screen dialog, NestedNavigationShell app bar and bottom navigation bar will be hidden
     // full media viewer
     GoRoute(
-      path: RouteConstants.mediaViewer,
+      path: RouteConstants.mediaView,
       builder: (context, state) {
         final extra = state.extra as Map<String, dynamic>?;
         final image = extra?['media'] as MediaAsset;
@@ -96,9 +113,19 @@ final topLevelNavigationRouter = GoRouter(
 
     // search by caption screen
     GoRoute(
-      path: RouteConstants.searchByCaption,
+      path: RouteConstants.searchByCaptionResultView,
       builder: (context, state) {
         return ImageSearchScreen();
+      },
+    ),
+
+    // album view screen
+    GoRoute(
+      path: RouteConstants.albumView,
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final album = extra?['album'] as Album;
+        return AlbumOpenedScreen(currentAlbum: album);
       },
     ),
   ],

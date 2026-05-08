@@ -43,14 +43,13 @@ class ImageObjectBox {
   });
 
   /// Helper method to convert to domain model
-  MediaAsset toMediaAsset() {
-    return MediaAsset(
-      assetId: assetId,
-      title: title,
-      createDateTime: createdAt,
-      modifiedDateTime: modifiedAt,
-      mediaType: mediaType == 1 ? EMediaType.video : EMediaType.image,
-      duration: duration,
-    );
-  }
+  // MediaAsset toImageAsset() {
+  //   return ImageAsset(
+  //     assetId: assetId,
+  //     title: title,
+  //     createDateTime: createdAt,
+  //     modifiedDateTime: modifiedAt,
+  //     mediaType: mediaType == 1 ? EMediaType.video : EMediaType.image,
+  //   );
+  // }
 }

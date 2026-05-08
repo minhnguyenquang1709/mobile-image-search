@@ -415,21 +415,24 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
             await galleryDataSource.getAllImages();
         final List<MediaAsset> allGalleryMediaAssets = allGalleryAssetEntities
             .map((asset) {
-              return fillMetadataFromAsset(asset);
+              return toMediaAsset(asset);
             })
             .toList();
 
         final imageBox = objectBoxStoreDataSource.store.box<ImageObjectBox>();
         final List<ImageObjectBox> allIndexedImages = imageBox.getAll();
         final Map<String, MediaAsset> indexedImagesMap = {
-          for (final indexedImage in allIndexedImages)
-            indexedImage.assetId: MediaAsset(
-              assetId: indexedImage.assetId,
-              title: indexedImage.title,
-              createDateTime: indexedImage.createdAt,
-              modifiedDateTime: indexedImage.modifiedAt,
-              mediaType: EMediaType.image,
-            ),
+          // for (final indexedImage in allIndexedImages)
+          //   indexedImage.assetId: MediaAsset(
+          //     assetId: indexedImage.assetId,
+          //     title: indexedImage.title,
+          //     createDateTime: indexedImage.createdAt,
+          //     modifiedDateTime: indexedImage.modifiedAt,
+          //     mediaType: EMediaType.image,
+          //     width: null,
+          //     height: null,
+          //     format: null,
+          //   ),
         };
 
         for (final galleryImage in allGalleryMediaAssets) {

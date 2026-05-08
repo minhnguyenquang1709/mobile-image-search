@@ -30,4 +30,6 @@ abstract class IGalleryRepository {
   Future<List<MediaAsset>> getAllMetadata();
 
   AssetEntity? getCachedEntity(String assetId);
+
+  Future<MediaAsset> populateAssetDetails(MediaAsset mediaAsset);
 }
