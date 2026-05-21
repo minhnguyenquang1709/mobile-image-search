@@ -4,6 +4,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/routing/router_config.dart';
 import 'package:flutter/material.dart';
+import 'package:mobile_image_search/src/service_locator.dart';
 
 final logger = Logger(printer: PrettyPrinter(methodCount: 0));
 
@@ -11,6 +12,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
+    await ServiceLocator.init();
     runApp(ProviderScope(child: AppLifecycleWrapper()));
     logger.i("main() - App started successfully");
   } catch (e) {

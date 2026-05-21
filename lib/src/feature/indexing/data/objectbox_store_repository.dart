@@ -8,11 +8,45 @@ import 'package:mobile_image_search/src/feature/indexing/data/image_objectbox_mo
 import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/feature/indexing/domain/store_repository_interface.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+
+class ObjectBoxClient {
+  late final Store store;
+  Admin? admin;
+
+  static final ObjectBoxClient instance = ObjectBoxClient._();
+
+  ObjectBoxClient._();
+
+  Future<void> init() async {
+    final docsDir = await getApplicationSupportDirectory();
+    store = await openStore(directory: p.join(docsDir.path, 'image-embedding'));
+
+    // TODO: remove debug print
+    print(
+      "[ObjectBoxStoreDataSource] Store initialized at ${store.directoryPath}",
+    );
+    print(
+      "[ObjectBoxStoreDataSource] ObjectBox Admin available: ${Admin.isAvailable()}",
+    );
+
+    if (Admin.isAvailable()) {
+      admin = Admin(store);
+    }
+  }
+}
+
+final objectBoxClientProvider = FutureProvider<ObjectBoxClient>((ref) async {
+  final client = ObjectBoxClient.instance;
+  await client.init();
+  return client;
+});
 
 class ObjectBoxStoreRepository implements IStoreRepository {
-  final ObjectBoxStoreDataSource _dataSource;
+  final ObjectBoxClient _objectBoxClient;
 
-  ObjectBoxStoreRepository(this._dataSource);
+  ObjectBoxStoreRepository(this._objectBoxClient);
 
   // @override
   // Future<Float32List> getImageEmbedding(String assetId) async {
@@ -36,7 +70,16 @@ class ObjectBoxStoreRepository implements IStoreRepository {
     Float32List embedding,
   ) async {
     try {
-      await _dataSource.saveImageEmbedding(mediaAsset, embedding);
+      final imageEmbeddingBox = _objectBoxClient.store.box<ImageObjectBox>();
+      final ImageObjectBox newImageEmbedding = ImageObjectBox(
+        assetId: mediaAsset.assetId,
+        title: mediaAsset.title,
+        mediaType: mediaAsset.mediaType == EMediaType.video ? 1 : 0,
+        embedding: embedding,
+        mediaCreatedAt: mediaAsset.createDateTime,
+        mediaModifiedAt: mediaAsset.modifiedDateTime,
+      );
+      await imageEmbeddingBox.putAsync(newImageEmbedding);
       return true;
     } catch (e) {
       rethrow;
@@ -46,7 +89,7 @@ class ObjectBoxStoreRepository implements IStoreRepository {
   @override
   Future<bool> deleteImageEmbeddings(List<String> assetIds) async {
     try {
-      final imageEmbeddingBox = _dataSource.store.box<ImageObjectBox>();
+      final imageEmbeddingBox = _objectBoxClient.store.box<ImageObjectBox>();
       for (final id in assetIds) {
         final query = imageEmbeddingBox
             .query(ImageObjectBox_.assetId.equals(id))
@@ -112,6 +155,6 @@ class ObjectBoxStoreRepository implements IStoreRepository {
 }
 
 final objectBoxStoreRepoProvider = FutureProvider((ref) async {
-  final dataSource = await ref.watch(objectBoxStoreDataSourceProvider.future);
-  return ObjectBoxStoreRepository(dataSource);
+  final objectBoxClient = await ref.watch(objectBoxClientProvider.future);
+  return ObjectBoxStoreRepository(objectBoxClient);
 });

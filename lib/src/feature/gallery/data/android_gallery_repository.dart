@@ -2,7 +2,6 @@ import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_image_search/src/constants/common_constant.dart';
 import 'package:mobile_image_search/src/utils/media_processing.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';

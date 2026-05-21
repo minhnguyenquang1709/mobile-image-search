@@ -10,13 +10,13 @@ import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 class ThumbnailWidget extends ConsumerStatefulWidget {
-  final MediaAsset mediaAsset;
+  final String assetId;
   final Function? onTap;
   final Function? onLongPress;
 
   const ThumbnailWidget({
     super.key,
-    required this.mediaAsset,
+    required this.assetId,
     this.onTap,
     this.onLongPress,
   });
@@ -37,7 +37,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
     super.initState();
 
     // platform channel call, leading to many calls on the screen with thumbnail list (bottleneck). UI should not fetch data like this. UI should only receive rich data from provider and display it
-    _assetEntityFuture = AssetEntity.fromId(widget.mediaAsset.assetId);
+    _assetEntityFuture = AssetEntity.fromId(widget.assetId);
   }
 
   @override
@@ -66,7 +66,6 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
         }
 
         final AssetEntity assetEntity = snapshot.data!;
-        final MediaAsset mediaAsset = widget.mediaAsset;
         return GestureDetector(
           onTap: () {
             // context.push(
@@ -74,7 +73,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
             //   extra: {'media': widget.mediaAsset},
             // );
             if (widget.onTap != null) {
-              widget.onTap!(mediaAsset);
+              widget.onTap!(widget.assetId);
             }
           },
           onLongPress: () {
@@ -103,12 +102,12 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
                   ),
                 );
 
-                final bool isVideo = mediaAsset is VideoAsset;
+                final bool isVideo = assetEntity.type == AssetType.video;
                 final stack = Stack(
                   children: [
                     Positioned.fill(child: assetEntityImageWidget),
 
-                    if (isVideo && mediaAsset.duration > 0)
+                    if (isVideo && assetEntity.duration > 0)
                       Positioned(
                         bottom: 4,
                         right: 4,
@@ -122,7 +121,7 @@ class _ThumbnailWidgetState extends ConsumerState<ThumbnailWidget>
                             size: const Size(40, 20),
                             child: Center(
                               child: Text(
-                                formatVideoDuration(mediaAsset.duration),
+                                formatVideoDuration(assetEntity.duration),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: CustomColors.textSecondary,

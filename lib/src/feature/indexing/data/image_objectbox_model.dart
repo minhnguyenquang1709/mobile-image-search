@@ -27,10 +27,13 @@ class ImageObjectBox {
   DateTime indexedAt = DateTime.now();
 
   @Property(type: PropertyType.date)
-  DateTime createdAt;
+  DateTime mediaCreatedAt;
 
   @Property(type: PropertyType.date)
-  DateTime modifiedAt;
+  DateTime mediaModifiedAt;
+
+  @Property(type: PropertyType.date)
+  DateTime createdAt = DateTime.now();
 
   ImageObjectBox({
     required this.assetId,
@@ -38,8 +41,8 @@ class ImageObjectBox {
     required this.mediaType,
     this.duration = 0,
     required this.embedding,
-    required this.createdAt,
-    required this.modifiedAt,
+    required this.mediaCreatedAt,
+    required this.mediaModifiedAt,
   });
 
   /// Helper method to convert to domain model

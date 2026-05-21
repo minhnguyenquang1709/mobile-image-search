@@ -305,9 +305,9 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
     );
 
     // init vector store
-    ObjectBoxStoreDataSource objectBoxStoreDataSource =
-        ObjectBoxStoreDataSource();
-    await objectBoxStoreDataSource.init();
+    // ObjectBoxStoreDataSource objectBoxStoreDataSource =
+    //     ObjectBoxStoreDataSource();
+    // await objectBoxStoreDataSource.init();
 
     // init gallery data source
     MediaPlatformChannel mediaPlatformChannel = MediaPlatformChannel();
@@ -352,10 +352,10 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
 
           // FAST
           // save to vector store
-          await objectBoxStoreDataSource.saveImageEmbedding(
-            mediaAsset,
-            imageEmbedding,
-          );
+          // await objectBoxStoreDataSource.saveImageEmbedding(
+          //   mediaAsset,
+          //   imageEmbedding,
+          // );
           // END FAST
           dbTask.finish();
         } catch (e) {
@@ -419,8 +419,8 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
             })
             .toList();
 
-        final imageBox = objectBoxStoreDataSource.store.box<ImageObjectBox>();
-        final List<ImageObjectBox> allIndexedImages = imageBox.getAll();
+        // final imageBox = objectBoxStoreDataSource.store.box<ImageObjectBox>();
+        // final List<ImageObjectBox> allIndexedImages = imageBox.getAll();
         final Map<String, MediaAsset> indexedImagesMap = {
           // for (final indexedImage in allIndexedImages)
           //   indexedImage.assetId: MediaAsset(

@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/constants/common_constant.dart';
-import 'package:mobile_image_search/src/feature/gallery/data/gallery_repository.dart';
+import 'package:mobile_image_search/src/feature/gallery/data/android_gallery_repository.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 

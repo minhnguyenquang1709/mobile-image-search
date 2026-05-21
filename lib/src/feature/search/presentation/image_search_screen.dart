@@ -177,7 +177,7 @@ class SearchResultThumbnailWidget extends StatelessWidget {
     return Stack(
       children: [
         // Image
-        ThumbnailWidget(mediaAsset: resultItem.mediaAsset),
+        ThumbnailWidget(assetId: resultItem.mediaAsset.assetId),
 
         // Similarity score badge
         Positioned(

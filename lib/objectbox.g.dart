@@ -14,6 +14,7 @@ import 'package:objectbox/internal.dart'
 import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
+import 'src/feature/gallery/data/objectbox_trash_entry.dart';
 import 'src/feature/indexing/data/image_objectbox_model.dart';
 import 'src/feature/indexing/data/search_objectbox_model.dart';
 
@@ -52,7 +53,7 @@ final _entities = <obx_int.ModelEntity>[
   obx_int.ModelEntity(
     id: const obx_int.IdUid(4, 5043420744528449525),
     name: 'ImageObjectBox',
-    lastPropertyId: const obx_int.IdUid(9, 2842926343622553362),
+    lastPropertyId: const obx_int.IdUid(11, 6479119926179794594),
     flags: 0,
     properties: <obx_int.ModelProperty>[
       obx_int.ModelProperty(
@@ -89,12 +90,6 @@ final _entities = <obx_int.ModelEntity>[
         flags: 0,
       ),
       obx_int.ModelProperty(
-        id: const obx_int.IdUid(6, 2740278633346680692),
-        name: 'modifiedAt',
-        type: 10,
-        flags: 0,
-      ),
-      obx_int.ModelProperty(
         id: const obx_int.IdUid(7, 8584243545755849456),
         name: 'title',
         type: 9,
@@ -111,6 +106,48 @@ final _entities = <obx_int.ModelEntity>[
         name: 'duration',
         type: 6,
         flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(10, 3324893777632430676),
+        name: 'mediaCreatedAt',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(11, 6479119926179794594),
+        name: 'mediaModifiedAt',
+        type: 10,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(5, 3308344578776231510),
+    name: 'ObjectBoxTrashEntry',
+    lastPropertyId: const obx_int.IdUid(3, 8190675144603662551),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 8882868979833481190),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 404277907193553463),
+        name: 'assetId',
+        type: 9,
+        flags: 34848,
+        indexId: const obx_int.IdUid(8, 6614934186557400277),
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 8190675144603662551),
+        name: 'trashedAt',
+        type: 10,
+        flags: 8,
+        indexId: const obx_int.IdUid(9, 8273342539676853360),
       ),
     ],
     relations: <obx_int.ModelRelation>[],
@@ -161,11 +198,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(4, 5043420744528449525),
-    lastIndexId: const obx_int.IdUid(7, 2419459409395599829),
+    lastEntityId: const obx_int.IdUid(6, 6948439073829930918),
+    lastIndexId: const obx_int.IdUid(9, 8273342539676853360),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
-    retiredEntityUids: const [1561470879124125729, 4579256638745705832],
+    retiredEntityUids: const [
+      1561470879124125729,
+      4579256638745705832,
+      6948439073829930918,
+    ],
     retiredIndexUids: const [],
     retiredPropertyUids: const [
       5503804796325456193,
@@ -177,6 +218,10 @@ obx_int.ModelDefinition getObjectBoxModel() {
       4902416859858591108,
       5122337035740735393,
       4925822784491038955,
+      2740278633346680692,
+      8718488453534067771,
+      131951363468051406,
+      8360917123897941686,
     ],
     retiredRelationUids: const [],
     modelVersion: 5,
@@ -239,16 +284,17 @@ obx_int.ModelDefinition getObjectBoxModel() {
         final assetIdOffset = fbb.writeString(object.assetId);
         final embeddingOffset = fbb.writeListFloat32(object.embedding);
         final titleOffset = fbb.writeString(object.title);
-        fbb.startTable(10);
+        fbb.startTable(12);
         fbb.addInt64(0, object.id);
         fbb.addOffset(1, assetIdOffset);
         fbb.addOffset(2, embeddingOffset);
         fbb.addInt64(3, object.indexedAt.millisecondsSinceEpoch);
         fbb.addInt64(4, object.createdAt.millisecondsSinceEpoch);
-        fbb.addInt64(5, object.modifiedAt.millisecondsSinceEpoch);
         fbb.addOffset(6, titleOffset);
         fbb.addInt64(7, object.mediaType);
         fbb.addInt64(8, object.duration);
+        fbb.addInt64(9, object.mediaCreatedAt.millisecondsSinceEpoch);
+        fbb.addInt64(10, object.mediaModifiedAt.millisecondsSinceEpoch);
         fbb.finish(fbb.endTable());
         return object.id;
       },
@@ -277,11 +323,11 @@ obx_int.ModelDefinition getObjectBoxModel() {
           fb.Float32Reader(),
           lazy: false,
         ).vTableGet(buffer, rootOffset, 8, []);
-        final createdAtParam = DateTime.fromMillisecondsSinceEpoch(
-          const fb.Int64Reader().vTableGet(buffer, rootOffset, 12, 0),
+        final mediaCreatedAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 22, 0),
         );
-        final modifiedAtParam = DateTime.fromMillisecondsSinceEpoch(
-          const fb.Int64Reader().vTableGet(buffer, rootOffset, 14, 0),
+        final mediaModifiedAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 24, 0),
         );
         final object =
             ImageObjectBox(
@@ -290,13 +336,50 @@ obx_int.ModelDefinition getObjectBoxModel() {
                 mediaType: mediaTypeParam,
                 duration: durationParam,
                 embedding: embeddingParam,
-                createdAt: createdAtParam,
-                modifiedAt: modifiedAtParam,
+                mediaCreatedAt: mediaCreatedAtParam,
+                mediaModifiedAt: mediaModifiedAtParam,
               )
               ..id = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0)
               ..indexedAt = DateTime.fromMillisecondsSinceEpoch(
                 const fb.Int64Reader().vTableGet(buffer, rootOffset, 10, 0),
+              )
+              ..createdAt = DateTime.fromMillisecondsSinceEpoch(
+                const fb.Int64Reader().vTableGet(buffer, rootOffset, 12, 0),
               );
+
+        return object;
+      },
+    ),
+    ObjectBoxTrashEntry: obx_int.EntityDefinition<ObjectBoxTrashEntry>(
+      model: _entities[2],
+      toOneRelations: (ObjectBoxTrashEntry object) => [],
+      toManyRelations: (ObjectBoxTrashEntry object) => {},
+      getId: (ObjectBoxTrashEntry object) => object.id,
+      setId: (ObjectBoxTrashEntry object, int id) {
+        object.id = id;
+      },
+      objectToFB: (ObjectBoxTrashEntry object, fb.Builder fbb) {
+        final assetIdOffset = fbb.writeString(object.assetId);
+        fbb.startTable(4);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, assetIdOffset);
+        fbb.addInt64(2, object.trashedAt.millisecondsSinceEpoch);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final assetIdParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final trashedAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 8, 0),
+        );
+        final object = ObjectBoxTrashEntry(
+          assetId: assetIdParam,
+          trashedAt: trashedAtParam,
+        )..id = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
 
         return object;
       },
@@ -351,23 +434,46 @@ class ImageObjectBox_ {
     _entities[1].properties[4],
   );
 
-  /// See [ImageObjectBox.modifiedAt].
-  static final modifiedAt = obx.QueryDateProperty<ImageObjectBox>(
-    _entities[1].properties[5],
-  );
-
   /// See [ImageObjectBox.title].
   static final title = obx.QueryStringProperty<ImageObjectBox>(
-    _entities[1].properties[6],
+    _entities[1].properties[5],
   );
 
   /// See [ImageObjectBox.mediaType].
   static final mediaType = obx.QueryIntegerProperty<ImageObjectBox>(
-    _entities[1].properties[7],
+    _entities[1].properties[6],
   );
 
   /// See [ImageObjectBox.duration].
   static final duration = obx.QueryIntegerProperty<ImageObjectBox>(
+    _entities[1].properties[7],
+  );
+
+  /// See [ImageObjectBox.mediaCreatedAt].
+  static final mediaCreatedAt = obx.QueryDateProperty<ImageObjectBox>(
     _entities[1].properties[8],
+  );
+
+  /// See [ImageObjectBox.mediaModifiedAt].
+  static final mediaModifiedAt = obx.QueryDateProperty<ImageObjectBox>(
+    _entities[1].properties[9],
+  );
+}
+
+/// [ObjectBoxTrashEntry] entity fields to define ObjectBox queries.
+class ObjectBoxTrashEntry_ {
+  /// See [ObjectBoxTrashEntry.id].
+  static final id = obx.QueryIntegerProperty<ObjectBoxTrashEntry>(
+    _entities[2].properties[0],
+  );
+
+  /// See [ObjectBoxTrashEntry.assetId].
+  static final assetId = obx.QueryStringProperty<ObjectBoxTrashEntry>(
+    _entities[2].properties[1],
+  );
+
+  /// See [ObjectBoxTrashEntry.trashedAt].
+  static final trashedAt = obx.QueryDateProperty<ObjectBoxTrashEntry>(
+    _entities[2].properties[2],
   );
 }

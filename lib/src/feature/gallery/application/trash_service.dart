@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/trash_model.dart';
-import 'package:mobile_image_search/src/feature/gallery/data/trash_repo.dart';
+import 'package:mobile_image_search/src/feature/gallery/data/android_trash_repo.dart';
 import 'package:mobile_image_search/src/feature/gallery/domain/trash_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
@@ -9,7 +9,7 @@ class TrashService {
 
   TrashService(this.repo);
 
-  Future<List<TrashItem>> loadTrash() => repo.getAllTrashItems();
+  Future<List<TrashEntry>> loadTrash() => repo.getAllTrashEntries();
 
   Future<void> moveToTrash(List<MediaAsset> assets) => repo.moveToTrash(assets);
 
@@ -20,7 +20,7 @@ class TrashService {
       repo.deletePermanently(assetIds);
 }
 
-final trashServiceProvider = Provider<TrashService>((ref) {
-  final repo = ref.watch(trashRepositoryProvider);
-  return TrashService(repo);
-});
+// final trashServiceProvider = FutureProvider<TrashService>((ref) async {
+//   final repo = await ref.watch(trashRepositoryProvider);
+//   return TrashService(repo);
+// });

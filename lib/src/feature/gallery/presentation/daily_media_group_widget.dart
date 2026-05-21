@@ -34,7 +34,7 @@ class DailyMediaGroupWidget extends StatelessWidget {
           itemBuilder: (context, index) {
             final mediaAsset = _mediaGroup.mediaAssets[index];
             return ThumbnailWidget(
-              mediaAsset: mediaAsset,
+              assetId: mediaAsset.assetId,
               key: ValueKey(mediaAsset.assetId),
             );
           },

@@ -100,11 +100,12 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
   }
 
   void _goBranch(int index) {
+    debugPrint("Navigating to branch $index");
     if (index == 2) {
       return;
     }
     navigationShell.goBranch(
-      index,
+      index == 3 ? 2 : index,
       // A common pattern when using bottom navigation bars is to support
       // navigating to the initial location when tapping the item that is
       // already active. This example demonstrates how to support this behavior,

@@ -13,52 +13,52 @@ import 'package:path/path.dart' as p;
 /// * handle store init
 ///
 /// * provide store instance
-class ObjectBoxStoreDataSource {
-  late final Store store;
-  Admin? admin;
+// class ObjectBoxStoreDataSource {
+//   late final Store store;
+//   Admin? admin;
 
-  ObjectBoxStoreDataSource();
+//   ObjectBoxStoreDataSource();
 
-  Future<void> init() async {
-    final docsDir = await getApplicationDocumentsDirectory();
-    store = await openStore(directory: p.join(docsDir.path, 'image-embedding'));
+//   Future<void> init() async {
+//     final docsDir = await getApplicationDocumentsDirectory();
+//     store = await openStore(directory: p.join(docsDir.path, 'image-embedding'));
 
-    // TODO: remove debug print
-    print(
-      "[ObjectBoxStoreDataSource] Store initialized at ${store.directoryPath}",
-    );
-    print(
-      "[ObjectBoxStoreDataSource] ObjectBox Admin available: ${Admin.isAvailable()}",
-    );
-    if (Admin.isAvailable()) {
-      admin = Admin(store);
-    }
+//     // TODO: remove debug print
+//     print(
+//       "[ObjectBoxStoreDataSource] Store initialized at ${store.directoryPath}",
+//     );
+//     print(
+//       "[ObjectBoxStoreDataSource] ObjectBox Admin available: ${Admin.isAvailable()}",
+//     );
+//     if (Admin.isAvailable()) {
+//       admin = Admin(store);
+//     }
 
-    // TODO: remove this debug database cleanup
-    final imageEmbeddingBox = store.box<ImageObjectBox>();
-    imageEmbeddingBox.removeAll();
-  }
+//     // TODO: remove this debug database cleanup
+//     final imageEmbeddingBox = store.box<ImageObjectBox>();
+//     imageEmbeddingBox.removeAll();
+//   }
 
-  Future<void> saveImageEmbedding(
-    MediaAsset mediaAsset,
-    Float32List embedding,
-  ) async {
-    final imageBox = store.box<ImageObjectBox>();
-    ImageObjectBox image = ImageObjectBox(
-      assetId: mediaAsset.assetId,
-      title: mediaAsset.title,
-      embedding: embedding,
-      createdAt: mediaAsset.createDateTime,
-      modifiedAt: mediaAsset.modifiedDateTime,
-      mediaType: mediaAsset.mediaType == EMediaType.video ? 1 : 0,
-    );
-    await imageBox.putAsync(image);
-  }
-}
+//   Future<void> saveImageEmbedding(
+//     MediaAsset mediaAsset,
+//     Float32List embedding,
+//   ) async {
+//     final imageBox = store.box<ImageObjectBox>();
+//     ImageObjectBox image = ImageObjectBox(
+//       assetId: mediaAsset.assetId,
+//       title: mediaAsset.title,
+//       embedding: embedding,
+//       createdAt: mediaAsset.createDateTime,
+//       modifiedAt: mediaAsset.modifiedDateTime,
+//       mediaType: mediaAsset.mediaType == EMediaType.video ? 1 : 0,
+//     );
+//     await imageBox.putAsync(image);
+//   }
+// }
 
-final objectBoxStoreDataSourceProvider =
-    FutureProvider<ObjectBoxStoreDataSource>((ref) async {
-      final dataSource = ObjectBoxStoreDataSource();
-      await dataSource.init();
-      return dataSource;
-    });
+// final objectBoxStoreDataSourceProvider =
+//     FutureProvider<ObjectBoxStoreDataSource>((ref) async {
+//       final dataSource = ObjectBoxStoreDataSource();
+//       await dataSource.init();
+//       return dataSource;
+//     });

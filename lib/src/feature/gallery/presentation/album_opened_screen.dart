@@ -65,7 +65,7 @@ class _AlbumOpenedScreenState extends ConsumerState<AlbumOpenedScreen> {
         final isSelected = state.selectedAssetIds.contains(mediaAsset.assetId);
 
         final thumbnail = ThumbnailWidget(
-          mediaAsset: mediaAsset,
+          assetId: mediaAsset.assetId,
           onLongPress: () {
             debugPrint(
               "Long pressed thumbnail with assetId: ${mediaAsset.assetId}",
