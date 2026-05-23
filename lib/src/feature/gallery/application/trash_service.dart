@@ -16,7 +16,7 @@ class TrashService {
   Future<void> restore(List<String> assetIds) =>
       repo.restoreFromTrash(assetIds);
 
-  Future<void> emptyTrash(List<String> assetIds) =>
+  Future<void> permanentlyDelete(List<String> assetIds) =>
       repo.deletePermanently(assetIds);
 }
 

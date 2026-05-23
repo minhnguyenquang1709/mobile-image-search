@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/src/common_widgets/thumbnail_widget.dart';
+import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/trash_view_model.dart';
 
 class TrashScreen extends StatefulWidget {
@@ -20,19 +22,27 @@ class _TrashScreenState extends State<TrashScreen> {
   void initState() {
     super.initState();
     _trashVM = TrashViewModel.instance;
+    _trashVM.addListener(_refresh);
     _loadTrashEntries();
+  }
+
+  void _refresh() {
+    setState(() {});
+    debugPrint("[TrashScreen] Refreshing UI...");
   }
 
   Future<void> _loadTrashEntries() async {
     debugPrint("[TrashScreen] Loading trash entries...");
     try {
       await _trashVM.loadFromDatabase();
-      debugPrint("[TrashScreen] Trash entries loaded: ${_trashVM.trashedAssetIds.length}");
+      debugPrint(
+        "[TrashScreen] Trash entries loaded: ${_trashVM.trashedAssetIds.length}",
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading trash: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading trash: $e')));
       }
     }
   }
@@ -55,24 +65,26 @@ class _TrashScreenState extends State<TrashScreen> {
       setState(() => _selectedAssetIds.clear());
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error restoring: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error restoring: $e')));
       }
     }
   }
 
   Future<void> _deleteSelected() async {
     if (_selectedAssetIds.isEmpty) return;
-    debugPrint("[TrashScreen] Permanently deleting ${_selectedAssetIds.length} items");
+    debugPrint(
+      "[TrashScreen] Permanently deleting ${_selectedAssetIds.length} items",
+    );
     try {
-      await _trashVM.emptyTrash(_selectedAssetIds.toList());
+      await _trashVM.permanentlyDelete(_selectedAssetIds.toList());
       setState(() => _selectedAssetIds.clear());
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting: $e')));
       }
     }
   }
@@ -80,6 +92,7 @@ class _TrashScreenState extends State<TrashScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _trashVM.removeListener(_refresh);
     super.dispose();
   }
 
@@ -101,6 +114,29 @@ class _TrashScreenState extends State<TrashScreen> {
               onPressed: _deleteSelected,
             ),
           ],
+
+          if (_trashVM.trashedAssetIds.isNotEmpty && !isInSelectionMode)
+            IconButton(
+              icon: const Icon(Icons.select_all),
+              tooltip: 'Select all',
+              onPressed: () {
+                setState(() {
+                  _selectedAssetIds.addAll(_trashVM.trashedAssetIds);
+                });
+              },
+            ),
+
+          // Empty trash bin
+          if (_trashVM.trashedAssetIds.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep),
+              tooltip: 'Empty Trash',
+              onPressed: () async {
+                await _trashVM.permanentlyDelete(
+                  _trashVM.trashedAssetIds.toList(),
+                );
+              },
+            ),
         ],
       ),
       body: ListenableBuilder(
@@ -122,11 +158,12 @@ class _TrashScreenState extends State<TrashScreen> {
                   controller: _scrollController,
                   slivers: [
                     SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4,
-                        mainAxisSpacing: 2,
-                        crossAxisSpacing: 2,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            mainAxisSpacing: 2,
+                            crossAxisSpacing: 2,
+                          ),
                       delegate: SliverChildBuilderDelegate((context, index) {
                         final assetId = trashedIds.elementAt(index);
                         final isSelected = _selectedAssetIds.contains(assetId);
@@ -143,12 +180,19 @@ class _TrashScreenState extends State<TrashScreen> {
                                 : Colors.transparent,
                           ),
                           onLongPress: () => _toggleSelect(assetId),
-                          onTap: () => _toggleSelect(assetId),
+                          onTap: () {
+                            if (isInSelectionMode)
+                              _toggleSelect(assetId);
+                            else {
+                              // context.push(
+                              //   RouteConstants.mediaView,
+                              //   extra: {'assetId': assetId},
+                              // );
+                            }
+                          },
                         );
 
-                        return Stack(
-                          children: [thumbnail, selectionOverlay],
-                        );
+                        return Stack(children: [thumbnail, selectionOverlay]);
                       }, childCount: trashedIds.length),
                     ),
                   ],

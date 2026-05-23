@@ -59,7 +59,7 @@ class TrashViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> emptyTrash(List<String> assetIds) async {
+  Future<void> permanentlyDelete(List<String> assetIds) async {
     if (assetIds.isEmpty) return;
 
     debugPrint(
@@ -67,7 +67,7 @@ class TrashViewModel extends ChangeNotifier {
     );
 
     try {
-      await ServiceLocator.trashService.emptyTrash(assetIds);
+      await ServiceLocator.trashService.permanentlyDelete(assetIds);
       _trashedAssetIds.removeAll(assetIds);
       notifyListeners();
       debugPrint("[TrashViewModel] Successfully deleted items");

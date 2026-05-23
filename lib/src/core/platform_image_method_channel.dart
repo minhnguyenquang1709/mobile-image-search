@@ -1,9 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/constants/common_constant.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
-class MediaPlatformChannel {
+class PlatformMethodChannel {
   static const String _channelName =
       'com.minh.mobile_image_gallery/media_channel';
 
@@ -15,7 +16,7 @@ class MediaPlatformChannel {
       final int result = await _methodChannel.invokeMethod('getBatteryLevel');
       return result;
     } on PlatformException catch (e) {
-      print("Failed to get battery level: ${e.message}");
+      debugPrint("Failed to get battery level: ${e.message}");
       return -1;
     }
   }
@@ -26,7 +27,7 @@ class MediaPlatformChannel {
         'ids': assetIds,
       });
     } on PlatformException catch (e) {
-      print("Failed to delete images: ${e.message}");
+      debugPrint("Failed to delete images: ${e.message}");
       return Future.value(false);
     }
   }
@@ -68,7 +69,7 @@ class MediaPlatformChannel {
         'mediaList': mediaList,
       });
     } catch (e) {
-      print("Failed to move media to album: ${e.toString()}");
+      debugPrint("Failed to move media to album: ${e.toString()}");
       return Future.value(false);
     }
   }
@@ -91,8 +92,19 @@ class MediaPlatformChannel {
       rethrow;
     }
   }
+
+  Future<void> callNativeMethod(
+    String methodName,
+    Map<String, dynamic> params,
+  ) async {
+    try {
+      await _methodChannel.invokeMethod(methodName, params);
+    } on PlatformException catch (e) {
+      debugPrint("Failed to call native method: ${e.message}");
+    }
+  }
 }
 
-final mediaPlatformChannelProvider = Provider((ref) {
-  return MediaPlatformChannel();
+final platformMethodChannelProvider = Provider((ref) {
+  return PlatformMethodChannel();
 });

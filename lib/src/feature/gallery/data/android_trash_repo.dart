@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/objectbox.g.dart';
+import 'package:mobile_image_search/src/core/platform_image_method_channel.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/objectbox_trash_entry.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/trash_model.dart';
 import 'package:mobile_image_search/src/feature/gallery/domain/trash_repository_interface.dart';
@@ -9,14 +10,47 @@ import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 class AndroidTrashRepository implements ITrashRepository {
   final ObjectBoxClient _objectBoxClient;
+  final PlatformMethodChannel _methodChannel;
 
-  AndroidTrashRepository({required objectBoxStoreClient})
-    : _objectBoxClient = objectBoxStoreClient;
+  AndroidTrashRepository({
+    required ObjectBoxClient objectBoxStoreClient,
+    required PlatformMethodChannel methodChannel,
+  }) : _objectBoxClient = objectBoxStoreClient,
+       this._methodChannel = methodChannel;
 
+  /// Send message to native platform to permanently delete media assets
   @override
-  Future<void> deletePermanently(List<String> assetIds) {
-    // TODO: implement deletePermanently
-    throw UnimplementedError();
+  Future<void> deletePermanently(List<String> assetIds) async {
+    debugPrint(
+      "[AndroidTrashRepository] Permanently deleting assetIds: $assetIds",
+    );
+    try {
+      Map<String, dynamic> args = {
+        'opId': 'permanentlyDelete',
+        'assetIds': assetIds,
+      };
+      await _methodChannel.callNativeMethod("permanentlyDelete", args);
+
+      // remove any corresponding trash entries from ObjectBox
+      final trashEntryBox = _objectBoxClient.store.box<ObjectBoxTrashEntry>();
+      final entriesToDelete = trashEntryBox
+          .query(ObjectBoxTrashEntry_.assetId.oneOf(assetIds))
+          .build()
+          .find();
+      if (entriesToDelete.isNotEmpty) {
+        final idsToDelete = entriesToDelete.map((e) => e.id).toList();
+        await trashEntryBox.removeManyAsync(idsToDelete);
+        debugPrint(
+          "Deleted ${idsToDelete.length} entries from ObjectBox after permanent deletion",
+        );
+      } else {
+        debugPrint(
+          "No matching entries found in ObjectBox for assetIds: $assetIds after permanent deletion",
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
   }
 
   @override
@@ -87,8 +121,11 @@ class AndroidTrashRepository implements ITrashRepository {
   }
 }
 
-final trashRepositoryProvider = Provider<ITrashRepository>((ref) {
-  final objectBoxClient = ref.watch(objectBoxClientProvider).requireValue;
-
-  return AndroidTrashRepository(objectBoxStoreClient: objectBoxClient);
-});
+// final trashRepositoryProvider = Provider<ITrashRepository>((ref) {
+//   final objectBoxClient = ref.watch(objectBoxClientProvider).requireValue;
+//   final platformChannel = ref.watch(platformMethodChannelProvider);
+//   return AndroidTrashRepository(
+//     objectBoxStoreClient: objectBoxClient,
+//     methodChannel: platformChannel,
+//   );
+// });

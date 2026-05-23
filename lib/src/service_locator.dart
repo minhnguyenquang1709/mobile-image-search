@@ -16,20 +16,23 @@ class ServiceLocator {
   static late final TrashService trashService;
   static late final IGalleryRepository galleryRepository;
   static late final GalleryService galleryService;
+  static late final PlatformMethodChannel platformMethodChannel;
 
   static Future<void> init() async {
     debugPrint("[ServiceLocator] Initializing...");
     await objectBoxClient.init();
 
     // Gallery
-    final mediaPlatformChannel = MediaPlatformChannel();
+    final mediaPlatformChannel = PlatformMethodChannel();
     final galleryDataSource = GalleryDataSource(mediaPlatformChannel);
     galleryRepository = AndroidGalleryRepository(galleryDataSource);
     galleryService = GalleryService(galleryRepository);
 
     // Trash
+    platformMethodChannel = PlatformMethodChannel();
     trashRepository = AndroidTrashRepository(
       objectBoxStoreClient: objectBoxClient,
+      methodChannel: platformMethodChannel,
     );
     trashService = TrashService(trashRepository);
     await TrashViewModel.instance.loadFromDatabase();
