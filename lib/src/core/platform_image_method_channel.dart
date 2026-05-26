@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/constants/common_constant.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
-class PlatformMethodChannel {
+/// A data source that abstracts the communication with native platform (Android/iOS).
+class PlatformChannelClient {
   static const String _channelName =
       'com.minh.mobile_image_gallery/media_channel';
 
@@ -20,6 +21,9 @@ class PlatformMethodChannel {
       return -1;
     }
   }
+
+  Future<T?> invokeMethod<T>(String method, [dynamic arguments]) =>
+      _methodChannel.invokeMethod<T>(method, arguments);
 
   Future<bool> deleteImages(List<String> assetIds) async {
     try {
@@ -106,5 +110,5 @@ class PlatformMethodChannel {
 }
 
 final platformMethodChannelProvider = Provider((ref) {
-  return PlatformMethodChannel();
+  return PlatformChannelClient();
 });

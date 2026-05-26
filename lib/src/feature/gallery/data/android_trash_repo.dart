@@ -10,11 +10,11 @@ import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 class AndroidTrashRepository implements ITrashRepository {
   final ObjectBoxClient _objectBoxClient;
-  final PlatformMethodChannel _methodChannel;
+  final PlatformChannelClient _methodChannel;
 
   AndroidTrashRepository({
     required ObjectBoxClient objectBoxStoreClient,
-    required PlatformMethodChannel methodChannel,
+    required PlatformChannelClient methodChannel,
   }) : _objectBoxClient = objectBoxStoreClient,
        this._methodChannel = methodChannel;
 

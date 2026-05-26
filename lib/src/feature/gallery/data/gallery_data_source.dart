@@ -10,10 +10,10 @@ import 'package:photo_manager/photo_manager.dart';
 
 /// Get images from device storage
 class GalleryDataSource {
-  final PlatformMethodChannel _mediaPlatformChannel;
+  final PlatformChannelClient _mediaPlatformChannel;
   AssetPathEntity? _rootAlbum;
 
-  GalleryDataSource(PlatformMethodChannel mediaPlatformChannel)
+  GalleryDataSource(PlatformChannelClient mediaPlatformChannel)
     : _mediaPlatformChannel = mediaPlatformChannel;
 
   /// Call photo_manager to check permission
@@ -344,7 +344,7 @@ class GalleryDataSource {
 }
 
 final galleryDataSourceProvider = Provider((ref) {
-  final PlatformMethodChannel mediaPlatformChannel = ref.watch(
+  final PlatformChannelClient mediaPlatformChannel = ref.watch(
     platformMethodChannelProvider,
   );
   return GalleryDataSource(mediaPlatformChannel);

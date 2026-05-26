@@ -119,10 +119,41 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "7:5167160291219839134",
+      "lastPropertyId": "4:4185198081818703660",
+      "name": "ObjectBoxAlbum",
+      "properties": [
+        {
+          "id": "1:6834902613715951441",
+          "name": "objectBoxId",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:2523939935320921728",
+          "name": "title",
+          "type": 9
+        },
+        {
+          "id": "3:2501778018105789813",
+          "name": "description",
+          "type": 9
+        },
+        {
+          "id": "4:4185198081818703660",
+          "name": "platformId",
+          "indexId": "10:258238646482860556",
+          "type": 9,
+          "flags": 2080
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "6:6948439073829930918",
-  "lastIndexId": "9:8273342539676853360",
+  "lastEntityId": "7:5167160291219839134",
+  "lastIndexId": "10:258238646482860556",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

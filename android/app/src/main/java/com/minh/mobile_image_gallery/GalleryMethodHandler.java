@@ -4,11 +4,11 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.ContentUris;
-import android.content.ContentValues;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
@@ -18,9 +18,9 @@ import androidx.annotation.NonNull;
 import com.minh.mobile_image_gallery.constants.MethodNames;
 import com.minh.mobile_image_gallery.constants.RequestCodes;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -30,324 +30,155 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 
 public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
+    private final Activity activity;
+    private final ContentResolver contentResolver;
+    private final Logger logger = Logger.getLogger("GalleryMethodHandler");
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    private MethodChannel.Result pendingResult;
+
     public GalleryMethodHandler(Activity activity) {
         this.activity = activity;
         this.contentResolver = activity.getContentResolver();
-//        this.bulkOpManager = new BulkOperationManager(activity);
-        logger = Logger.getLogger("MethodChannelHandler");
     }
-
-    private final Activity activity;
-    private final ContentResolver contentResolver;
-
-    private final Logger logger;
-//    private final BulkOperationManager bulkOpManager;
-
-    private MethodChannel.Result pendingResult = null;
-    private String pendingAlbumName = null;
-    private List<Uri> pendingUris = null;
-
-    private final ExecutorService executorService = Executors.newFixedThreadPool(4);
-    private final Handler threadMessageHandler = new Handler(Looper.getMainLooper());
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
-        // debug
-        this.logger.log(Level.INFO, call.arguments.toString());
+        logger.log(Level.INFO, "Called: " + call.method + " with args: " + call.arguments);
 
-        if (call.method.equals(MethodNames.createAlbum)) {
-            String albumName = call.argument("albumName");
-            this.logger.log(Level.INFO, String.format("Create album named '%s'", albumName));
-            List<Map<String, Object>> mediaList = call.argument("mediaList");
-            createAlbum(albumName, mediaList, result);
-        }
-        // else if (call.method.equals(MethodNames.moveMediaToTrash)) {
-        // List<Map<String, Object>> mediaList = call.argument("mediaList");
-        // moveMediaToTrash(mediaList, result);
-        // }
-        else if (call.method.equals(MethodNames.permanentlyDelete)) {
-            List<String> assetIdList = call.argument("assetIds");
-            this.permanentlyDelete(assetIdList, result);
-        } else {
-            result.notImplemented();
+        switch (call.method) {
+            case MethodNames.createAlbum:
+                createAlbum(call, result);
+                break;
+            case "checkAlbumExistence":
+                checkAlbumExistence(call, result);
+                break;
+            case MethodNames.permanentlyDelete:
+                permanentlyDelete(call, result);
+                break;
+            default:
+                result.notImplemented();
+                break;
         }
     }
 
-    /**
-     *
-     *
-     */
-    private Uri getUriFromAssetId(String assetId) {
+    private void createAlbum(MethodCall call, MethodChannel.Result result) {
+        String albumTitle = call.argument("albumTitle");
 
-        // Uri imagePrimaryContentUri =
-        // MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY); //
-        // content://media/external_primary/images/media
-        // Uri videoPrimaryContentUri =
-        // MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY); //
-        // content://media/external_primary/video/media
-        // Uri imageInternalContentUri =
-        // MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_INTERNAL); //
-        // content://media/internal/images/media
-        // Uri videoInternalContentUri =
-        // MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_INTERNAL); //
-        // content://media/internal/video/media
-
-        long assetIdLong;
-        try {
-            assetIdLong = Long.parseLong(assetId);
-        } catch (RuntimeException e) {
-            throw new RuntimeException(e);
-        }
-
-        Uri assetUri;
-
-        try {
-            Uri imageBaseUri = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL); // content://media/external/images/media
-            assetUri = ContentUris.withAppendedId(imageBaseUri, assetIdLong);
-        } catch (RuntimeException e) {
-            Uri videoBaseUri = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL); // content://media/external/video/media
-            assetUri = ContentUris.withAppendedId(videoBaseUri, assetIdLong);
-        }
-
-        return assetUri;
-    }
-
-    private void permanentlyDelete(List<String> assetIdList, MethodChannel.Result result) {
-        this.logger.log(Level.INFO, String.format("Start permanently deleting media: %s", assetIdList.toString()));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        executor.execute(() -> {
             try {
-                this.pendingResult = result;
-                List<Uri> uris = new ArrayList<Uri>();
-                for (String assetId : assetIdList) {
-                    Uri assetUri = getUriFromAssetId(assetId);
-                    uris.add(assetUri);
-                }
-                PendingIntent pendingIntent = MediaStore.createDeleteRequest(this.contentResolver, uris);
-                this.activity.startIntentSenderForResult(pendingIntent.getIntentSender(), RequestCodes.DELETE_REQUEST_CODE, null, 0, 0, 0);
+                File dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+                File newAlbumDir = new File(dcimDir, albumTitle);
 
-            } catch (RuntimeException e) {
-                result.error("DELETE_FAILED", e.getMessage(), null);
-                resetPendingState();
-            } catch (IntentSender.SendIntentException e) {
-                result.error("INTENT_ERROR", e.getMessage(), null);
-                resetPendingState();
-            }
-        } else {
-            result.error("UNSUPPORTED_VERSION", "Requires Android 11+", null);
-        }
-    }
-
-
-    /**
-     * Start creating an album and move media to it
-     *
-     * @overview Get uris from asset ids, send intent to ask OS to create album and
-     * move media to it
-     */
-    private void createAlbum(String albumName, List<Map<String, Object>> mediaList, MethodChannel.Result result) {
-        executorService.execute(() -> {
-            try {
-                List<Uri> uris = new ArrayList<Uri>();
-                for (Map<String, Object> media : mediaList) {
-                    try {
-                        final MediaAsset mediaAsset = new MediaAsset((long) media.get("assetId"),
-                                (int) media.get("mediaType"));
-                        Uri mediaUri = getUriFromMediaAsset(mediaAsset);
-                        uris.add(mediaUri);
-                    } catch (Exception e) {
-                        if (e instanceof ClassCastException) {
-                            continue;
-                        }
+                if (!newAlbumDir.exists()) {
+                    boolean created = newAlbumDir.mkdirs();
+                    if (!created) {
+                        mainHandler.post(() -> result.error("CREATE_FAILED", "Failed to create directory", null));
+                        return;
                     }
                 }
 
-                if (uris.isEmpty()) {
-                    threadMessageHandler.post(() -> result.error("EMPTY_LIST", "No media items provided", null));
-                    return;
-                }
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    this.pendingResult = result;
-                    this.pendingAlbumName = albumName;
-                    this.pendingUris = uris;
-
-                    PendingIntent pendingIntent = MediaStore.createWriteRequest(contentResolver, uris);
-                    threadMessageHandler.post(() -> {
-                        try {
-                            activity.startIntentSenderForResult(pendingIntent.getIntentSender(),
-                                    RequestCodes.CREATE_ALBUM_REQUEST_CODE, null, 0, 0, 0);
-                        } catch (Exception e) {
-                            pendingResult.error("INTENT_ERROR", e.getMessage(), null);
-                            resetPendingState();
-                        }
-                    });
-                } else {
-                    threadMessageHandler.post(() -> result.error("NOT_SUPPORTED",
-                            "Android version not supported for this operation yet", null));
-                }
+                String bucketId = String.valueOf(newAlbumDir.getAbsolutePath().toLowerCase().hashCode());
+                mainHandler.post(() -> result.success(bucketId));
             } catch (Exception e) {
-                threadMessageHandler.post(() -> result.error("CREATE_ALBUM_FAILED", e.getMessage(), null));
+                mainHandler.post(() -> result.error("CREATE_ERROR", e.getMessage(), null));
             }
         });
     }
 
-    /**
-     * Start moving media to album
-     */
-    private void moveMediaToAlbum(String albumName, List<Map<String, Object>> mediaList, MethodChannel.Result result) {
-        executorService.execute(() -> {
+    private void checkAlbumExistence(MethodCall call, MethodChannel.Result result) {
+        String appAlbumDir = call.argument("appAlbumDir");
+        String albumName = call.argument("albumName");
 
+        executor.execute(() -> {
+            try {
+                File albumDir = new File(appAlbumDir, albumName);
+                boolean exists = albumDir.exists() && albumDir.isDirectory();
+                mainHandler.post(() -> result.success(exists));
+            } catch (Exception e) {
+                mainHandler.post(() -> result.error("CHECK_ERROR", e.getMessage(), null));
+            }
         });
     }
 
-    /**
-     * Start moving media to trash
-     */
-    // private void moveMediaToTrash(List<Map<String, Object>> mediaList,
-    // MethodChannel.Result result) {
-    // executorService.execute(() -> {
-    // try {
-    // if (this.pendingResult != null) {
-    // handler.post(() -> result.error("ALREADY_IN_PROGRESS", "Another operation
-    // already in progress", null));
-    // return;
-    // }
-    //
-    // List<Uri> uris = new ArrayList<Uri>();
-    // for (Map<String, Object> media : mediaList) {
-    //
-    //
-    // }
-    //
-    // if (uris.isEmpty()) {
-    // handler.post(() -> result.error("EMPTY_LIST", "No media items provided",
-    // null));
-    // return;
-    // }
-    //
-    // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-    // this.pendingResult = result;
-    // this.pendingUris = uris;
-    //
-    // PendingIntent pendingIntent = MediaStore.createTrashRequest(contentResolver,
-    // uris, true);
-    // handler.post(() -> {
-    // try {
-    // activity.startIntentSenderForResult(pendingIntent.getIntentSender(),
-    // RequestCodes.MOVE_MEDIA_TO_TRASH, null, 0, 0, 0);
-    // } catch (Exception e) {
-    // pendingResult.error("INTENT_ERROR", e.getMessage(), null);
-    // resetPendingState();
-    // }
-    // });
-    // }
-    // } catch (Exception e) {
-    // handler.post(() -> result.error("MOVE_TO_TRASH_FAILED", e.getMessage(),
-    // null));
-    // }
-    // });
-    // }
+    private void permanentlyDelete(MethodCall call, MethodChannel.Result result) {
+        List<String> assetIdList = call.argument("assetIds");
+        if (assetIdList == null || assetIdList.isEmpty()) {
+            result.error("INVALID_ARGS", "assetIds list is empty or null", null);
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            result.error("UNSUPPORTED_VERSION", "Requires Android 11+", null);
+            return;
+        }
+
+        this.pendingResult = result;
+
+        try {
+            List<Uri> uris = new ArrayList<>();
+            for (String assetId : assetIdList) {
+                uris.add(getUriFromAssetId(assetId));
+            }
+
+            PendingIntent pendingIntent = MediaStore.createDeleteRequest(contentResolver, uris);
+            activity.startIntentSenderForResult(pendingIntent.getIntentSender(),
+                    RequestCodes.DELETE_REQUEST_CODE, null, 0, 0, 0);
+        } catch (IntentSender.SendIntentException | RuntimeException e) {
+            result.error("DELETE_FAILED", e.getMessage(), null);
+            this.pendingResult = null;
+        }
+    }
 
     /**
      * Helper method to get uri from asset id
+     * <br>
+     * <br>
+     * MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+     * content://media/external_primary/images/media
+     * <br>
+     * <br>
+     * MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+     * content://media/external_primary/video/media
+     * <br>
+     * <br>
+     * MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_INTERNAL)
+     * content://media/internal/images/media
+     * <br>
+     * <br>
+     * MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_INTERNAL)
+     * content://media/internal/video/media
+     * <br>
+     * <br>
+     * MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+     * content://media/external/video/media
+     * <br>
+     * <br>
+     * MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+     * content://media/external/images/media
      */
-    private Uri getUriFromMediaAsset(MediaAsset mediaAsset) {
-
-        // Uri imagePrimaryContentUri =
-        // MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY); //
-        // content://media/external_primary/images/media
-        // Uri videoPrimaryContentUri =
-        // MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY); //
-        // content://media/external_primary/video/media
-        // Uri imageInternalContentUri =
-        // MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_INTERNAL); //
-        // content://media/internal/images/media
-        // Uri videoInternalContentUri =
-        // MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_INTERNAL); //
-        // content://media/internal/video/media
-
-        Uri baseUri = mediaAsset.type == 1
-                ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL) // content://media/external/video/media
-                : MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL); // content://media/external/images/media
-
-        return ContentUris.withAppendedId(baseUri, mediaAsset.id);
+    private Uri getUriFromAssetId(String assetId) {
+        long assetIdLong = Long.parseLong(assetId);
+        try {
+            Uri imageBaseUri = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
+            return ContentUris.withAppendedId(imageBaseUri, assetIdLong);
+        } catch (RuntimeException e) {
+            Uri videoBaseUri = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
+            return ContentUris.withAppendedId(videoBaseUri, assetIdLong);
+        }
     }
 
     public void handleActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == RequestCodes.CREATE_ALBUM_REQUEST_CODE) {
-            if (resultCode == Activity.RESULT_OK) {
-                handleMoveMediaToAlbum();
-            } else {
-                if (pendingResult != null) {
-                    pendingResult.error("PERMISSION_DENIED", "User denied write access", null);
-                    resetPendingState();
-                }
-            }
-        } else if (requestCode == RequestCodes.DELETE_REQUEST_CODE) {
-            if (resultCode == Activity.RESULT_OK) {
-                if (pendingResult != null) {
+        if (requestCode == RequestCodes.DELETE_REQUEST_CODE) {
+            if (pendingResult != null) {
+                if (resultCode == Activity.RESULT_OK) {
                     pendingResult.success(true);
-                    resetPendingState();
-                }
-            } else {
-                if (pendingResult != null) {
+                } else {
                     pendingResult.error("PERMISSION_DENIED", "User denied delete access", null);
-                    resetPendingState();
                 }
+                pendingResult = null;
             }
         }
-
-        // if (requestCode == RequestCodes.MOVE_MEDIA_TO_TRASH) {
-        // if (resultCode == Activity.RESULT_OK) {
-        // handleMoveMediaToTrash();
-        // } else {
-        // if (pendingResult != null) {
-        // pendingResult.error("PERMISSION_DENIED", "User denied the operation", null);
-        // resetPendingState();
-        // }
-        // }
-        // }
-    }
-
-    private void handleMoveMediaToAlbum() {
-        executorService.execute(() -> {
-            for (Uri uri : pendingUris) {
-                try {
-                    ContentValues values = new ContentValues();
-                    values.put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/" + pendingAlbumName);
-                    contentResolver.update(uri, values, null, null);
-                } catch (Exception e) {
-                    threadMessageHandler.post(() -> {
-                        if (pendingResult != null) {
-                            pendingResult.error("UPDATE_FAILED", e.getMessage(), null);
-                            resetPendingState();
-                        }
-                    });
-                }
-            }
-            threadMessageHandler.post(() -> {
-                if (pendingResult != null) {
-                    pendingResult.success(true);
-                    resetPendingState();
-                }
-            });
-
-        });
-    }
-
-    // private void handleMoveMediaToTrash() {
-    // executorService.execute(() -> {
-    // try {
-    //
-    // } catch (Exception e) {
-    //
-    // }
-    // });
-    // }
-
-    private void resetPendingState() {
-        pendingResult = null;
-        pendingAlbumName = null;
-        pendingUris = null;
     }
 }

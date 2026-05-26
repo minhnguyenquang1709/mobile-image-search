@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/src/constants/route_constant.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/album_controller.dart';
+import 'package:mobile_image_search/src/feature/gallery/presentation/album_view_model.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/image_objectbox_model.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/search_objectbox_model.dart';
+import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/model/album.dart';
+import 'package:mobile_image_search/src/utils/debug.dart';
 
-class AlbumScreen extends ConsumerStatefulWidget {
+class AlbumScreen extends StatefulWidget {
   const AlbumScreen({super.key});
 
   @override
-  ConsumerState<AlbumScreen> createState() => _AlbumScreenState();
+  State<AlbumScreen> createState() => _AlbumScreenState();
 }
 
-class _AlbumScreenState extends ConsumerState<AlbumScreen> {
-  String _albumName = "";
+class _AlbumScreenState extends State<AlbumScreen> {
+  final AlbumViewModel _albumVM = AlbumViewModel.instance;
 
   @override
   void initState() {
     super.initState();
+    _albumVM.loadAlbums();
   }
 
   @override
@@ -25,41 +29,226 @@ class _AlbumScreenState extends ConsumerState<AlbumScreen> {
     super.dispose();
   }
 
+  void _showCreateAlbumDialog() {
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Create New Album'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Album Title *'),
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (Optional)',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final title = titleController.text.trim();
+                if (title.isNotEmpty) {
+                  final desc = descriptionController.text.trim();
+                  _albumVM.createAlbum(title, desc.isEmpty ? null : desc);
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _clearImageObjectBox() {
+    final imageBox = ServiceLocator.objectBoxClient.store.box<ImageObjectBox>();
+    imageBox.removeAll();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('[DEBUG] ImageObjectBox cleared')),
+    );
+    debugPrint('[DEBUG] ImageObjectBox cleared');
+  }
+
+  void _clearSearchQueryObjectBox() {
+    final searchBox = ServiceLocator.objectBoxClient.store.box<SearchQuery>();
+    searchBox.removeAll();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('[DEBUG] SearchQuery cleared')),
+    );
+    debugPrint('[DEBUG] SearchQuery cleared');
+  }
+
+  void _clearAlbumObjectBox() {
+    final albumBox = ServiceLocator.objectBoxClient.store.box<ObjectBoxAlbum>();
+    albumBox.removeAll();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('[DEBUG] ObjectBoxAlbum cleared')),
+    );
+    debugPrint('[DEBUG] ObjectBoxAlbum cleared');
+  }
+
+  void _showDebugMenu() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Debug Menu'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Select an action:'),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _showCreateAlbumDialog();
+                      },
+                      child: const Text('Create New Album'),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _clearImageObjectBox();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                      ),
+                      child: const Text('Clear ImageObjectBox'),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _clearSearchQueryObjectBox();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                      ),
+                      child: const Text('Clear SearchQuery'),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _clearAlbumObjectBox();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text('Clear ObjectBoxAlbum'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final albumController = ref.watch(albumControllerProvider);
-    return Container(
-      child: albumController.when(
-        loading: () {
-          return const Center(child: CircularProgressIndicator());
-        },
-        error: (error, stackTrace) {
-          return Center(child: const Text("Error loading albums"));
-        },
-        data: (List<Album> albumList) {
-          if (albumList.isEmpty) {
-            return const Center(child: const Text("No albums found"));
+    return Scaffold(
+      body: ListenableBuilder(
+        listenable: _albumVM,
+        builder: (context, _) {
+          if (_albumVM.isLoadingAlbums && _albumVM.albums.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
           }
 
-          return ListView(
-            children: [
-              for (final album in albumList)
-                ListTile(
-                  title: Text(album.title),
-                  subtitle: Text("ID: ${album.id}"),
-                  onTap: () {
-                    debugPrint("Tapped on album: ${album.title}");
+          if (_albumVM.albums.isEmpty) {
+            return const Center(child: Text("No albums found"));
+          }
 
-                    context.push(
-                      RouteConstants.albumView,
-                      extra: {'album': album},
-                    );
-                  },
-                ),
-            ],
+          return ListView.builder(
+            itemCount: _albumVM.albums.length,
+            itemBuilder: (context, index) {
+              final Album album = _albumVM.albums[index];
+              return ListTile(
+                title: Text(album.title),
+                subtitle: Text("ID: ${album.id}"),
+                onTap: () {
+                  debugPrint("Tapped on album: ${album.title}");
+                  context.push(
+                    RouteConstants.albumView,
+                    extra: {'album': album},
+                  );
+                },
+              );
+            },
           );
         },
       ),
+      floatingActionButton: isDebugOrProfileMode
+          ? FloatingActionButton(
+              onPressed: _showDebugMenu,
+              child: const Icon(Icons.bug_report),
+              tooltip: 'Debug menu',
+            )
+          : null,
     );
+    // Container(
+    //   child: albumController.when(
+    //     loading: () {
+    //       return const Center(child: CircularProgressIndicator());
+    //     },
+    //     error: (error, stackTrace) {
+    //       return Center(child: const Text("Error loading albums"));
+    //     },
+    //     data: (List<Album> albumList) {
+    //       if (albumList.isEmpty) {
+    //         return const Center(child: const Text("No albums found"));
+    //       }
+
+    //       return ListView(
+    //         children: [
+    //           for (final album in albumList)
+    //             ListTile(
+    //               title: Text(album.title),
+    //               subtitle: Text("ID: ${album.id}"),
+    //               onTap: () {
+    //                 debugPrint("Tapped on album: ${album.title}");
+
+    //                 context.push(
+    //                   RouteConstants.albumView,
+    //                   extra: {'album': album},
+    //                 );
+    //               },
+    //             ),
+    //         ],
+    //       );
+    //     },
+    //   ),
+    // );
   }
 }

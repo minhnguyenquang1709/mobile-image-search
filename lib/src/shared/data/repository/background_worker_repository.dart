@@ -310,7 +310,7 @@ class BackgroundWorkerRepo implements IBackgroundWorkerRepository {
     // await objectBoxStoreDataSource.init();
 
     // init gallery data source
-    PlatformMethodChannel mediaPlatformChannel = PlatformMethodChannel();
+    PlatformChannelClient mediaPlatformChannel = PlatformChannelClient();
     GalleryDataSource galleryDataSource = GalleryDataSource(
       mediaPlatformChannel,
     );

@@ -17,6 +17,7 @@ import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 import 'src/feature/gallery/data/objectbox_trash_entry.dart';
 import 'src/feature/indexing/data/image_objectbox_model.dart';
 import 'src/feature/indexing/data/search_objectbox_model.dart';
+import 'src/shared/domain/model/album.dart';
 
 export 'package:objectbox/objectbox.dart'; // so that callers only have to import this file
 
@@ -153,6 +154,41 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(7, 5167160291219839134),
+    name: 'ObjectBoxAlbum',
+    lastPropertyId: const obx_int.IdUid(4, 4185198081818703660),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 6834902613715951441),
+        name: 'objectBoxId',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 2523939935320921728),
+        name: 'title',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 2501778018105789813),
+        name: 'description',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 4185198081818703660),
+        name: 'platformId',
+        type: 9,
+        flags: 2080,
+        indexId: const obx_int.IdUid(10, 258238646482860556),
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -198,8 +234,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(6, 6948439073829930918),
-    lastIndexId: const obx_int.IdUid(9, 8273342539676853360),
+    lastEntityId: const obx_int.IdUid(7, 5167160291219839134),
+    lastIndexId: const obx_int.IdUid(10, 258238646482860556),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [
@@ -384,6 +420,56 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    ObjectBoxAlbum: obx_int.EntityDefinition<ObjectBoxAlbum>(
+      model: _entities[3],
+      toOneRelations: (ObjectBoxAlbum object) => [],
+      toManyRelations: (ObjectBoxAlbum object) => {},
+      getId: (ObjectBoxAlbum object) => object.objectBoxId,
+      setId: (ObjectBoxAlbum object, int id) {
+        object.objectBoxId = id;
+      },
+      objectToFB: (ObjectBoxAlbum object, fb.Builder fbb) {
+        final titleOffset = fbb.writeString(object.title);
+        final descriptionOffset = object.description == null
+            ? null
+            : fbb.writeString(object.description!);
+        final platformIdOffset = fbb.writeString(object.platformId);
+        fbb.startTable(5);
+        fbb.addInt64(0, object.objectBoxId);
+        fbb.addOffset(1, titleOffset);
+        fbb.addOffset(2, descriptionOffset);
+        fbb.addOffset(3, platformIdOffset);
+        fbb.finish(fbb.endTable());
+        return object.objectBoxId;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final objectBoxIdParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final titleParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final descriptionParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGetNullable(buffer, rootOffset, 8);
+        final platformIdParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 10, '');
+        final object = ObjectBoxAlbum(
+          objectBoxId: objectBoxIdParam,
+          title: titleParam,
+          description: descriptionParam,
+          platformId: platformIdParam,
+        );
+
+        return object;
+      },
+    ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
@@ -475,5 +561,28 @@ class ObjectBoxTrashEntry_ {
   /// See [ObjectBoxTrashEntry.trashedAt].
   static final trashedAt = obx.QueryDateProperty<ObjectBoxTrashEntry>(
     _entities[2].properties[2],
+  );
+}
+
+/// [ObjectBoxAlbum] entity fields to define ObjectBox queries.
+class ObjectBoxAlbum_ {
+  /// See [ObjectBoxAlbum.objectBoxId].
+  static final objectBoxId = obx.QueryIntegerProperty<ObjectBoxAlbum>(
+    _entities[3].properties[0],
+  );
+
+  /// See [ObjectBoxAlbum.title].
+  static final title = obx.QueryStringProperty<ObjectBoxAlbum>(
+    _entities[3].properties[1],
+  );
+
+  /// See [ObjectBoxAlbum.description].
+  static final description = obx.QueryStringProperty<ObjectBoxAlbum>(
+    _entities[3].properties[2],
+  );
+
+  /// See [ObjectBoxAlbum.platformId].
+  static final platformId = obx.QueryStringProperty<ObjectBoxAlbum>(
+    _entities[3].properties[3],
   );
 }
