@@ -126,12 +126,6 @@ class AndroidGalleryRepository implements IGalleryRepository {
   }
 
   @override
-  Future<bool> deleteAlbum(String albumId, {bool deleteMedia = false}) async {
-    // TODO: implement deleteAlbum
-    throw UnimplementedError();
-  }
-
-  @override
   AssetEntity? getCachedEntity(String assetId) {
     return _assetEntityCache[assetId];
   }

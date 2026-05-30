@@ -2,6 +2,9 @@ import 'package:objectbox/objectbox.dart';
 
 /// A model representing an album, which can contain multiple media assets.
 class Album {
+  /// Android: MediaStore.Images.Media.BUCKET_ID.
+  ///
+  /// iOS/macOS: localIdentifier.
   final String id;
   final String title;
   String? description;
@@ -14,7 +17,7 @@ class ObjectBoxAlbum {
   @Id()
   int objectBoxId;
 
-  /// - Android: BUCKET_ID
+  /// - Android: MediaStore.Images.Media.BUCKET_ID
   ///
   /// - iOS: localIdentifier
   @Unique(onConflict: ConflictStrategy.fail)

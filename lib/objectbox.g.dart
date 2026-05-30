@@ -15,7 +15,7 @@ import 'package:objectbox/objectbox.dart' as obx;
 import 'package:objectbox_flutter_libs/objectbox_flutter_libs.dart';
 
 import 'src/feature/gallery/data/objectbox_trash_entry.dart';
-import 'src/feature/indexing/data/image_objectbox_model.dart';
+import 'src/feature/indexing/data/objectbox_image_embedding.dart';
 import 'src/feature/indexing/data/search_objectbox_model.dart';
 import 'src/shared/domain/model/album.dart';
 
@@ -189,6 +189,36 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(9, 1721730835871466479),
+    name: 'ObjectBoxAlbumTrashEntry',
+    lastPropertyId: const obx_int.IdUid(3, 6554121543465052767),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 5291209764634765604),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 8052264120116243379),
+        name: 'albumId',
+        type: 9,
+        flags: 34848,
+        indexId: const obx_int.IdUid(13, 1109444958506980282),
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 6554121543465052767),
+        name: 'trashedAt',
+        type: 10,
+        flags: 8,
+        indexId: const obx_int.IdUid(14, 5445266917403499267),
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -234,14 +264,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(7, 5167160291219839134),
-    lastIndexId: const obx_int.IdUid(10, 258238646482860556),
+    lastEntityId: const obx_int.IdUid(9, 1721730835871466479),
+    lastIndexId: const obx_int.IdUid(14, 5445266917403499267),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [
       1561470879124125729,
       4579256638745705832,
       6948439073829930918,
+      2818964444761599636,
     ],
     retiredIndexUids: const [],
     retiredPropertyUids: const [
@@ -258,6 +289,9 @@ obx_int.ModelDefinition getObjectBoxModel() {
       8718488453534067771,
       131951363468051406,
       8360917123897941686,
+      3182848755641666981,
+      4348689481054691837,
+      977867506931564729,
     ],
     retiredRelationUids: const [],
     modelVersion: 5,
@@ -308,15 +342,15 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
-    ImageObjectBox: obx_int.EntityDefinition<ImageObjectBox>(
+    ObjectBoxImageEmbedding: obx_int.EntityDefinition<ObjectBoxImageEmbedding>(
       model: _entities[1],
-      toOneRelations: (ImageObjectBox object) => [],
-      toManyRelations: (ImageObjectBox object) => {},
-      getId: (ImageObjectBox object) => object.id,
-      setId: (ImageObjectBox object, int id) {
+      toOneRelations: (ObjectBoxImageEmbedding object) => [],
+      toManyRelations: (ObjectBoxImageEmbedding object) => {},
+      getId: (ObjectBoxImageEmbedding object) => object.id,
+      setId: (ObjectBoxImageEmbedding object, int id) {
         object.id = id;
       },
-      objectToFB: (ImageObjectBox object, fb.Builder fbb) {
+      objectToFB: (ObjectBoxImageEmbedding object, fb.Builder fbb) {
         final assetIdOffset = fbb.writeString(object.assetId);
         final embeddingOffset = fbb.writeListFloat32(object.embedding);
         final titleOffset = fbb.writeString(object.title);
@@ -366,7 +400,7 @@ obx_int.ModelDefinition getObjectBoxModel() {
           const fb.Int64Reader().vTableGet(buffer, rootOffset, 24, 0),
         );
         final object =
-            ImageObjectBox(
+            ObjectBoxImageEmbedding(
                 assetId: assetIdParam,
                 title: titleParam,
                 mediaType: mediaTypeParam,
@@ -470,6 +504,41 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    ObjectBoxAlbumTrashEntry:
+        obx_int.EntityDefinition<ObjectBoxAlbumTrashEntry>(
+          model: _entities[4],
+          toOneRelations: (ObjectBoxAlbumTrashEntry object) => [],
+          toManyRelations: (ObjectBoxAlbumTrashEntry object) => {},
+          getId: (ObjectBoxAlbumTrashEntry object) => object.id,
+          setId: (ObjectBoxAlbumTrashEntry object, int id) {
+            object.id = id;
+          },
+          objectToFB: (ObjectBoxAlbumTrashEntry object, fb.Builder fbb) {
+            final albumIdOffset = fbb.writeString(object.albumId);
+            fbb.startTable(4);
+            fbb.addInt64(0, object.id);
+            fbb.addOffset(1, albumIdOffset);
+            fbb.addInt64(2, object.trashedAt.millisecondsSinceEpoch);
+            fbb.finish(fbb.endTable());
+            return object.id;
+          },
+          objectFromFB: (obx.Store store, ByteData fbData) {
+            final buffer = fb.BufferContext(fbData);
+            final rootOffset = buffer.derefObject(0);
+            final albumIdParam = const fb.StringReader(
+              asciiOptimization: true,
+            ).vTableGet(buffer, rootOffset, 6, '');
+            final trashedAtParam = DateTime.fromMillisecondsSinceEpoch(
+              const fb.Int64Reader().vTableGet(buffer, rootOffset, 8, 0),
+            );
+            final object = ObjectBoxAlbumTrashEntry(
+              albumId: albumIdParam,
+              trashedAt: trashedAtParam,
+            )..id = const fb.Int64Reader().vTableGet(buffer, rootOffset, 4, 0);
+
+            return object;
+          },
+        ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
@@ -493,55 +562,55 @@ class SearchQuery_ {
   );
 }
 
-/// [ImageObjectBox] entity fields to define ObjectBox queries.
+/// [ObjectBoxImageEmbedding] entity fields to define ObjectBox queries.
 class ImageObjectBox_ {
-  /// See [ImageObjectBox.id].
-  static final id = obx.QueryIntegerProperty<ImageObjectBox>(
+  /// See [ObjectBoxImageEmbedding.id].
+  static final id = obx.QueryIntegerProperty<ObjectBoxImageEmbedding>(
     _entities[1].properties[0],
   );
 
-  /// See [ImageObjectBox.assetId].
-  static final assetId = obx.QueryStringProperty<ImageObjectBox>(
+  /// See [ObjectBoxImageEmbedding.assetId].
+  static final assetId = obx.QueryStringProperty<ObjectBoxImageEmbedding>(
     _entities[1].properties[1],
   );
 
-  /// See [ImageObjectBox.embedding].
-  static final embedding = obx.QueryHnswProperty<ImageObjectBox>(
+  /// See [ObjectBoxImageEmbedding.embedding].
+  static final embedding = obx.QueryHnswProperty<ObjectBoxImageEmbedding>(
     _entities[1].properties[2],
   );
 
-  /// See [ImageObjectBox.indexedAt].
-  static final indexedAt = obx.QueryDateProperty<ImageObjectBox>(
+  /// See [ObjectBoxImageEmbedding.indexedAt].
+  static final indexedAt = obx.QueryDateProperty<ObjectBoxImageEmbedding>(
     _entities[1].properties[3],
   );
 
-  /// See [ImageObjectBox.createdAt].
-  static final createdAt = obx.QueryDateProperty<ImageObjectBox>(
+  /// See [ObjectBoxImageEmbedding.createdAt].
+  static final createdAt = obx.QueryDateProperty<ObjectBoxImageEmbedding>(
     _entities[1].properties[4],
   );
 
-  /// See [ImageObjectBox.title].
-  static final title = obx.QueryStringProperty<ImageObjectBox>(
+  /// See [ObjectBoxImageEmbedding.title].
+  static final title = obx.QueryStringProperty<ObjectBoxImageEmbedding>(
     _entities[1].properties[5],
   );
 
-  /// See [ImageObjectBox.mediaType].
-  static final mediaType = obx.QueryIntegerProperty<ImageObjectBox>(
+  /// See [ObjectBoxImageEmbedding.mediaType].
+  static final mediaType = obx.QueryIntegerProperty<ObjectBoxImageEmbedding>(
     _entities[1].properties[6],
   );
 
-  /// See [ImageObjectBox.duration].
-  static final duration = obx.QueryIntegerProperty<ImageObjectBox>(
+  /// See [ObjectBoxImageEmbedding.duration].
+  static final duration = obx.QueryIntegerProperty<ObjectBoxImageEmbedding>(
     _entities[1].properties[7],
   );
 
-  /// See [ImageObjectBox.mediaCreatedAt].
-  static final mediaCreatedAt = obx.QueryDateProperty<ImageObjectBox>(
+  /// See [ObjectBoxImageEmbedding.mediaCreatedAt].
+  static final mediaCreatedAt = obx.QueryDateProperty<ObjectBoxImageEmbedding>(
     _entities[1].properties[8],
   );
 
-  /// See [ImageObjectBox.mediaModifiedAt].
-  static final mediaModifiedAt = obx.QueryDateProperty<ImageObjectBox>(
+  /// See [ObjectBoxImageEmbedding.mediaModifiedAt].
+  static final mediaModifiedAt = obx.QueryDateProperty<ObjectBoxImageEmbedding>(
     _entities[1].properties[9],
   );
 }
@@ -584,5 +653,23 @@ class ObjectBoxAlbum_ {
   /// See [ObjectBoxAlbum.platformId].
   static final platformId = obx.QueryStringProperty<ObjectBoxAlbum>(
     _entities[3].properties[3],
+  );
+}
+
+/// [ObjectBoxAlbumTrashEntry] entity fields to define ObjectBox queries.
+class ObjectBoxAlbumTrashEntry_ {
+  /// See [ObjectBoxAlbumTrashEntry.id].
+  static final id = obx.QueryIntegerProperty<ObjectBoxAlbumTrashEntry>(
+    _entities[4].properties[0],
+  );
+
+  /// See [ObjectBoxAlbumTrashEntry.albumId].
+  static final albumId = obx.QueryStringProperty<ObjectBoxAlbumTrashEntry>(
+    _entities[4].properties[1],
+  );
+
+  /// See [ObjectBoxAlbumTrashEntry.trashedAt].
+  static final trashedAt = obx.QueryDateProperty<ObjectBoxAlbumTrashEntry>(
+    _entities[4].properties[2],
   );
 }

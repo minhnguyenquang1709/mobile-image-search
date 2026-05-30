@@ -8,6 +8,8 @@ import 'package:mobile_image_search/src/feature/gallery/data/android_gallery_rep
 import 'package:mobile_image_search/src/feature/gallery/data/android_trash_repo.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source.dart';
 import 'package:mobile_image_search/src/feature/gallery/domain/trash_repository_interface.dart';
+import 'package:mobile_image_search/src/feature/indexing/application/indexing_service.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/background_worker_repo.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/trash_view_model.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_repository.dart';
@@ -20,6 +22,7 @@ class ServiceLocator {
   static late final GalleryService galleryService;
   static late final PlatformChannelClient platformChannelClient;
   static late final AlbumService albumService;
+  static late final BackgroundWorkerRepo backgroundWorkerRepo;
 
   static Future<void> init() async {
     debugPrint("[ServiceLocator] Initializing...");
@@ -47,5 +50,10 @@ class ServiceLocator {
     );
     albumService = AlbumService(albumRepo);
     await albumRepo.syncAlbums();
+
+    // background indexing
+    backgroundWorkerRepo = BackgroundWorkerRepo(
+      objectBoxClient: objectBoxClient,
+    );
   }
 }

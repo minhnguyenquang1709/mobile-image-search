@@ -1,5 +1,3 @@
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import 'package:mobile_image_search/src/feature/gallery/data/album_repo.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/album_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/album.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
@@ -34,6 +32,14 @@ class AlbumService {
       return await _albumRepository.createAlbum(title, description);
     } catch (e) {
       throw Exception("Failed to create album: $e");
+    }
+  }
+
+  Future<void> deleteAlbum(String albumId, {bool deleteAssets = false}) async {
+    try {
+      await _albumRepository.deleteAlbum(albumId, deleteAssets: deleteAssets);
+    } catch (e) {
+      throw Exception("Failed to delete album: $e");
     }
   }
 }

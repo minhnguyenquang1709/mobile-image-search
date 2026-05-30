@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:mobile_image_search/src/shared/domain/model/indexing_progress.dart';
 
+///
 abstract class IBackgroundWorkerRepository {
   /// initialize worker isolate with necessary file paths, message handlers
   Future<void> init();

@@ -1,10 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_image_search/src/shared/data/repository/background_worker_repository.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/background_worker_repo.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/background_worker_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/indexing_progress.dart';
 
+/// Contains business rules related to indexing in background, including:
+///
+/// - Reading media asset data
+///
+/// -
 class IndexingService {
   Stream<IndexingProgress> get progressStream => _workerRepo.progressStream;
   IndexingProgress get currentProgress => _workerRepo.currentIndexingProgress;
@@ -19,7 +24,7 @@ class IndexingService {
   /// Check for necessary gallery change and update indexing on app startup
   ///
   /// Change status and display to user
-  Future<void> initialize() async {
+  Future<void> init() async {
     try {
       // check for necessary gallery change and update indexing on app startup
       // fire-and-forget
@@ -174,10 +179,10 @@ class IndexingService {
   // }
 }
 
-final indexingServiceProvider = FutureProvider((ref) async {
-  final worker = await ref.watch(backgroundWorkerRepoProvider.future);
+// final indexingServiceProvider = FutureProvider((ref) async {
+//   final worker = await ref.watch(backgroundWorkerRepoProvider.future);
 
-  final service = IndexingService(workerRepo: worker);
-  await service.initialize();
-  return service;
-});
+//   final service = IndexingService(workerRepo: worker);
+//   await service.init();
+//   return service;
+// });

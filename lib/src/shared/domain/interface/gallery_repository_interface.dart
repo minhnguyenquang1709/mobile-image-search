@@ -19,7 +19,6 @@ abstract class IGalleryRepository {
 
   // write operations
   Future<bool> createAlbum(String albumName, List<MediaAsset> mediaAssets);
-  Future<bool> deleteAlbum(String albumId, {bool deleteMedia = false});
   Future<bool> moveMediaToAlbum(
     List<MediaAsset> mediaAssets,
     String targetAlbumId,

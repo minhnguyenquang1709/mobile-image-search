@@ -55,8 +55,10 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
                 checkAlbumExistence(call, result);
                 break;
             case MethodNames.permanentlyDelete:
-                permanentlyDelete(call, result);
+                permanentlyDeleteMedia(call, result);
                 break;
+            case MethodNames.deleteAlbum:
+                deleteAlbum(call, result);
             default:
                 result.notImplemented();
                 break;
@@ -102,7 +104,14 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
         });
     }
 
-    private void permanentlyDelete(MethodCall call, MethodChannel.Result result) {
+    /**
+     * Permanently delete media assets given their asset IDs, remove them from
+     * device storage.
+     * 
+     * @param call
+     * @param result
+     */
+    private void permanentlyDeleteMedia(MethodCall call, MethodChannel.Result result) {
         List<String> assetIdList = call.argument("assetIds");
         if (assetIdList == null || assetIdList.isEmpty()) {
             result.error("INVALID_ARGS", "assetIds list is empty or null", null);
@@ -129,6 +138,25 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
             result.error("DELETE_FAILED", e.getMessage(), null);
             this.pendingResult = null;
         }
+    }
+
+    /**
+     * Delete the target directory (album) given its BUCKET_ID.
+     * 
+     * @param call
+     * @param result
+     */
+    private void deleteAlbum(MethodCall call, MethodChannel.Result result) {
+        String albumId = call.argument("albumId");
+        Boolean deleteAssets = call.argument("deleteAssets");
+
+        executor.execute(() -> {
+            try {
+
+            } catch (Exception e) {
+                mainHandler.post(() -> result.error("DELETE_ALBUM_FAILED", e.getMessage(), null));
+            }
+        });
     }
 
     /**

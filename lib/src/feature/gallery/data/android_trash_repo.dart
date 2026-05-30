@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/objectbox.g.dart';
 import 'package:mobile_image_search/src/core/platform_image_method_channel.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/objectbox_trash_entry.dart';
@@ -64,10 +63,10 @@ class AndroidTrashRepository implements ITrashRepository {
     return Future.value(
       entries
           .map(
-            (e) => TrashEntry(
-              id: e.id.toString(),
-              assetId: e.assetId,
-              trashedAt: e.trashedAt,
+            (dbTrashEntry) => TrashEntry(
+              // id: dbTrashEntry.id.toString(),
+              assetId: dbTrashEntry.assetId,
+              trashedAt: dbTrashEntry.trashedAt,
             ),
           )
           .toList(),
@@ -118,6 +117,8 @@ class AndroidTrashRepository implements ITrashRepository {
     // delete entries from DB
     final idsToDelete = entriesToRestore.map((e) => e.id).toList();
     await trashEntryBox.removeManyAsync(idsToDelete);
+
+    // delete album trash entries if any of the restored assets belong to trashed albums
   }
 }
 

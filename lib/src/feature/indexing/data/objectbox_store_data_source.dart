@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/objectbox.g.dart';
 import 'package:mobile_image_search/src/constants/common_constant.dart';
-import 'package:mobile_image_search/src/feature/indexing/data/image_objectbox_model.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/objectbox_image_embedding.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;

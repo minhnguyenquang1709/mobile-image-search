@@ -45,6 +45,9 @@ class AlbumViewModel extends ChangeNotifier {
       final result = await ServiceLocator.albumService.getAlbums();
       _albums.clear();
       _albums.addAll(result);
+      _albums.sort(
+        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      );
     } catch (e) {
       debugPrint("[AlbumViewModel] Error loading albums: $e");
     } finally {
@@ -174,6 +177,20 @@ class AlbumViewModel extends ChangeNotifier {
       debugPrint("[AlbumViewModel] Created new album: ${newAlbum.title}");
     } catch (e) {
       debugPrint("[AlbumViewModel] Error creating album: $e");
+    }
+  }
+
+  Future<void> deleteAlbum(String albumId, {bool deleteAssets = false}) async {
+    try {
+      await ServiceLocator.albumService.deleteAlbum(
+        albumId,
+        deleteAssets: deleteAssets,
+      );
+      // reload albums list after deletion
+      await loadAlbums();
+    } catch (e) {
+      debugPrint("[AlbumViewModel] Error deleting album: $e");
+      rethrow;
     }
   }
 }

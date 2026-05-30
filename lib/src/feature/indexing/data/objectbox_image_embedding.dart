@@ -1,10 +1,8 @@
-import 'package:mobile_image_search/src/constants/common_constant.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:objectbox/objectbox.dart';
 import '../../../constants/config_constant.dart';
 
 @Entity()
-class ImageObjectBox {
+class ObjectBoxImageEmbedding {
   @Id()
   int id = 0;
 
@@ -35,7 +33,7 @@ class ImageObjectBox {
   @Property(type: PropertyType.date)
   DateTime createdAt = DateTime.now();
 
-  ImageObjectBox({
+  ObjectBoxImageEmbedding({
     required this.assetId,
     required this.title,
     required this.mediaType,
@@ -44,15 +42,4 @@ class ImageObjectBox {
     required this.mediaCreatedAt,
     required this.mediaModifiedAt,
   });
-
-  /// Helper method to convert to domain model
-  // MediaAsset toImageAsset() {
-  //   return ImageAsset(
-  //     assetId: assetId,
-  //     title: title,
-  //     createDateTime: createdAt,
-  //     modifiedDateTime: modifiedAt,
-  //     mediaType: mediaType == 1 ? EMediaType.video : EMediaType.image,
-  //   );
-  // }
 }

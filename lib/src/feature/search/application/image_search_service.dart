@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_repository.dart';
 import 'package:mobile_image_search/src/feature/indexing/domain/store_repository_interface.dart';
 import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
-import 'package:mobile_image_search/src/shared/data/repository/background_worker_repository.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/background_worker_repo.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/background_worker_interface.dart';
 
 class SearchService {

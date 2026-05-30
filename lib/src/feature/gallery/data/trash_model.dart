@@ -1,18 +1,28 @@
 import 'package:flutter/foundation.dart';
-import 'package:objectbox/objectbox.dart';
 // import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 @immutable
 class TrashEntry {
-  final String id;
+  // final String id;
   final String assetId;
   final DateTime trashedAt;
 
   const TrashEntry({
-    required this.id,
+    // required this.id,
     required this.assetId,
     required this.trashedAt,
   });
+}
+
+@immutable
+class AlbumTrashEntry {
+  /// Android: MediaStore.Images.Media.BUCKET_ID
+  ///
+  /// iOS: localIdentifier
+  final String albumId;
+  final DateTime trashedAt;
+
+  const AlbumTrashEntry({required this.albumId, required this.trashedAt});
 }
 
 // @immutable

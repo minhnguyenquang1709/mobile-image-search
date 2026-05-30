@@ -14,3 +14,21 @@ class ObjectBoxTrashEntry {
 
   ObjectBoxTrashEntry({required this.assetId, required this.trashedAt});
 }
+
+@Entity()
+class ObjectBoxAlbumTrashEntry {
+  @Id()
+  int id = 0;
+
+  /// - Android: MediaStore.Images.Media.BUCKET_ID
+  ///
+  /// - iOS: localIdentifier
+  @Unique(onConflict: ConflictStrategy.replace)
+  @Index()
+  String albumId;
+
+  @Index()
+  DateTime trashedAt;
+
+  ObjectBoxAlbumTrashEntry({required this.albumId, required this.trashedAt});
+}

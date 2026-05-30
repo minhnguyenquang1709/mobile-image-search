@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/album_view_model.dart';
-import 'package:mobile_image_search/src/feature/indexing/data/image_objectbox_model.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/objectbox_image_embedding.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/search_objectbox_model.dart';
 import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/model/album.dart';
@@ -78,7 +78,8 @@ class _AlbumScreenState extends State<AlbumScreen> {
   }
 
   void _clearImageObjectBox() {
-    final imageBox = ServiceLocator.objectBoxClient.store.box<ImageObjectBox>();
+    final imageBox = ServiceLocator.objectBoxClient.store
+        .box<ObjectBoxImageEmbedding>();
     imageBox.removeAll();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('[DEBUG] ImageObjectBox cleared')),
@@ -102,6 +103,72 @@ class _AlbumScreenState extends State<AlbumScreen> {
       const SnackBar(content: Text('[DEBUG] ObjectBoxAlbum cleared')),
     );
     debugPrint('[DEBUG] ObjectBoxAlbum cleared');
+  }
+
+  void _confirmDeleteAlbum(Album album) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Delete Album "${album.title}"?'),
+          content: const Text(
+            'This will remove the album from the app. '
+            'Would you also like to delete the physical media files in this album?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  await _albumVM.deleteAlbum(album.id, deleteAssets: true);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Album ${album.title} removed')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  }
+                }
+              },
+              child: const Text('Remove Album Only'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  await _albumVM.deleteAlbum(album.id, deleteAssets: true);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Album ${album.title} and assets deleted',
+                        ),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Delete Album & Media'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showDebugMenu() {
@@ -197,6 +264,10 @@ class _AlbumScreenState extends State<AlbumScreen> {
               return ListTile(
                 title: Text(album.title),
                 subtitle: Text("ID: ${album.id}"),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.grey),
+                  onPressed: () => _confirmDeleteAlbum(album),
+                ),
                 onTap: () {
                   debugPrint("Tapped on album: ${album.title}");
                   context.push(

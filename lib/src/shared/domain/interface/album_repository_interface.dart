@@ -23,16 +23,18 @@ abstract class IAlbumRepository {
   /// - creating a new album entry in database
   ///
   /// - create a new folder in Android device or a new collection in iOS device (TBD)
-  Future<Album> createAlbum(String albumName, [String? description]);
+  Future<Album> createAlbum(String albumTitle, [String? description]);
 
   /// Sync albums between app database and platform albums
   Future<void> syncAlbums();
 
   /// Delete an album given its ID.
+  /// Optionally delete media assets in the album as well.
+  ///
   /// Album ID is BUCKET_ID in Android and localIdentifier in iOS.
   ///
   /// - Android: delete both the album entry in database and corresponding directory
   ///
   /// - iOS: TBD
-  Future<void> deleteAlbum(String albumId);
+  Future<void> deleteAlbum(String albumId, {bool deleteAssets = false});
 }

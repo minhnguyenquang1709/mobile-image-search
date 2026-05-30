@@ -4,13 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/objectbox.g.dart';
 import 'package:mobile_image_search/src/constants/common_constant.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_data_source.dart';
-import 'package:mobile_image_search/src/feature/indexing/data/image_objectbox_model.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/objectbox_image_embedding.dart';
 import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/feature/indexing/domain/store_repository_interface.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
+/// Data source abstracting the interaction with ObjectBox database
 class ObjectBoxClient {
   late final Store store;
   Admin? admin;
@@ -70,8 +71,9 @@ class ObjectBoxStoreRepository implements IStoreRepository {
     Float32List embedding,
   ) async {
     try {
-      final imageEmbeddingBox = _objectBoxClient.store.box<ImageObjectBox>();
-      final ImageObjectBox newImageEmbedding = ImageObjectBox(
+      final imageEmbeddingBox = _objectBoxClient.store
+          .box<ObjectBoxImageEmbedding>();
+      final ObjectBoxImageEmbedding newImageEmbedding = ObjectBoxImageEmbedding(
         assetId: mediaAsset.assetId,
         title: mediaAsset.title,
         mediaType: mediaAsset.mediaType == EMediaType.video ? 1 : 0,
@@ -89,7 +91,8 @@ class ObjectBoxStoreRepository implements IStoreRepository {
   @override
   Future<bool> deleteImageEmbeddings(List<String> assetIds) async {
     try {
-      final imageEmbeddingBox = _objectBoxClient.store.box<ImageObjectBox>();
+      final imageEmbeddingBox = _objectBoxClient.store
+          .box<ObjectBoxImageEmbedding>();
       for (final id in assetIds) {
         final query = imageEmbeddingBox
             .query(ImageObjectBox_.assetId.equals(id))
