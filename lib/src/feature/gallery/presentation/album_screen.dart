@@ -77,14 +77,14 @@ class _AlbumScreenState extends State<AlbumScreen> {
     );
   }
 
-  void _clearImageObjectBox() {
+  void _clearObjectBoxImageEmbedding() {
     final imageBox = ServiceLocator.objectBoxClient.store
         .box<ObjectBoxImageEmbedding>();
     imageBox.removeAll();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('[DEBUG] ImageObjectBox cleared')),
+      const SnackBar(content: Text('[DEBUG] ObjectBoxImageEmbedding cleared')),
     );
-    debugPrint('[DEBUG] ImageObjectBox cleared');
+    debugPrint('[DEBUG] ObjectBoxImageEmbedding cleared');
   }
 
   void _clearSearchQueryObjectBox() {
@@ -198,12 +198,12 @@ class _AlbumScreenState extends State<AlbumScreen> {
                     ElevatedButton(
                       onPressed: () {
                         Navigator.of(context).pop();
-                        _clearImageObjectBox();
+                        _clearObjectBoxImageEmbedding();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                       ),
-                      child: const Text('Clear ImageObjectBox'),
+                      child: const Text('Clear ObjectBoxImageEmbedding'),
                     ),
                     const SizedBox(height: 8),
                     ElevatedButton(

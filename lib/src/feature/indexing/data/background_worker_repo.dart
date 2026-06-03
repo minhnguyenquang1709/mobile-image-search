@@ -480,5 +480,3 @@ import 'package:photo_manager/photo_manager.dart';
 //   await repo.init();
 //   return repo;
 // });
-
-class BackgroundWorkerRepo implements IBackgroundWorkerRepository {}

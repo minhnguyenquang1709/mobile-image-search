@@ -24,9 +24,9 @@ class ImageSearchController extends AsyncNotifier<List<SearchResultMatch>> {
       state = const AsyncValue.loading();
 
       // Get search service and search
-      final searchService = await ref.watch(imageSearchServiceProvider.future);
-      final List<SearchResultMatch> searchResults = await searchService
-          .searchByCaption(query);
+      // final searchService = await ref.watch(imageSearchServiceProvider.future);
+      // final List<SearchResultMatch> searchResults = await searchService
+      //     .searchByCaption(query);
 
       // Get all media objects to match with search results
       final galleryService = ref.read(galleryServiceProvider);
@@ -50,11 +50,11 @@ class ImageSearchController extends AsyncNotifier<List<SearchResultMatch>> {
       //     .toList();
 
       // Sort by similarity ascending (lower scores = better matches)
-      searchResults.sort((a, b) => a.cosineScore.compareTo(b.cosineScore));
+      // searchResults.sort((a, b) => a.cosineScore.compareTo(b.cosineScore));
 
-      for (var i = 0; i < searchResults.take(5).length; i++) {}
+      // for (var i = 0; i < searchResults.take(5).length; i++) {}
 
-      state = AsyncValue.data(searchResults);
+      // state = AsyncValue.data(searchResults);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }

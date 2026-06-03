@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:developer';
 import 'dart:io';
 import 'dart:isolate';
@@ -9,18 +8,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_image_search/src/constants/config_constant.dart';
 import 'package:mobile_image_search/src/constants/method_param_constant.dart';
-import 'package:mobile_image_search/src/core/platform_image_method_channel.dart';
-import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/onnx_data_source.dart';
 import 'package:mobile_image_search/src/feature/search/domain/model/background_isolate_command.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/background_worker_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/indexing_progress.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
-import 'package:mobile_image_search/src/utils/media_processing.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:photo_manager/photo_manager.dart';
 
 /// Data source that abstract the interaction with background worker isolate for image indexing
+///
+/// Considering dart isolate as a server, this data source acts as a client that sends requests to the isolate and listens for responses
 class BackgroundWorkerDataSource {
   // listen for message from worker isolate
   ReceivePort? _mainReceivePort;
@@ -62,6 +59,9 @@ class BackgroundWorkerDataSource {
     // prepare model file paths
     // extract model to file system to allow bg isolate to load
     final directory = await getApplicationSupportDirectory();
+    debugPrint(
+      "[BackgroundWorkerDataSource] Application support directory: ${directory.path}",
+    );
     final applicationSupportDirPath = directory.path;
 
     // copy model files from assets to file system and initialize data sources
@@ -174,6 +174,9 @@ class BackgroundWorkerDataSource {
         final completer = _pendingIndexingTasks.remove(message.taskId);
         if (completer != null) {
           if (message.errorMessage != null) {
+            debugPrint(
+              "[BackgroundWorkerDataSource] Image encoding error for assetId ${message.assetId}: ${message.errorMessage}",
+            );
             completer.complete(
               ImageEncodingResult.failure(
                 message.taskId,
@@ -182,6 +185,9 @@ class BackgroundWorkerDataSource {
               ),
             );
           } else {
+            debugPrint(
+              "[BackgroundWorkerDataSource] Image encoding successful for assetId ${message.assetId}: ${message.errorMessage}",
+            );
             completer.complete(
               ImageEncodingResult.success(
                 message.taskId,
@@ -251,87 +257,6 @@ class BackgroundWorkerDataSource {
       bpeVocabExtractedPath: bpeVocabFilePath,
     );
 
-    // init vector store
-    // ObjectBoxStoreDataSource objectBoxStoreDataSource =
-    //     ObjectBoxStoreDataSource();
-    // await objectBoxStoreDataSource.init();
-
-    // init gallery data source
-    PlatformChannelClient mediaPlatformChannel = PlatformChannelClient();
-    GalleryDataSource galleryDataSource = GalleryDataSource(
-      mediaPlatformChannel,
-    );
-
-    Queue<MediaAsset> pendingIndexingAssetQueue = Queue();
-
-    bool isIndexingQueueProcessing = false;
-
-    IndexingProgress currentIndexingProgress = IndexingProgress(
-      total: 0,
-      processed: 0,
-      isIndexing: false,
-    );
-
-    Future<void> indexNextImage() async {
-      if (isIndexingQueueProcessing) {
-        return;
-      }
-
-      isIndexingQueueProcessing = true;
-
-      currentIndexingProgress = IndexingProgress(
-        total: currentIndexingProgress.total,
-        processed: currentIndexingProgress.processed,
-        isIndexing: false,
-      );
-      workerConfig.mainSendPort.send(currentIndexingProgress);
-      while (pendingIndexingAssetQueue.isNotEmpty) {
-        final mediaAsset = pendingIndexingAssetQueue.removeFirst();
-
-        // _logger.printLog("Start indexing image ${mediaAsset.title}");
-
-        try {
-          final imageEmbedding = await onnxDataSource.encodeImage(mediaAsset);
-
-          // measure saving embedding to vector store time
-          final dbTask = TimelineTask()
-            ..start("Save Image Embedding to Vector Store");
-
-          // FAST
-          // save to vector store
-          // await objectBoxStoreDataSource.saveImageEmbedding(
-          //   mediaAsset,
-          //   imageEmbedding,
-          // );
-          // END FAST
-          dbTask.finish();
-        } catch (e) {
-          rethrow;
-        }
-
-        // update progress
-        currentIndexingProgress = IndexingProgress(
-          total: currentIndexingProgress.total,
-          processed: currentIndexingProgress.processed + 1,
-          isIndexing: true,
-        );
-        workerConfig.mainSendPort.send(currentIndexingProgress);
-
-        debugPrint(
-          "[BackgroundWorkerDataSource] Finished indexing image ${mediaAsset.title}, id: ${mediaAsset.assetId}",
-        );
-      }
-
-      isIndexingQueueProcessing = false;
-
-      currentIndexingProgress = IndexingProgress(
-        total: currentIndexingProgress.total,
-        processed: currentIndexingProgress.processed,
-        isIndexing: false,
-      );
-      workerConfig.mainSendPort.send(currentIndexingProgress);
-    }
-
     // listen for messages from main isolate
     workerReceivePort.listen((message) async {
       // if message is text encoding request
@@ -349,76 +274,31 @@ class BackgroundWorkerDataSource {
       }
 
       // if message is image encoding request
-      if (message is ImageEncodingCommand) {}
-
-      // if message is gallery sync request
-      if (message is ScanGalleryCommand) {
+      if (message is ImageEncodingCommand) {
         debugPrint(
-          "[BackgroundWorkerDataSource] Start gallery sync process in background isolate",
+          "[BackgroundWorkerDataSource] Received image encoding request for assetId: ${message.assetId}",
         );
-        final List<MediaAsset> pendingIndexingAssetList = [];
-        final List<String> pendingDeleteAssetIdList = [];
-
-        // diffing: scan gallery and compare with indexed assets in vector store to find new/updated/deleted assets
-        final List<AssetEntity> allGalleryAssetEntities =
-            await galleryDataSource.getAllImages();
-        final List<MediaAsset> allGalleryMediaAssets = allGalleryAssetEntities
-            .map((asset) {
-              return toMediaAsset(asset);
-            })
-            .toList();
-
-        // final imageBox = objectBoxStoreDataSource.store.box<ImageObjectBox>();
-        // final List<ImageObjectBox> allIndexedImages = imageBox.getAll();
-        final Map<String, MediaAsset> indexedImagesMap = {
-          // for (final indexedImage in allIndexedImages)
-          //   indexedImage.assetId: MediaAsset(
-          //     assetId: indexedImage.assetId,
-          //     title: indexedImage.title,
-          //     createDateTime: indexedImage.createdAt,
-          //     modifiedDateTime: indexedImage.modifiedAt,
-          //     mediaType: EMediaType.image,
-          //     width: null,
-          //     height: null,
-          //     format: null,
-          //   ),
-        };
-
-        for (final galleryImage in allGalleryMediaAssets) {
-          final indexedImage = indexedImagesMap[galleryImage.assetId];
-
-          if (indexedImage == null) {
-            // new image
-            pendingIndexingAssetList.add(galleryImage);
-          } else {
-            // existing image, check if modified
-            if (galleryImage.modifiedDateTime.isAfter(
-              indexedImage.modifiedDateTime,
-            )) {
-              pendingIndexingAssetList.add(galleryImage);
-            }
-          }
-
-          indexedImagesMap.remove(galleryImage.assetId);
+        try {
+          final imageEmbedding = await onnxDataSource.encodeImage(
+            message.imageBytes,
+            message.title,
+          );
+          workerConfig.mainSendPort.send(
+            ImageEncodingResult.success(
+              message.taskId,
+              message.assetId,
+              imageEmbedding,
+            ),
+          );
+        } catch (e) {
+          workerConfig.mainSendPort.send(
+            ImageEncodingResult.failure(
+              message.taskId,
+              message.assetId,
+              e.toString(),
+            ),
+          );
         }
-
-        // add to queue
-        pendingIndexingAssetQueue.addAll(pendingIndexingAssetList);
-
-        // remaining items in indexedImagesMap are meant to be deleted from database
-        pendingDeleteAssetIdList.addAll(indexedImagesMap.keys);
-
-        // start processing queue
-        currentIndexingProgress = IndexingProgress(
-          total: pendingIndexingAssetQueue.length,
-          processed: 0,
-          isIndexing: true,
-        );
-
-        debugPrint(
-          "[BackgroundWorkerDataSource] Indexing process started. ${pendingIndexingAssetQueue.length} images to index, ${pendingDeleteAssetIdList.length} images to delete from index.",
-        );
-        await indexNextImage();
       }
     });
   }
@@ -432,13 +312,28 @@ class BackgroundWorkerDataSource {
     _messageController.close();
   }
 
-  Future<Float32List> encodeImage(Uint8List imageBytes) async {
+  /// Receive image data, send to worker isolate for encoding, and return the resulting embedding
+  Future<Float32List> encodeImage(
+    String assetId,
+    String title,
+    Uint8List imageBytes,
+  ) async {
+    debugPrint(
+      "[BackgroundWorkerDataSource] Sending image encoding request for assetId: ${assetId}",
+    );
     final id = _getNextTaskId();
     final completer = Completer<ImageEncodingResult>();
 
     _pendingIndexingTasks[id] = completer;
 
-    _workerSendPort?.send(ImageEncodingCommand(taskId: id, assetId: id));
+    _workerSendPort?.send(
+      ImageEncodingCommand(
+        taskId: id,
+        assetId: assetId,
+        title: title,
+        imageBytes: imageBytes,
+      ),
+    );
 
     // wait for isolate to respond
     final result = await completer.future;
@@ -456,11 +351,5 @@ class BackgroundWorkerDataSource {
     // yield execution until isolate responds
     final result = await completer.future;
     return result.embedding;
-  }
-
-  /// Send command to background isolate to start the sync process
-  Future<void> syncGallery() async {
-    // create task
-    _workerSendPort?.send(ScanGalleryCommand());
   }
 }

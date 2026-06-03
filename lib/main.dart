@@ -19,9 +19,11 @@ void main() async {
     runApp(
       MaterialApp(
         home: Scaffold(
-          body: Center(
-            child: Column(
-              children: [Text("Error initializing app: ${e.toString()}")],
+          body: SafeArea(
+            child: Center(
+              child: Column(
+                children: [Text("Error initializing app: ${e.toString()}")],
+              ),
             ),
           ),
         ),

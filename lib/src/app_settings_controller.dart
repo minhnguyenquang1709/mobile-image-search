@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_image_search/src/feature/indexing/application/indexing_service.dart';
+import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/model/indexing_progress.dart';
 
 class AppSettings {
@@ -48,7 +48,7 @@ class AppSettingsNotifier extends AsyncNotifier<AppSettings> {
 
   @override
   FutureOr<AppSettings> build() async {
-    final indexingService = await ref.watch(indexingServiceProvider.future);
+    final indexingService = ServiceLocator.indexingService;
 
     // cleanup on dispose
     ref.onDispose(() {
@@ -65,7 +65,10 @@ class AppSettingsNotifier extends AsyncNotifier<AppSettings> {
       );
     });
 
-    return AppSettings();
+    return AppSettings(
+      totalToProcess: indexingService.currentProgress.total,
+      processedCount: indexingService.currentProgress.processed,
+    );
   }
 
   void updateSearchSimilarityThreshold(double threshold) {

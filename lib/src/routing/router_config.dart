@@ -6,7 +6,7 @@ import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/common_widgets/nested_navigation_widget.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/album_opened_screen.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/album_screen.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/home_screen.dart';
+import 'package:mobile_image_search/src/feature/gallery/presentation/main_gallery_screen.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/full_media_view_screen.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/trash_screen.dart';
 import 'package:mobile_image_search/src/feature/search/presentation/image_search_screen.dart';
@@ -45,7 +45,7 @@ final topLevelNavigationRouter = GoRouter(
             GoRoute(
               path: RouteConstants.home,
               builder: (BuildContext context, GoRouterState state) =>
-                  HomeScreen(),
+                  MainGalleryScreen(),
               // routes: [
               //   // child route
               //   GoRoute(

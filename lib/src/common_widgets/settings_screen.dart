@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/app_settings_controller.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
+import 'package:mobile_image_search/src/feature/indexing/presentation/indexing_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -23,6 +24,8 @@ class SettingsScreen extends ConsumerWidget {
               if (data.totalToProcess > 0)
                 Column(
                   children: [
+                    // indexing status
+                    Card(child: IndexingCard()),
                     Card(
                       child: ListTile(
                         title: const Text("Indexing Progress"),

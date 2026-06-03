@@ -93,12 +93,10 @@ class ObjectBoxStoreRepository implements IStoreRepository {
     try {
       final imageEmbeddingBox = _objectBoxClient.store
           .box<ObjectBoxImageEmbedding>();
-      for (final id in assetIds) {
-        final query = imageEmbeddingBox
-            .query(ImageObjectBox_.assetId.equals(id))
-            .build();
-        query.remove();
-      }
+      final deleteQuery = imageEmbeddingBox
+          .query(ObjectBoxImageEmbedding_.assetId.oneOf(assetIds))
+          .build();
+      await deleteQuery.removeAsync();
       return true;
     } catch (e) {
       rethrow;

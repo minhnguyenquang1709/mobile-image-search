@@ -3,14 +3,13 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:mobile_image_search/src/constants/config_constant.dart';
-import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/utils/debug.dart';
-import 'package:mobile_image_search/src/utils/logger.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:mobile_image_search/src/utils/bpe_tokenizer.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:photo_manager/photo_manager.dart';
 
+/// This class abstracts the interaction with AI models
+///
 /// OnnxRuntime: Main entry point for creating sessions and configuring global options
 ///
 /// OrtSession: Represents a loaded ML model for running inference
@@ -31,8 +30,6 @@ class OnnxDataSource {
 
   final List<double> mean = Model.specs.mean;
   final List<double> std = Model.specs.std;
-
-  final _logger = loggers[LoggerName.onnxDataSource]!;
 
   // performance tracking
   int _totalImagesProcessed = 0;
@@ -70,7 +67,9 @@ class OnnxDataSource {
           : Model.imageEncoderAssetPath;
 
       final providers = await ort.getAvailableProviders();
-      _logger.printLog('Available ONNX Runtime providers: $providers');
+      debugPrint(
+        '[OnnxDataSource] Available ONNX Runtime providers: $providers',
+      );
 
       List<OrtProvider> availableProviders = [];
       for (final provider in [
@@ -94,11 +93,16 @@ class OnnxDataSource {
         imageEncoderPath,
         options: options,
       );
+      debugPrint(
+        "[OnnxDataSource] Text encoder & image encoder initialized successfully",
+      );
+
       tokenizer = BpeTokenizer();
       await tokenizer?.init(
         vocabExtractedPath: bpeVocabExtractedPath,
         mergesExtractedPath: bpeMergesExtractedPath,
       );
+      debugPrint("[OnnxDataSource] Tokenizer initialized successfully");
 
       if (textEncoder == null || imageEncoder == null) {
         throw Exception(
@@ -181,7 +185,7 @@ class OnnxDataSource {
       //   );
       // }
     } catch (e) {
-      _logger.printLog('Error initializing AiInferenceService: $e');
+      debugPrint('[OnnxDataSource] Error in initialization: $e');
       rethrow;
     }
   }
@@ -207,8 +211,8 @@ class OnnxDataSource {
     List<int> tokenIds = tokenizer!.tokenize(text);
     final List<String> inputNames = textEncoder!.inputNames;
     final List<String> outputNames = textEncoder!.outputNames;
-    _logger.printLog('Input names for text encoder: $inputNames');
-    _logger.printLog('Output names for text encoder: $outputNames');
+    debugPrint('[OnnxDataSource] Input names for text encoder: $inputNames');
+    debugPrint('[OnnxDataSource] Output names for text encoder: $outputNames');
 
     final String inputName = inputNames.first;
     final String outputName = outputNames.first;
@@ -220,11 +224,11 @@ class OnnxDataSource {
       ]),
     };
     final output = await textEncoder!.run(inputs);
-    _logger.printLog('Text encoded successfully, output keys:\n');
+    debugPrint('[OnnxDataSource] Text encoded successfully, output keys:\n');
     final outputKeys = output.keys.toList();
     for (int i = 0; i < outputKeys.length; i++) {
-      _logger.printLog(
-        'Output $i: ${outputKeys[i]} - ${output[outputKeys[i]].runtimeType}',
+      debugPrint(
+        '[OnnxDataSource] Output $i: ${outputKeys[i]} - ${output[outputKeys[i]].runtimeType}',
       );
     }
 
@@ -234,10 +238,13 @@ class OnnxDataSource {
     );
   }
 
-  /// transform image into model's expected input
+  /// Create vector embedding from image's thumbnail bytes
   ///
-  /// create tensor
-  Future<Float32List> encodeImage(MediaAsset mediaAsset) async {
+  /// Apply letterboxing
+  Future<Float32List> encodeImage(
+    Uint8List thumbnailBytes,
+    String title,
+  ) async {
     final TimelineTask task = TimelineTask();
     final Stopwatch stopwatch = Stopwatch();
     if (isDebugOrProfileMode) {
@@ -250,64 +257,6 @@ class OnnxDataSource {
     }
 
     try {
-      // _logger.printLog(
-      //   'Encoding image: ${mediaAsset.title}, assetId: ${mediaAsset.assetId}',
-      // );
-
-      // FAST
-      // read and preprocess image
-      final AssetEntity? assetEntity = await AssetEntity.fromId(
-        mediaAsset.assetId,
-      );
-
-      if (assetEntity == null) {
-        throw Exception(
-          'AssetEntity not found for assetId: ${mediaAsset.assetId}',
-        );
-      }
-      // END FAST
-
-      // FAST
-      const ThumbnailOption thumbnailOption = ThumbnailOption(
-        size: ThumbnailSize(
-          500,
-          500,
-        ), // return thumbnail with max width or height of 500px
-      );
-
-      // measure platform channel
-      final fetchTask = TimelineTask(parent: task);
-
-      if (isDebugOrProfileMode) {
-        fetchTask.start('Fetch Thumbnail from Platform Channel');
-      }
-
-      // platform channel call goes through Flutter Platform Thread (OS main thread)
-      Uint8List? thumbnailBytes = await assetEntity.thumbnailDataWithOption(
-        thumbnailOption,
-      );
-      if (isDebugOrProfileMode) {
-        fetchTask.finish();
-      }
-
-      if (thumbnailBytes == null) {
-        throw Exception(
-          'Failed to get thumbnail for assetId: ${mediaAsset.assetId}',
-        );
-      }
-      // END FAST
-
-      // get physical file pathway
-      // final File? imageFile = await assetEntity.file;
-
-      // if (imageFile == null) {
-      //   throw Exception(
-      //     'Failed to get image file for assetId: ${mediaAsset.assetId}',
-      //   );
-      // }
-
-      // final Uint8List imageBytes = await imageFile.readAsBytes();
-
       // measure dart image decoding (CPU)
       final decodeTask = TimelineTask(parent: task);
       if (isDebugOrProfileMode) {
@@ -321,9 +270,7 @@ class OnnxDataSource {
       }
 
       if (decodedImage == null) {
-        throw Exception(
-          'Failed to decode image for assetId: ${mediaAsset.assetId}',
-        );
+        throw Exception('Failed to decode image for ${title}');
       }
 
       // measure image resizing (CPU)
@@ -334,26 +281,32 @@ class OnnxDataSource {
 
       // resize
       final int targetSize = Model.specs.imageSize;
-      // get shorter image side
-      final bool isWidthShorter = decodedImage.width < decodedImage.height;
+
+      // get longer image side for contain
+      final bool isWidthLonger = decodedImage.width > decodedImage.height;
 
       final img.Image resizedImage = img.copyResize(
         decodedImage,
-        width: isWidthShorter ? targetSize : null,
-        height: isWidthShorter ? null : targetSize,
+        width: isWidthLonger ? targetSize : null,
+        height: isWidthLonger ? null : targetSize,
         interpolation: img.Interpolation.average,
       );
 
-      // center crop
-      final int xOffset = (resizedImage.width - targetSize) ~/ 2; // center crop
-      final int yOffset =
-          (resizedImage.height - targetSize) ~/ 2; // center crop
-      final img.Image croppedImage = img.copyCrop(
-        resizedImage,
-        x: xOffset,
-        y: yOffset,
+      // contain (create pads)
+      final int xOffset = (targetSize - resizedImage.width) ~/ 2;
+      final int yOffset = (targetSize - resizedImage.height) ~/ 2;
+
+      final img.Image paddedImage = img.Image(
         width: targetSize,
         height: targetSize,
+        numChannels: 3,
+      );
+
+      img.compositeImage(
+        paddedImage,
+        resizedImage,
+        dstX: xOffset,
+        dstY: yOffset,
       );
       if (isDebugOrProfileMode) {
         resizeTask.finish();
@@ -367,15 +320,15 @@ class OnnxDataSource {
 
       // convert to CHW (channels, height, width) and normalize
       final Float32List imageInputData = Float32List(
-        1 * 3 * croppedImage.width * croppedImage.height,
+        1 * 3 * paddedImage.width * paddedImage.height,
       );
       int idx = 0;
       final List<double> mean = Model.specs.mean;
       final List<double> std = Model.specs.std;
       for (int c = 0; c < 3; c++) {
-        for (int h = 0; h < croppedImage.height; h++) {
-          for (int w = 0; w < croppedImage.width; w++) {
-            final pixel = croppedImage.getPixel(
+        for (int h = 0; h < paddedImage.height; h++) {
+          for (int w = 0; w < paddedImage.width; w++) {
+            final pixel = paddedImage.getPixel(
               w,
               h,
             ); // need another method, getPixel returns a new Pixel object, expensive
@@ -415,8 +368,8 @@ class OnnxDataSource {
       final OrtValue inputImageOrt = await OrtValue.fromList(imageInputData, [
         1,
         3,
-        croppedImage.height,
-        croppedImage.width,
+        paddedImage.height,
+        paddedImage.width,
       ]);
 
       // run inference
@@ -475,51 +428,35 @@ class OnnxDataSource {
           _totalProcessingTimeMs += elapsedMs;
           final avgMs = (_totalProcessingTimeMs / _totalImagesProcessed)
               .round();
-          final imageResolution = '${assetEntity.width}x${assetEntity.height}';
+          final imageResolution =
+              '${decodedImage.width}x${decodedImage.height}';
 
           if (!logFile.existsSync()) {
             logFile.writeAsStringSync('Title,Resolution,Time (s),Avg (s)\n');
           }
           logFile.writeAsStringSync(
-            '${mediaAsset.title},$imageResolution,${elapsedMs / 1000},${avgMs / 1000}\n',
+            '$title,$imageResolution,${elapsedMs / 1000},${avgMs / 1000}\n',
             mode: FileMode.append,
           );
         }
       }
 
       // save debug step images for inspection
-      if (isDebugOrProfileMode) {
-        // original image
-        final File? originImage = await assetEntity.originFile;
-        if (originImage != null) {
-          await _saveDebugImage(
-            img.decodeImage(originImage.readAsBytesSync())!,
-            mediaAsset.title,
-            '00_original_image',
-          );
-        }
-
+      if (false) {
+        // We cannot save original without assetEntity here anymore.
         // DEBUG: thumbnail
-        await _saveDebugImage(decodedImage, mediaAsset.title, '01_thumbnail');
+        await _saveDebugImage(decodedImage, title, '01_thumbnail');
 
         // DEBUG: resized image
-        await _saveDebugImage(
-          resizedImage,
-          mediaAsset.title,
-          '02_resized_image',
-        );
+        await _saveDebugImage(resizedImage, title, '02_resized_image');
 
-        // DEBUG: cropped image
-        await _saveDebugImage(
-          croppedImage,
-          mediaAsset.title,
-          '03_cropped_image',
-        );
+        // DEBUG: padded image
+        await _saveDebugImage(paddedImage, title, '03_padded_image');
       }
 
       return result;
     } catch (e) {
-      _logger.printLog('Error encoding image: $e');
+      debugPrint('[OnnxDataSource] Error encoding image: $e');
       task.finish();
       rethrow;
     }

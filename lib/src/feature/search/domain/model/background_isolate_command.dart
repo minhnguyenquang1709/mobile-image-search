@@ -20,8 +20,15 @@ class TextEncodingResult {
 class ImageEncodingCommand {
   final String taskId;
   final String assetId;
+  final String title;
+  final Uint8List imageBytes;
 
-  ImageEncodingCommand({required this.taskId, required this.assetId});
+  ImageEncodingCommand({
+    required this.taskId,
+    required this.assetId,
+    required this.title,
+    required this.imageBytes,
+  });
 }
 
 class ImageEncodingResult {
@@ -37,5 +44,7 @@ class ImageEncodingResult {
 }
 
 class ScanGalleryCommand {
-  ScanGalleryCommand();
+  final String taskId;
+
+  ScanGalleryCommand({required this.taskId});
 }

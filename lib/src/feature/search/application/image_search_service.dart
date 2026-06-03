@@ -26,12 +26,12 @@ class SearchService {
   }
 }
 
-final imageSearchServiceProvider = FutureProvider((ref) async {
-  final storeRepository = await ref.watch(objectBoxStoreRepoProvider.future);
-  final workerRepository = await ref.watch(backgroundWorkerRepoProvider.future);
+// final imageSearchServiceProvider = FutureProvider((ref) async {
+//   final storeRepository = await ref.watch(objectBoxStoreRepoProvider.future);
+//   final workerRepository = await ref.watch(backgroundWorkerRepoProvider.future);
 
-  return SearchService(
-    storeRepository: storeRepository,
-    workerRepository: workerRepository,
-  );
-});
+//   return SearchService(
+//     storeRepository: storeRepository,
+//     workerRepository: workerRepository,
+//   );
+// });

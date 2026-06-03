@@ -6,17 +6,18 @@ import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/gallery_view_model.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/trash_view_model.dart';
+import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/utils/debug.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class MainGalleryScreen extends StatefulWidget {
+  const MainGalleryScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<MainGalleryScreen> createState() => _MainGalleryScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _MainGalleryScreenState extends State<MainGalleryScreen> {
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<bool> _showTopButton = ValueNotifier(false);
 
@@ -73,6 +74,65 @@ class _HomeScreenState extends State<HomeScreen> {
     _scrollController.dispose();
     _showTopButton.dispose();
     super.dispose();
+  }
+
+  void _showDebugMenu(GalleryViewModel galleryVM) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Debug Menu'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Select an action:'),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton(
+                      onPressed: galleryVM.isSelectionMode
+                          ? () {
+                              Navigator.of(context).pop();
+                              galleryVM.moveSelectedToTrash();
+                            }
+                          : null,
+                      child: Text(
+                        "Move to Trash (${galleryVM.selectedAssetIds.length})",
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: galleryVM.isSelectionMode
+                          ? () {
+                              Navigator.of(context).pop();
+                              galleryVM.clearSelection();
+                            }
+                          : null,
+                      child: const Text("Clear Selection"),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await ServiceLocator.indexingService.indexGallery();
+              },
+              child: const Text('Start indexing'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   List<DailyMediaGroup> _groupMediaByDate(List<MediaAsset> mediaAssetList) {
@@ -268,35 +328,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
-              // Debug button to move selected items to trash
-              if (isDebugOrProfileMode)
-                Positioned(
-                  top: 40,
-                  right: 20,
-                  child: Column(
-                    children: [
-                      ElevatedButton(
-                        onPressed: galleryVM.isSelectionMode
-                            ? () => galleryVM.moveSelectedToTrash()
-                            : null,
-                        child: Text(
-                          "Move to Trash (${galleryVM.selectedAssetIds.length})",
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: galleryVM.isSelectionMode
-                            ? () => galleryVM.clearSelection()
-                            : null,
-                        child: const Text("Clear Selection"),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           );
         },
       ),
+      floatingActionButton: isDebugOrProfileMode
+          ? FloatingActionButton(
+              onPressed: () => _showDebugMenu(GalleryViewModel.instance),
+              child: const Icon(Icons.bug_report),
+              tooltip: 'Debug menu',
+            )
+          : null,
     );
   }
 }
