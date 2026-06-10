@@ -1,8 +1,6 @@
-import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
-
 class SearchResultMatch {
-  final MediaAsset mediaAsset;
+  final String assetId;
   final double cosineScore;
 
-  SearchResultMatch({required this.mediaAsset, required this.cosineScore});
+  SearchResultMatch({required this.assetId, required this.cosineScore});
 }

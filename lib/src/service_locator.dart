@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:mobile_image_search/src/constants/config_constant.dart';
 import 'package:mobile_image_search/src/core/platform_image_method_channel.dart';
 import 'package:mobile_image_search/src/feature/gallery/application/album_service.dart';
 import 'package:mobile_image_search/src/feature/gallery/application/gallery_service.dart';
@@ -10,9 +14,11 @@ import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source
 import 'package:mobile_image_search/src/feature/gallery/domain/trash_repository_interface.dart';
 import 'package:mobile_image_search/src/feature/indexing/application/indexing_service.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/background_worker_data_source.dart';
+import 'package:mobile_image_search/src/feature/search/application/image_search_service.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/trash_view_model.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_repository.dart';
+import 'package:mobile_image_search/src/utils/bpe_tokenizer.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ServiceLocator {
@@ -24,6 +30,10 @@ class ServiceLocator {
   static late final PlatformChannelClient platformChannelClient;
   static late final AlbumService albumService;
   static late final IndexingService indexingService;
+  static late final SearchService searchService;
+  static late final BackgroundWorkerDataSource backgroundWorkerDataSource;
+
+  static late final BpeTokenizer bpeTokenizer;
 
   static Future<void> init() async {
     debugPrint("[ServiceLocator] Initializing...");
@@ -53,7 +63,7 @@ class ServiceLocator {
     await albumRepo.syncAlbums();
 
     // background indexing
-    final backgroundWorkerDataSource = BackgroundWorkerDataSource();
+    backgroundWorkerDataSource = BackgroundWorkerDataSource();
     await backgroundWorkerDataSource.init();
     indexingService = IndexingService(
       workerIsolateClient: backgroundWorkerDataSource,
@@ -61,6 +71,65 @@ class ServiceLocator {
       objectBoxClient: objectBoxClient,
     );
     await indexingService.init();
+
+    // byte pair encoding tokenizer
+    bpeTokenizer = BpeTokenizer();
+    // extract vocab & merges from bundled assets
+    final appSupportDir = await getApplicationSupportDirectory();
+    debugPrint(
+      "[ServiceLocator] App support directory for tokenizer files: ${appSupportDir.path}",
+    );
+    final applicationSupportDirPath = appSupportDir.path;
+    final bpeVocabFilePath =
+        '$applicationSupportDirPath${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}vocab.json';
+    final bpeMergesFilePath =
+        '$applicationSupportDirPath${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}merges.txt';
+
+    final bpeVocabFile = File(bpeVocabFilePath);
+    final bpeMergesFile = File(bpeMergesFilePath);
+
+    if (!await bpeVocabFile.exists()) {
+      final bpeVocabFileData = await rootBundle.load(
+        '${Model.tokenizerDir}/vocab.json',
+      );
+
+      await bpeVocabFile.parent.create(recursive: true);
+
+      await bpeVocabFile.writeAsBytes(
+        bpeVocabFileData.buffer.asUint8List(),
+        flush: true,
+      );
+    }
+
+    if (!await bpeMergesFile.exists()) {
+      final bpeMergesFileData = await rootBundle.load(
+        '${Model.tokenizerDir}/merges.txt',
+      );
+
+      await bpeMergesFile.parent.create(recursive: true);
+
+      await bpeMergesFile.writeAsBytes(
+        bpeMergesFileData.buffer.asUint8List(),
+        flush: true,
+      );
+    }
+
+    if (!await bpeVocabFile.exists() || !await bpeMergesFile.exists()) {
+      throw Exception(
+        "Failed to prepare BPE tokenizer files. Vocab exists: ${await bpeVocabFile.exists()}, Merges exists: ${await bpeMergesFile.exists()}",
+      );
+    }
+
+    await bpeTokenizer.init(
+      vocabExtractedPath: bpeVocabFilePath,
+      mergesExtractedPath: bpeMergesFilePath,
+    );
+
+    // search service
+    searchService = SearchService(
+      objectBoxClient: objectBoxClient,
+      bgWorkerClient: backgroundWorkerDataSource,
+    );
 
     // debugging
     // path_provider

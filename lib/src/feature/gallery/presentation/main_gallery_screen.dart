@@ -8,7 +8,6 @@ import 'package:mobile_image_search/src/feature/gallery/presentation/gallery_vie
 import 'package:mobile_image_search/src/feature/gallery/presentation/trash_view_model.dart';
 import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
-import 'package:mobile_image_search/src/utils/debug.dart';
 
 class MainGalleryScreen extends StatefulWidget {
   const MainGalleryScreen({super.key});
@@ -20,6 +19,12 @@ class MainGalleryScreen extends StatefulWidget {
 class _MainGalleryScreenState extends State<MainGalleryScreen> {
   final ScrollController _scrollController = ScrollController();
   final ValueNotifier<bool> _showTopButton = ValueNotifier(false);
+  final ValueNotifier<bool> _showSearchBar = ValueNotifier(false);
+  final TextEditingController _searchTextController = TextEditingController();
+  double _lastOffset = 0.0;
+
+  final GalleryViewModel _galleryVM = GalleryViewModel.instance;
+  final TrashViewModel _trashVM = TrashViewModel.instance;
 
   @override
   void initState() {
@@ -54,6 +59,18 @@ class _MainGalleryScreenState extends State<MainGalleryScreen> {
       _showTopButton.value = nextValue;
     }
 
+    // Show search bar on scroll down, hide on scroll up
+    if (pixels > _lastOffset && pixels > 50) {
+      if (!_showSearchBar.value) {
+        _showSearchBar.value = true;
+      }
+    } else if (pixels < _lastOffset || pixels <= 50) {
+      if (_showSearchBar.value) {
+        _showSearchBar.value = false;
+      }
+    }
+    _lastOffset = pixels;
+
     // Load more when reaching near the bottom
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 500) {
@@ -69,10 +86,17 @@ class _MainGalleryScreenState extends State<MainGalleryScreen> {
     );
   }
 
+  void _performSearchByPhrase(String query) {
+    debugPrint("[MainGalleryScreen] Performing search for: $query");
+    _galleryVM.searchByPhrase(query);
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
     _showTopButton.dispose();
+    _showSearchBar.dispose();
+    _searchTextController.dispose();
     super.dispose();
   }
 
@@ -163,15 +187,16 @@ class _MainGalleryScreenState extends State<MainGalleryScreen> {
 
   /// Build groups of media into slivers, with trashed media filtered out
   List<Widget> _buildGroupSlivers(
-    GalleryViewModel galleryVM,
-    TrashViewModel trashVM,
+    List<MediaAsset> mediaAssetsToDisplay,
+    Set<String> filteredOutAssetIds,
+    Set<String> selectedAssetIds,
+    bool isSelectionMode,
   ) {
-    final trashedAssetIds = trashVM.trashedAssetIds;
     final slivers = <Widget>[];
 
     // Filter out trashed media
-    final filteredMediaAssets = galleryVM.mediaAssets
-        .where((asset) => !trashedAssetIds.contains(asset.assetId))
+    List<MediaAsset> filteredMediaAssets = mediaAssetsToDisplay
+        .where((asset) => !filteredOutAssetIds.contains(asset.assetId))
         .toList();
 
     // Group by date
@@ -210,9 +235,7 @@ class _MainGalleryScreenState extends State<MainGalleryScreen> {
               key: ValueKey(mediaAsset.assetId),
             );
 
-            final isSelected = galleryVM.selectedAssetIds.contains(
-              mediaAsset.assetId,
-            );
+            final isSelected = selectedAssetIds.contains(mediaAsset.assetId);
             final selectionOverlay = GestureDetector(
               child: Container(
                 color: isSelected
@@ -223,7 +246,7 @@ class _MainGalleryScreenState extends State<MainGalleryScreen> {
                 mediaAsset.assetId,
               ),
               onTap: () {
-                if (galleryVM.isSelectionMode) {
+                if (isSelectionMode) {
                   GalleryViewModel.instance.toggleSelectMedia(
                     mediaAsset.assetId,
                   );
@@ -250,18 +273,14 @@ class _MainGalleryScreenState extends State<MainGalleryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: ListenableBuilder(
-        listenable: Listenable.merge([
-          GalleryViewModel.instance,
-          TrashViewModel.instance,
-        ]),
+        listenable: Listenable.merge([_galleryVM, _trashVM]),
         builder: (context, _) {
-          final galleryVM = GalleryViewModel.instance;
-          final trashVM = TrashViewModel.instance;
-
           // Show loading spinner if initial load is in progress and no data yet
-          if (galleryVM.isLoading && galleryVM.mediaAssets.isEmpty) {
+          if (_galleryVM.isLoading && _galleryVM.mediaAssets.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
+
+          final bool isSearchModeOn = _galleryVM.isSearchModeOn;
 
           final fullScreenImageList = Flex(
             direction: Axis.vertical,
@@ -282,14 +301,26 @@ class _MainGalleryScreenState extends State<MainGalleryScreen> {
                     ),
                     child: CustomScrollView(
                       controller: _scrollController,
-                      slivers: _buildGroupSlivers(galleryVM, trashVM),
+                      slivers: isSearchModeOn
+                          ? _buildGroupSlivers(
+                              _galleryVM.searchResults,
+                              _trashVM.trashedAssetIds,
+                              _galleryVM.selectedAssetIds,
+                              _galleryVM.isSelectionMode,
+                            )
+                          : _buildGroupSlivers(
+                              _galleryVM.mediaAssets,
+                              _trashVM.trashedAssetIds,
+                              _galleryVM.selectedAssetIds,
+                              _galleryVM.isSelectionMode,
+                            ),
                       scrollDirection: Axis.vertical,
                     ),
                   ),
                 ),
               ),
               // Loading indicator at the bottom during pagination
-              if (galleryVM.isLoading)
+              if (_galleryVM.isLoading)
                 const Padding(
                   padding: EdgeInsets.all(16),
                   child: SizedBox(
@@ -304,41 +335,109 @@ class _MainGalleryScreenState extends State<MainGalleryScreen> {
           return Stack(
             children: [
               fullScreenImageList,
-              // Scroll to top button
+              // debug button
               ValueListenableBuilder<bool>(
-                valueListenable: _showTopButton,
-                builder: (context, visible, _) {
-                  return Positioned(
-                    bottom: 16,
-                    left: 0,
-                    right: 0,
-                    child: IgnorePointer(
-                      ignoring: !visible,
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 120),
-                        opacity: visible ? 1 : 0,
-                        child: Center(
-                          child: ElevatedButton(
-                            onPressed: _scrollToTop,
-                            child: const Icon(Icons.arrow_upward),
-                          ),
-                        ),
-                      ),
+                valueListenable: _showSearchBar,
+                builder: (context, searchVisible, _) {
+                  return AnimatedPositioned(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOutCubic,
+                    bottom: searchVisible ? 88 : 16,
+                    left: 16,
+                    child: FloatingActionButton(
+                      onPressed: () => _showDebugMenu(_galleryVM),
+                      tooltip: 'Debug Menu',
+                      child: const Icon(Icons.bug_report),
                     ),
                   );
                 },
+              ),
+              // Search input bar
+              ValueListenableBuilder<bool>(
+                valueListenable: _showSearchBar,
+                builder: (context, visible, child) {
+                  return AnimatedPositioned(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOutCubic,
+                    bottom: visible ? 16 : -80,
+                    left: 16,
+                    right: 80,
+                    child: child!,
+                  );
+                },
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(38),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Icon(Icons.search, color: Colors.grey),
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchTextController,
+                          decoration: const InputDecoration(
+                            hintText: "Search with an English phrase",
+                            border: InputBorder.none,
+                            hintStyle: TextStyle(color: Colors.grey),
+                          ),
+                          onSubmitted: _performSearchByPhrase,
+                          onChanged: (value) {
+                            // Optionally handle on change
+                          },
+                        ),
+                      ),
+                      if (isSearchModeOn)
+                        IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchTextController.clear();
+                            _galleryVM.clearSearch();
+                          },
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_forward),
+                        onPressed: () {
+                          FocusScope.of(context).unfocus();
+                          _performSearchByPhrase(_searchTextController.text);
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+                ),
               ),
             ],
           );
         },
       ),
-      floatingActionButton: isDebugOrProfileMode
-          ? FloatingActionButton(
-              onPressed: () => _showDebugMenu(GalleryViewModel.instance),
-              child: const Icon(Icons.bug_report),
-              tooltip: 'Debug menu',
-            )
-          : null,
+      floatingActionButton: ValueListenableBuilder(
+        valueListenable: _showTopButton,
+        builder: (context, visible, _) {
+          return IgnorePointer(
+            ignoring: !visible,
+            child: Opacity(
+              opacity: visible ? 1 : 0,
+              child: FloatingActionButton(
+                onPressed: _scrollToTop,
+                tooltip: 'Scroll to top',
+                child: const Icon(Icons.arrow_upward),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

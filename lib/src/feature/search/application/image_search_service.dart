@@ -1,37 +1,75 @@
-import 'dart:typed_data';
-
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
+import 'package:mobile_image_search/objectbox.g.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/background_worker_data_source.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/objectbox_image_embedding.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_repository.dart';
-import 'package:mobile_image_search/src/feature/indexing/domain/store_repository_interface.dart';
 import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
-import 'package:mobile_image_search/src/feature/indexing/data/background_worker_repo.dart';
-import 'package:mobile_image_search/src/shared/domain/interface/background_worker_interface.dart';
+import 'package:objectbox/objectbox.dart';
 
+/// App Service class to handle image search logic
 class SearchService {
-  final IStoreRepository _storeRepo;
-  final IBackgroundWorkerRepository _workerRepo;
+  final ObjectBoxClient _objectBoxClient;
+  final BackgroundWorkerDataSource _bgWorkerClient;
 
   SearchService({
-    required IStoreRepository storeRepository,
-    required IBackgroundWorkerRepository workerRepository,
-  }) : _storeRepo = storeRepository,
-       _workerRepo = workerRepository;
+    required ObjectBoxClient objectBoxClient,
+    required BackgroundWorkerDataSource bgWorkerClient,
+  }) : _objectBoxClient = objectBoxClient,
+       _bgWorkerClient = bgWorkerClient;
 
-  Future<List<SearchResultMatch>> searchByCaption(String query) async {
-    final Float32List textEmbedding = await _workerRepo.encodeText(query);
+  /// Input validation:
+  ///
+  /// - trim whitespace, check empty
+  ///
+  /// - split by whitespace, add '</w>' to each word's end
+  ///
+  /// - check with model's vocab, if not exist, throw error
+  ///
+  /// - generate embedding
+  ///
+  /// - search in database
+  Future<List<SearchResultMatch>> searchByPhrase(String query) async {
+    debugPrint("[SearchService] Starting search for query: '$query'");
+    if (query.trim().isEmpty) {
+      throw Exception("Search query cannot be empty");
+    }
 
-    final searchResults = await _storeRepo.semanticSearch(textEmbedding, 200);
+    // generate embedding for text query
+    final queryVector = await _bgWorkerClient.encodeText(query);
 
-    return searchResults;
+    final Box<ObjectBoxImageEmbedding> imageEmbeddingBox = _objectBoxClient
+        .store
+        .box<ObjectBoxImageEmbedding>();
+
+    // get semantic search results
+    final searchQuery = imageEmbeddingBox
+        .query(
+          ObjectBoxImageEmbedding_.embedding.nearestNeighborsF32(
+            queryVector,
+            100,
+          ),
+        )
+        .build();
+    final searchResults = await searchQuery.findWithScoresAsync();
+
+    debugPrint(
+      "[SearchService] Search completed with ${searchResults.length} results",
+    );
+
+    final domainResults = searchResults.map((result) {
+      return SearchResultMatch(
+        assetId: result.object.assetId,
+        cosineScore: result.score,
+      );
+    }).toList();
+
+    // debug: print to terminal
+    for (var i = 0; i < domainResults.length; i++) {
+      debugPrint(
+        "[SearchService] Result ${i + 1}: assetId=${domainResults[i].assetId}, cosineScore=${domainResults[i].cosineScore}",
+      );
+    }
+
+    return domainResults;
   }
 }
-
-// final imageSearchServiceProvider = FutureProvider((ref) async {
-//   final storeRepository = await ref.watch(objectBoxStoreRepoProvider.future);
-//   final workerRepository = await ref.watch(backgroundWorkerRepoProvider.future);
-
-//   return SearchService(
-//     storeRepository: storeRepository,
-//     workerRepository: workerRepository,
-//   );
-// });

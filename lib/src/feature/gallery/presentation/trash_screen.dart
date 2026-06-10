@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/src/common_widgets/thumbnail_widget.dart';
-import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/trash_view_model.dart';
 
 class TrashScreen extends StatefulWidget {

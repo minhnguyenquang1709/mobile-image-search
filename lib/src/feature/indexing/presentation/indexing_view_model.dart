@@ -33,9 +33,7 @@ class IndexingViewModel extends ChangeNotifier {
 
   static IndexingViewModel get instance {
     if (_instance == null) {
-      throw Exception(
-        "[IndexingViewModel] Instance not initialized. Call IndexingViewModel(service: yourService) first.",
-      );
+      _instance = IndexingViewModel(service: ServiceLocator.indexingService);
     }
     return _instance!;
   }

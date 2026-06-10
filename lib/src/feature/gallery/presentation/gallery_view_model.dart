@@ -1,14 +1,20 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:mobile_image_search/objectbox.g.dart';
+import 'package:mobile_image_search/src/feature/gallery/application/trash_service.dart';
 import 'package:mobile_image_search/src/feature/gallery/presentation/trash_view_model.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/background_worker_data_source.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/objectbox_image_embedding.dart';
+import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_repository.dart';
+import 'package:mobile_image_search/src/feature/search/application/image_search_service.dart';
+import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
 import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
+import 'package:mobile_image_search/src/utils/media_processing.dart';
+import 'package:objectbox/objectbox.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 /// ViewModel for Gallery Screen
-///
-/// Responsibility: retrieve data from model, convert to a format the View can use,
-/// execute logic based on user actions.
 class GalleryViewModel extends ChangeNotifier {
   static final GalleryViewModel instance = GalleryViewModel._internal();
   GalleryViewModel._internal() {
@@ -17,21 +23,30 @@ class GalleryViewModel extends ChangeNotifier {
 
   static const int _pageSize = 100;
 
-  // --- State Variables ---
+  final TrashService _trashService = ServiceLocator.trashService;
+  final ObjectBoxClient _objectBoxClient = ServiceLocator.objectBoxClient;
+  final BackgroundWorkerDataSource _bgWorkerClient =
+      ServiceLocator.backgroundWorkerDataSource;
+
+  // State Variables
+  // gallery data
   final List<MediaAsset> _allMediaAssets = [];
-  bool _isLoading = false;
-  bool _hasMore = true;
+  bool isLoading = false;
+  bool hasMore = true;
   int _currentPage = 0;
   final Set<String> _selectedAssetIds = {};
+  // search data
+  String currentSearchQuery = "";
+  bool _isSearchModeOn = false;
+  bool get isSearchModeOn => _isSearchModeOn;
+  final List<MediaAsset> _searchResults = [];
+  List<MediaAsset> get searchResults => List.unmodifiable(_searchResults);
 
-  // --- Getters ---
   List<MediaAsset> get mediaAssets => List.unmodifiable(_allMediaAssets);
-  bool get isLoading => _isLoading;
-  bool get hasMore => _hasMore;
   Set<String> get selectedAssetIds => Set.unmodifiable(_selectedAssetIds);
   bool get isSelectionMode => _selectedAssetIds.isNotEmpty;
 
-  // --- Initialization ---
+  // Initialization
   void _init() {
     PhotoManager.addChangeCallback(_onPhotoManagerChange);
     PhotoManager.startChangeNotify();
@@ -44,21 +59,21 @@ class GalleryViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  // --- Refresh callback from PhotoManager ---
+  //  Refresh callback from PhotoManager
   Future<void> _onPhotoManagerChange(MethodCall call) async {
     debugPrint("[GalleryViewModel] Device gallery changed, reloading...");
     _currentPage = 0;
     _allMediaAssets.clear();
-    _hasMore = true;
+    hasMore = true;
     notifyListeners();
     await loadInitial();
   }
 
-  // --- Actions ---
+  //  Actions
   Future<void> loadInitial() async {
-    if (_isLoading) return;
+    if (isLoading) return;
 
-    _isLoading = true;
+    isLoading = true;
     notifyListeners();
 
     try {
@@ -76,7 +91,7 @@ class GalleryViewModel extends ChangeNotifier {
       _allMediaAssets.clear();
       _allMediaAssets.addAll(newImages);
       _currentPage = 0;
-      _hasMore = newImages.length >= _pageSize;
+      hasMore = newImages.length >= _pageSize;
 
       debugPrint(
         "[GalleryViewModel] Initial load complete: ${_allMediaAssets.length} images",
@@ -85,15 +100,15 @@ class GalleryViewModel extends ChangeNotifier {
       debugPrint("[GalleryViewModel] Error loading gallery: $e");
       rethrow;
     } finally {
-      _isLoading = false;
+      isLoading = false;
       notifyListeners();
     }
   }
 
   Future<void> loadMore() async {
-    if (_isLoading || !_hasMore) return;
+    if (isLoading || !hasMore) return;
 
-    _isLoading = true;
+    isLoading = true;
     notifyListeners();
 
     try {
@@ -105,11 +120,11 @@ class GalleryViewModel extends ChangeNotifier {
       );
 
       if (newImages.isEmpty) {
-        _hasMore = false;
+        hasMore = false;
       } else {
         _allMediaAssets.addAll(newImages);
         _currentPage = nextPage;
-        _hasMore = newImages.length >= _pageSize;
+        hasMore = newImages.length >= _pageSize;
         debugPrint(
           "[GalleryViewModel] Page $nextPage loaded: ${newImages.length} new images",
         );
@@ -117,7 +132,7 @@ class GalleryViewModel extends ChangeNotifier {
     } catch (e) {
       debugPrint("[GalleryViewModel] Error loading more: $e");
     } finally {
-      _isLoading = false;
+      isLoading = false;
       notifyListeners();
     }
   }
@@ -139,29 +154,102 @@ class GalleryViewModel extends ChangeNotifier {
   Future<void> moveSelectedToTrash() async {
     if (_selectedAssetIds.isEmpty) return;
 
-    debugPrint("[GalleryViewModel] Moving ${_selectedAssetIds.length} items to trash");
+    debugPrint(
+      "[GalleryViewModel] Moving ${_selectedAssetIds.length} items to trash",
+    );
 
-    // 1. Find the full MediaAsset objects for selected IDs
+    // find the full MediaAsset objects for selected IDs
     final selectedMediaAssets = _allMediaAssets
         .where((a) => _selectedAssetIds.contains(a.assetId))
         .toList();
 
     if (selectedMediaAssets.isEmpty) return;
 
-    // 2. Call the service to move to trash
+    // call the service to move to trash
     try {
-      await ServiceLocator.trashService.moveToTrash(selectedMediaAssets);
+      await _trashService.moveToTrash(selectedMediaAssets);
       debugPrint("[GalleryViewModel] Successfully moved items to trash");
 
-      // 3. Update the TrashViewModel state to hide items from gallery and show in trash
+      // update the TrashViewModel state to hide items from gallery and show in trash
       TrashViewModel.instance.markAsTrashed(_selectedAssetIds.toList());
     } catch (e) {
       debugPrint("[GalleryViewModel] Error moving to trash: $e");
       rethrow;
     }
 
-    // 4. Clear selection
+    // clear selection
     _selectedAssetIds.clear();
+    notifyListeners();
+  }
+
+  void clearSearch() {
+    currentSearchQuery = "";
+    _searchResults.clear();
+    _isSearchModeOn = false;
+    notifyListeners();
+  }
+
+  /// Search by an English phrase
+  Future<void> searchByPhrase(String textQuery) async {
+    debugPrint("[GalleryViewModel] Starting search for query: '$textQuery'");
+    if (textQuery.trim().isEmpty) {
+      throw Exception("Search query cannot be empty");
+    }
+
+    currentSearchQuery = textQuery;
+    _searchResults.clear();
+    _isSearchModeOn = true;
+    notifyListeners();
+
+    // generate embedding for text query
+    final queryVector = await _bgWorkerClient.encodeText(textQuery);
+
+    final Box<ObjectBoxImageEmbedding> imageEmbeddingBox = _objectBoxClient
+        .store
+        .box<ObjectBoxImageEmbedding>();
+
+    // get semantic search results
+    final searchQuery = imageEmbeddingBox
+        .query(
+          ObjectBoxImageEmbedding_.embedding.nearestNeighborsF32(
+            queryVector,
+            100,
+          ),
+        )
+        .build();
+    final searchResults = await searchQuery.findWithScoresAsync();
+
+    debugPrint(
+      "[GalleryViewModel] Search completed with ${searchResults.length} results",
+    );
+
+    final domainResults = searchResults.map((result) {
+      return SearchResultMatch(
+        assetId: result.object.assetId,
+        cosineScore: result.score,
+      );
+    }).toList();
+
+    // debug: print to terminal
+    for (var i = 0; i < domainResults.length; i++) {
+      debugPrint(
+        "[GalleryViewModel] Result ${i + 1}: assetId=${domainResults[i].assetId}, cosineScore=${domainResults[i].cosineScore}",
+      );
+    }
+
+    for (final result in domainResults) {
+      final AssetEntity? asset = await AssetEntity.fromId(result.assetId);
+      if (asset == null) {
+        // print error
+        debugPrint(
+          "[GalleryViewModel] Warning: photo_manager cannot find asset with ID ${result.assetId}",
+        );
+        continue;
+      }
+      final MediaAsset mediaAsset = toMediaAsset(asset);
+      _searchResults.add(mediaAsset);
+    }
+
     notifyListeners();
   }
 }

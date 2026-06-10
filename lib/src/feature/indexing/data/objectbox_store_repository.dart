@@ -1,9 +1,10 @@
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/objectbox.g.dart';
 import 'package:mobile_image_search/src/constants/common_constant.dart';
-import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_data_source.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_image_embedding.dart';
 import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
@@ -23,6 +24,11 @@ class ObjectBoxClient {
   Future<void> init() async {
     final docsDir = await getApplicationSupportDirectory();
     store = await openStore(directory: p.join(docsDir.path, 'image-embedding'));
+    final storeDir = Directory(store.directoryPath);
+    final dbFile = File('${storeDir.path}/data.mdb');
+    debugPrint(
+      "[ObjectBoxClient] Current storage size in bytes: ${await dbFile.length()}",
+    );
 
     // TODO: remove debug print
     print(
@@ -35,6 +41,14 @@ class ObjectBoxClient {
     if (Admin.isAvailable()) {
       admin = Admin(store);
     }
+  }
+
+  Future<void> printDbSize() async {
+    final storeDir = Directory(store.directoryPath);
+    final dbFile = File('${storeDir.path}/data.mdb');
+    debugPrint(
+      "[ObjectBoxClient] Current storage size in bytes: ${await dbFile.length()}",
+    );
   }
 }
 

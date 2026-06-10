@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_image_search/src/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/feature/indexing/presentation/indexing_view_model.dart';
 
 class IndexingCard extends StatefulWidget {
@@ -22,12 +23,21 @@ class _IndexingCardState extends State<IndexingCard> {
           return const SizedBox.shrink();
         }
 
-        return Column(
-          children: [
-            Text(
-              "Indexing Progress: ${_vm.currentProgress.processed} / ${_vm.currentProgress.total} images",
+        return Card(
+          child: ListTile(
+            title: const Text("Indexing Progress"),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Processed $processed / $total"),
+                LinearProgressIndicator(
+                  color: CustomColors.primary,
+                  backgroundColor: CustomColors.divider,
+                  value: total == 0 ? null : processed / total,
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );

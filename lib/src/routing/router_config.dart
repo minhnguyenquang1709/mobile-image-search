@@ -30,13 +30,13 @@ final topLevelNavigationRouter = GoRouter(
             GoRouterState state,
             StatefulNavigationShell navigationShell,
           ) {
-            // the UI shell that holds the navigation branches (tabs) and the content of the current branch
             return ScaffoldWithNestedNavigation(
               navigationShell: navigationShell,
             );
           },
       branches: [
         // top-level branch (aka tabs in app navigation bar)
+        // 0. home screen branch
         StatefulShellBranch(
           navigatorKey: _shellNavigatorHomeKey,
           routes: [
@@ -56,7 +56,13 @@ final topLevelNavigationRouter = GoRouter(
               //   ),
               // ],
             ),
-            // album screen
+          ],
+        ),
+
+        // 1. album screen branch
+        StatefulShellBranch(
+          navigatorKey: _shellNavigatorAlbumsKey,
+          routes: [
             GoRoute(
               path: RouteConstants.albums,
               builder: (context, state) {
@@ -65,20 +71,8 @@ final topLevelNavigationRouter = GoRouter(
             ),
           ],
         ),
-        // 2nd top-level branch
-        StatefulShellBranch(
-          navigatorKey: _shellNavigatorAlbumsKey,
-          routes: [
-            GoRoute(
-              path: RouteConstants.albums,
-              builder: (context, state) {
-                return Container();
-              },
-            ),
-          ],
-        ),
 
-        // 3rd top-level branch
+        // 2. trash screen branch
         StatefulShellBranch(
           navigatorKey: _shellNavigatorTrashKey,
           routes: [
@@ -87,6 +81,16 @@ final topLevelNavigationRouter = GoRouter(
               builder: (context, state) {
                 return TrashScreen();
               },
+            ),
+          ],
+        ),
+
+        // 3. settings screen branch
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RouteConstants.settings,
+              builder: (context, state) => SettingsScreen(),
             ),
           ],
         ),

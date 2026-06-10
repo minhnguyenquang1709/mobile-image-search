@@ -63,7 +63,7 @@ class _ImageSearchScreenState extends ConsumerState<ImageSearchScreen> {
                       // run on enter key press
                       onSubmitted: (_) => _searchByCaption(),
                       decoration: const InputDecoration(
-                        hintText: "Describe the image...",
+                        hintText: "Describe the image by an English phrase",
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 12,
@@ -177,7 +177,7 @@ class SearchResultThumbnailWidget extends StatelessWidget {
     return Stack(
       children: [
         // Image
-        ThumbnailWidget(assetId: resultItem.mediaAsset.assetId),
+        ThumbnailWidget(assetId: resultItem.assetId),
 
         // Similarity score badge
         Positioned(

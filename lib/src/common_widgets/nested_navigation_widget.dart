@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/src/constants/route_constant.dart';
 import 'package:mobile_image_search/src/constants/theme_constant.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/selection_controller.dart';
-import 'package:mobile_image_search/src/utils/debug.dart';
 
+/// The parent container for app's main navigation structure.
+///
+/// Hold the bottom navigation bar and the content of the current tab (branch).
 class ScaffoldWithNestedNavigation extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
   const ScaffoldWithNestedNavigation({
@@ -99,20 +100,20 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
     );
   }
 
-  void _goBranch(int index) {
-    debugPrint("Navigating to branch $index");
-    if (index == 2) {
-      return;
-    }
-    navigationShell.goBranch(
-      index == 3 ? 2 : index,
-      // A common pattern when using bottom navigation bars is to support
-      // navigating to the initial location when tapping the item that is
-      // already active. This example demonstrates how to support this behavior,
-      // using the initialLocation parameter of goBranch.
-      initialLocation: index == navigationShell.currentIndex,
-    );
-  }
+  // void _goBranch(int index) {
+  //   debugPrint("Navigating to branch $index");
+  //   if (index == 2) {
+  //     return;
+  //   }
+  //   navigationShell.goBranch(
+  //     index == 3 ? 2 : index,
+  //     // A common pattern when using bottom navigation bars is to support
+  //     // navigating to the initial location when tapping the item that is
+  //     // already active. This example demonstrates how to support this behavior,
+  //     // using the initialLocation parameter of goBranch.
+  //     initialLocation: index == navigationShell.currentIndex,
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -155,24 +156,20 @@ class ScaffoldWithNestedNavigation extends ConsumerWidget {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.photo_album), label: 'Albums'),
-          NavigationDestination(icon: Icon(Icons.menu), label: 'More'),
           NavigationDestination(icon: Icon(Icons.delete), label: 'Trash'),
+          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
         ],
         onDestinationSelected: (int index) {
-          _goBranch(index);
-          if (index == 2) {
-            _showMoreOptionsMenu(context);
-          }
+          // handle StatefulShellBranch's index
+
+          navigationShell.goBranch(
+            index,
+            // tap on current tab should navigate to initial location of the branch
+            // initialLocation: index == navigationShell.currentIndex,
+          );
         },
         selectedIndex: navigationShell.currentIndex,
       ),
     );
   }
-}
-
-class MainBottomNavigationBarProvider extends StateNotifier<bool> {
-  MainBottomNavigationBarProvider() : super(false);
-
-  void show() => state = true;
-  void hide() => state = false;
 }

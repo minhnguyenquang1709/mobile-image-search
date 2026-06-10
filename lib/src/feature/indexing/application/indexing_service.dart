@@ -80,8 +80,10 @@ class IndexingService {
     );
 
     // diffing by metadata
+    debugPrint("[IndexingService] Read all media from device...");
     final List<MediaAsset> galleryMediaList = await _galleryRepo
         .getAllMetadata();
+    debugPrint("[IndexingService] Get all indexed media from database...");
     final imageEmbeddingBox = _objectBoxClient.store
         .box<ObjectBoxImageEmbedding>();
     final List<ObjectBoxImageEmbedding> indexedMediaList = imageEmbeddingBox
@@ -92,6 +94,9 @@ class IndexingService {
 
     final List<MediaAsset> assetsToIndex = [];
 
+    debugPrint(
+      "[IndexingService] Start diffing gallery media with indexed media...",
+    );
     for (final media in galleryMediaList) {
       final indexedMedia = indexedMediaMap[media.assetId];
       if (indexedMedia == null) {
