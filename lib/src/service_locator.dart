@@ -1,140 +1,163 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:mobile_image_search/src/constants/config_constant.dart';
 import 'package:mobile_image_search/src/core/platform_image_method_channel.dart';
-import 'package:mobile_image_search/src/feature/gallery/application/album_service.dart';
-import 'package:mobile_image_search/src/feature/gallery/application/gallery_service.dart';
-import 'package:mobile_image_search/src/feature/gallery/application/trash_service.dart';
+import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_interface.dart';
+import 'package:mobile_image_search/src/data/repositories/image_embedding_repository.dart';
+import 'package:mobile_image_search/src/data/repositories/media_asset_repository.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/android_album_repo.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/android_gallery_repository.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/android_trash_repo.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source.dart';
-import 'package:mobile_image_search/src/feature/gallery/domain/trash_repository_interface.dart';
-import 'package:mobile_image_search/src/feature/indexing/application/indexing_service.dart';
-import 'package:mobile_image_search/src/feature/indexing/data/background_worker_data_source.dart';
-import 'package:mobile_image_search/src/feature/search/application/image_search_service.dart';
+import 'package:mobile_image_search/src/data/interfaces/trash_repository_interface.dart';
+import 'package:mobile_image_search/src/data/services/indexing_service.dart';
+import 'package:mobile_image_search/src/data/services/background_worker_service.dart';
+import 'package:mobile_image_search/src/feature/evaluation/data/evaluation_service.dart';
+import 'package:mobile_image_search/src/feature/evaluation/presentation/evaluation_viewmodel.dart';
+import 'package:mobile_image_search/src/feature/gallery/viewmodels/album_viewmodel.dart';
+import 'package:mobile_image_search/src/feature/gallery/viewmodels/gallery_viewmodel.dart';
+import 'package:mobile_image_search/src/feature/search/domain/query_validator.dart';
+import 'package:mobile_image_search/src/shared/domain/interface/album_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/trash_view_model.dart';
+import 'package:mobile_image_search/src/feature/gallery/viewmodels/trash_viewmodel.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_repository.dart';
-import 'package:mobile_image_search/src/utils/bpe_tokenizer.dart';
+import 'package:mobile_image_search/src/domain/bpe_tokenizer.dart';
+import 'package:mobile_image_search/src/feature/search/viewmodels/image_search_viewmodel.dart';
+import 'package:mobile_image_search/src/infra/asset_loader.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ServiceLocator {
-  static final ObjectBoxClient objectBoxClient = ObjectBoxClient.instance;
+  static final ObjectBoxService objectBoxService = ObjectBoxService.instance;
   static late final ITrashRepository trashRepository;
-  static late final TrashService trashService;
   static late final IGalleryRepository galleryRepository;
-  static late final GalleryService galleryService;
-  static late final PlatformChannelClient platformChannelClient;
-  static late final AlbumService albumService;
+  static late final IAlbumRepository albumRepository;
+  static late final PlatformChannelService platformChannelService;
   static late final IndexingService indexingService;
-  static late final SearchService searchService;
-  static late final BackgroundWorkerDataSource backgroundWorkerDataSource;
+  static late final BackgroundWorkerService backgroundWorkerService;
 
   static late final BpeTokenizer bpeTokenizer;
+  static late final QueryValidator queryValidator;
+
+  static late final IMediaAssetRepository mediaAssetRepository;
+  static late final ImageEmbeddingRepository imageEmbeddingRepository;
+
+  // extracted model/tokenizer file paths (set during init)
+  static late final String textEncoderPath;
+  static late final String imageEncoderPath;
+  static late final String vocabPath;
+  static late final String mergesPath;
+
+  // evaluation (developer tool)
+  static late final EvaluationService evaluationService;
+  static late final EvaluationViewModel evaluationViewModel;
+
+  // viewmodels
+  static late final SearchViewModel searchViewModel;
+  static late final TrashViewModel trashViewModel;
+  static late final GalleryViewModel galleryViewModel;
+  static late final AlbumViewModel albumViewModel;
 
   static Future<void> init() async {
     debugPrint("[ServiceLocator] Initializing...");
-    await objectBoxClient.init();
+
+    mediaAssetRepository = MediaAssetRepository();
+
+    await objectBoxService.init();
 
     // Gallery
-    final mediaPlatformChannel = PlatformChannelClient();
+    final mediaPlatformChannel = PlatformChannelService();
     final galleryDataSource = GalleryDataSource(mediaPlatformChannel);
     galleryRepository = AndroidGalleryRepository(galleryDataSource);
-    galleryService = GalleryService(galleryRepository);
 
     // Trash
-    platformChannelClient = PlatformChannelClient();
+    platformChannelService = PlatformChannelService();
     trashRepository = AndroidTrashRepository(
-      objectBoxStoreClient: objectBoxClient,
-      methodChannel: platformChannelClient,
+      objectBoxStoreClient: objectBoxService,
+      methodChannel: platformChannelService,
     );
-    trashService = TrashService(trashRepository);
-    await TrashViewModel.instance.loadFromDatabase();
+    trashViewModel = TrashViewModel(
+      trashRepo: trashRepository,
+      mediaAssetRepo: mediaAssetRepository,
+    );
+    await trashViewModel.loadFromDatabase();
 
     // Album
-    final albumRepo = AndroidAlbumRepository(
-      platformChannelClient: platformChannelClient,
-      objectBoxClient: objectBoxClient,
+    albumRepository = AndroidAlbumRepository(
+      platformChannelClient: platformChannelService,
+      objectBoxClient: objectBoxService,
     );
-    albumService = AlbumService(albumRepo);
-    await albumRepo.syncAlbums();
+    await albumRepository.syncAlbums();
+    albumViewModel = AlbumViewModel(
+      albumRepo: albumRepository,
+      mediaAssetRepo: mediaAssetRepository,
+    );
 
     // background indexing
-    backgroundWorkerDataSource = BackgroundWorkerDataSource();
-    await backgroundWorkerDataSource.init();
+    backgroundWorkerService = BackgroundWorkerService();
+
+    // asset extraction — centralized in AssetLoader
+    debugPrint('[ServiceLocator] Extracting bundled assets...');
+    final assetLoader = AssetLoader();
+    await assetLoader.extractAll();
+    debugPrint('[ServiceLocator] Assets extracted successfully.');
+
+    textEncoderPath = assetLoader.textEncoderPath;
+    imageEncoderPath = assetLoader.imageEncoderPath;
+    vocabPath = assetLoader.vocabPath;
+    mergesPath = assetLoader.mergesPath;
+
+    await backgroundWorkerService.init(
+      textEncoderPath: textEncoderPath,
+      imageEncoderPath: imageEncoderPath,
+      vocabPath: vocabPath,
+      mergesPath: mergesPath,
+      storeReference: objectBoxService.store.reference,
+    );
     indexingService = IndexingService(
-      workerIsolateClient: backgroundWorkerDataSource,
-      galleryRepository: galleryRepository,
-      objectBoxClient: objectBoxClient,
+      workerIsolateClient: backgroundWorkerService,
     );
     await indexingService.init();
 
+    // evaluation (developer tool)
+    evaluationService = EvaluationService(
+      workerService: backgroundWorkerService,
+      textEncoderPath: textEncoderPath,
+      imageEncoderPath: imageEncoderPath,
+      vocabPath: vocabPath,
+      mergesPath: mergesPath,
+    );
+    evaluationViewModel = EvaluationViewModel(service: evaluationService);
+
     // byte pair encoding tokenizer
     bpeTokenizer = BpeTokenizer();
-    // extract vocab & merges from bundled assets
-    final appSupportDir = await getApplicationSupportDirectory();
-    debugPrint(
-      "[ServiceLocator] App support directory for tokenizer files: ${appSupportDir.path}",
-    );
-    final applicationSupportDirPath = appSupportDir.path;
-    final bpeVocabFilePath =
-        '$applicationSupportDirPath${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}vocab.json';
-    final bpeMergesFilePath =
-        '$applicationSupportDirPath${Platform.pathSeparator}${Model.tokenizerDir}${Platform.pathSeparator}merges.txt';
-
-    final bpeVocabFile = File(bpeVocabFilePath);
-    final bpeMergesFile = File(bpeMergesFilePath);
-
-    if (!await bpeVocabFile.exists()) {
-      final bpeVocabFileData = await rootBundle.load(
-        '${Model.tokenizerDir}/vocab.json',
-      );
-
-      await bpeVocabFile.parent.create(recursive: true);
-
-      await bpeVocabFile.writeAsBytes(
-        bpeVocabFileData.buffer.asUint8List(),
-        flush: true,
-      );
-    }
-
-    if (!await bpeMergesFile.exists()) {
-      final bpeMergesFileData = await rootBundle.load(
-        '${Model.tokenizerDir}/merges.txt',
-      );
-
-      await bpeMergesFile.parent.create(recursive: true);
-
-      await bpeMergesFile.writeAsBytes(
-        bpeMergesFileData.buffer.asUint8List(),
-        flush: true,
-      );
-    }
-
-    if (!await bpeVocabFile.exists() || !await bpeMergesFile.exists()) {
-      throw Exception(
-        "Failed to prepare BPE tokenizer files. Vocab exists: ${await bpeVocabFile.exists()}, Merges exists: ${await bpeMergesFile.exists()}",
-      );
-    }
-
     await bpeTokenizer.init(
-      vocabExtractedPath: bpeVocabFilePath,
-      mergesExtractedPath: bpeMergesFilePath,
+      vocabExtractedPath: assetLoader.vocabPath,
+      mergesExtractedPath: assetLoader.mergesPath,
+    );
+    queryValidator = QueryValidator(bpeTokenizer: bpeTokenizer);
+
+    // gallery
+    galleryViewModel = GalleryViewModel(
+      galleryRepo: galleryRepository,
+      mediaAssetRepo: mediaAssetRepository,
     );
 
-    // search service
-    searchService = SearchService(
-      objectBoxClient: objectBoxClient,
-      bgWorkerClient: backgroundWorkerDataSource,
+    // search
+    // searchService = SearchService(
+    //   objectBoxClient: objectBoxClient,
+    //   bgWorkerClient: backgroundWorkerDataSource,
+    // );
+    imageEmbeddingRepository = ImageEmbeddingRepository(
+      objectBoxClient: objectBoxService,
+      bgWorkerClient: backgroundWorkerService,
+    );
+    searchViewModel = SearchViewModel(
+      imageEmbeddingRepository: imageEmbeddingRepository,
+      mediaAssetRepo: mediaAssetRepository,
+      queryValidator: queryValidator,
     );
 
     // debugging
     // path_provider
     debugPrint("[ServiceLocator] ===== Path Provider Directories =====");
-
     try {
       final tempDir = await getTemporaryDirectory();
       debugPrint(

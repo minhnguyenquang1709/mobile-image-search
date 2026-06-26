@@ -1,10 +1,12 @@
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_image_search/src/constants/theme_constant.dart';
+import 'package:mobile_image_search/src/core/constants/theme_constant.dart';
+import 'package:mobile_image_search/src/core/utils/debug.dart';
 import 'package:mobile_image_search/src/routing/router_config.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_image_search/src/service_locator.dart';
+import 'package:show_fps/show_fps.dart';
 
 final logger = Logger(printer: PrettyPrinter(methodCount: 0));
 
@@ -65,6 +67,16 @@ class _AppLifecycleWrapperState extends State<AppLifecycleWrapper> {
       theme: lightTheme,
       routerConfig: topLevelNavigationRouter,
       showPerformanceOverlay: false,
+      // Overlay the FPS indicator above every route (debug/profile only).
+      builder: (context, child) {
+        return ShowFPS(
+          alignment: Alignment.topRight,
+          visible: isDebugOrProfileMode,
+          showChart: false,
+          draggable: true,
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:objectbox/objectbox.dart';
-import '../../../constants/config_constant.dart';
+import '../../../core/constants/config_constant.dart';
 
 @Entity()
 class ObjectBoxImageEmbedding {

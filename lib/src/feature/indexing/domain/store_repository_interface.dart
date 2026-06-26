@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:mobile_image_search/src/feature/search/domain/model/search_result.dart';
+import 'package:mobile_image_search/src/feature/search/domain/search_result.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 /// abc

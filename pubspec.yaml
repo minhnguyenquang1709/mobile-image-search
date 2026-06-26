@@ -51,6 +51,7 @@ dependencies:
   video_player: ^2.10.1
   logger: ^2.7.0
   path: ^1.9.1
+  show_fps: ^1.1.0
 
 dev_dependencies:
   flutter_test:

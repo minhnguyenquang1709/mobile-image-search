@@ -13,10 +13,3 @@ class SearchQuery {
 
   SearchQuery({this.id = 0, required this.text, required this.createdAt});
 }
-
-// class SearchResult {
-//   final ImageObjectBox image;
-//   final double score;
-
-//   SearchResult({required this.image, required this.score});
-// }

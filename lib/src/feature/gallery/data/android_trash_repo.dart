@@ -3,17 +3,17 @@ import 'package:mobile_image_search/objectbox.g.dart';
 import 'package:mobile_image_search/src/core/platform_image_method_channel.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/objectbox_trash_entry.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/trash_model.dart';
-import 'package:mobile_image_search/src/feature/gallery/domain/trash_repository_interface.dart';
+import 'package:mobile_image_search/src/data/interfaces/trash_repository_interface.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_repository.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 class AndroidTrashRepository implements ITrashRepository {
-  final ObjectBoxClient _objectBoxClient;
-  final PlatformChannelClient _methodChannel;
+  final ObjectBoxService _objectBoxClient;
+  final PlatformChannelService _methodChannel;
 
   AndroidTrashRepository({
-    required ObjectBoxClient objectBoxStoreClient,
-    required PlatformChannelClient methodChannel,
+    required ObjectBoxService objectBoxStoreClient,
+    required PlatformChannelService methodChannel,
   }) : _objectBoxClient = objectBoxStoreClient,
        this._methodChannel = methodChannel;
 
@@ -121,12 +121,3 @@ class AndroidTrashRepository implements ITrashRepository {
     // delete album trash entries if any of the restored assets belong to trashed albums
   }
 }
-
-// final trashRepositoryProvider = Provider<ITrashRepository>((ref) {
-//   final objectBoxClient = ref.watch(objectBoxClientProvider).requireValue;
-//   final platformChannel = ref.watch(platformMethodChannelProvider);
-//   return AndroidTrashRepository(
-//     objectBoxStoreClient: objectBoxClient,
-//     methodChannel: platformChannel,
-//   );
-// });

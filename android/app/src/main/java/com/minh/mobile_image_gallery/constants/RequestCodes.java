@@ -7,4 +7,7 @@ abstract public class RequestCodes {
 
     public static final int MOVE_MEDIA_TO_TRASH = 300;
 
+    // delete-consent for the originals after a move
+    public static final int MOVE_DELETE_REQUEST_CODE = 400;
+
 }

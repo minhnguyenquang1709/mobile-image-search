@@ -1,5 +1,6 @@
 import 'package:mobile_image_search/src/shared/domain/model/album.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
+import 'package:mobile_image_search/src/shared/domain/model/move_progress.dart';
 
 abstract class IAlbumRepository {
   /// Get the list of albums on the device
@@ -9,14 +10,10 @@ abstract class IAlbumRepository {
   /// - iOS: albums are represented by collections in the Photos library. The album name is the same as the collection name.
   Future<List<Album>> getAlbums();
 
-  /// Get the list of media assets in an album with pagination support
-  Future<List<MediaAsset>> getMediaAssetsInAlbum({
-    required String albumId,
-    int page,
-    int limit,
-  });
-
-  Future<void> moveAssetsToAlbum(String albumId, List<String> assetIds);
+  /// Move [assets] into [album] (copy then delete originals), streaming
+  /// [MoveProgress] as it advances. The destination folder is resolved from the
+  /// album's existing location so media lands in the same bucket (no duplicate).
+  Stream<MoveProgress> moveAssetsToAlbum(Album album, List<MediaAsset> assets);
 
   /// A new album is created by
   ///

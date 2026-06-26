@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_image_search/src/constants/theme_constant.dart';
-import 'package:mobile_image_search/src/feature/indexing/presentation/indexing_view_model.dart';
+import 'package:mobile_image_search/src/core/constants/theme_constant.dart';
+import 'package:mobile_image_search/src/feature/indexing/presentation/indexing_viewmodel.dart';
 
 class IndexingCard extends StatefulWidget {
   const IndexingCard({super.key});

@@ -1,19 +1,20 @@
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_image_search/src/core/platform_image_method_channel.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
-import 'package:mobile_image_search/src/utils/media_processing.dart';
+import 'package:mobile_image_search/src/core/utils/media_processing.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 /// Get images from device storage
 class GalleryDataSource {
-  final PlatformChannelClient _mediaPlatformChannel;
+  final PlatformChannelService _mediaPlatformChannel;
   AssetPathEntity? _rootAlbum;
 
-  GalleryDataSource(PlatformChannelClient mediaPlatformChannel)
+  GalleryDataSource(PlatformChannelService mediaPlatformChannel)
     : _mediaPlatformChannel = mediaPlatformChannel;
 
   /// Call photo_manager to check permission
@@ -149,32 +150,26 @@ class GalleryDataSource {
     );
     final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
       type: RequestType.image,
-      onlyAll: true,
+      onlyAll: true, // returns only one root album that contains all media
       filterOption: filterOptions,
     );
-    // appLogger.i('Found ${albums.length} albums in the gallery.');
 
     if (albums.isEmpty) {}
 
-    final Set<String> assetIds = {};
     final List<AssetEntity> allAssets = [];
 
     for (final album in albums) {
+      debugPrint(
+        "[GalleryDataSource] Fetching assets from album: ${album.name}, id: ${album.id}",
+      );
       final int assetCount = await album.assetCountAsync;
       if (assetCount > 0) {
         final assets = await album.getAssetListRange(start: 0, end: assetCount);
 
-        for (final asset in assets) {
-          if (!assetIds.contains(asset.id)) {
-            assetIds.add(asset.id);
-            allAssets.add(asset);
-          }
-        }
+        allAssets.addAll(assets);
       }
     }
 
-    // Sort by update date (newest first)
-    // allAssets.sort((a, b) => b.modifiedDateTime.compareTo(a.modifiedDateTime));
     return allAssets;
   }
 
@@ -302,29 +297,6 @@ class GalleryDataSource {
     }
   }
 
-  /// Invoke native API to move media to album via method channel
-  ///
-  /// Only support Android for now
-  Future<bool> moveMediaToAlbum({
-    required List<MediaAsset> mediaAssets,
-    required String targetAlbumId,
-  }) async {
-    if (!Platform.isAndroid) {
-      throw UnsupportedError(
-        "Moving media to album is only supported on Android for now.",
-      );
-    }
-
-    try {
-      final bool result = await _mediaPlatformChannel.moveMediaToAlbum(
-        mediaAssets,
-      );
-      return result;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   Future<bool> moveMediaToTrash(List<MediaAsset> mediaAssets) async {
     if (!Platform.isAndroid) {
       throw UnsupportedError(
@@ -344,7 +316,7 @@ class GalleryDataSource {
 }
 
 final galleryDataSourceProvider = Provider((ref) {
-  final PlatformChannelClient mediaPlatformChannel = ref.watch(
+  final PlatformChannelService mediaPlatformChannel = ref.watch(
     platformMethodChannelProvider,
   );
   return GalleryDataSource(mediaPlatformChannel);

@@ -2,7 +2,7 @@
 
 > **A privacy-first mobile application that allows users to search their local photo library using natural language, powered by on-device AI and Vector Search.**
 
----
+
 
 ## 📖 About The Project
 
@@ -18,7 +18,7 @@ Users can search for _"a cat sleeping on the sofa"_ or _"sunset at the beach"_, 
 - **🔒 100% Offline & Private:** No photos leave the device. All processing happens locally.
 - **🧠 State-of-the-Art AI:** Powered by **OpenCLIP** models converted to TFLite for mobile efficiency.
 
----
+
 
 ## 🛠 Tech Stack
 
@@ -34,7 +34,7 @@ to be finalized
 
 to be finalized
 
----
+
 
 ## 🏗 Architecture & Design
 
@@ -48,13 +48,13 @@ to be finalized
 
 to be finalized
 
----
+
 
 ## 📸 Screenshots
 
 to be finalized
 
----
+
 
 ## 🚀 Getting Started
 
@@ -66,7 +66,7 @@ to be finalized
 
 to be finalized
 
----
+
 
 ## 📧 Contact
 

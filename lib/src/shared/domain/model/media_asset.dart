@@ -1,6 +1,4 @@
-import 'dart:io';
-
-import 'package:mobile_image_search/src/constants/common_constant.dart';
+import 'package:mobile_image_search/src/core/constants/common_constant.dart';
 
 /// Android: https://developer.android.com/media/platform/supported-formats
 enum EMediaFormat {
@@ -12,6 +10,7 @@ enum EMediaFormat {
 
   // video
   mp4,
+  mkv,
   webm,
 
   // unknown
@@ -35,10 +34,7 @@ class MediaAsset {
   final EMediaType mediaType;
   final EMediaFormat format;
   bool isFavorite;
-  // final EStorageLocation storageLocation;
-  // File? file;
   int? sizeBytes;
-  // AssetEntity? assetEntity;
 
   MediaAsset({
     required this.assetId,
@@ -49,11 +45,8 @@ class MediaAsset {
     required this.modifiedDateTime,
     required this.mediaType,
     required this.format,
-    // required this.storageLocation,
     this.isFavorite = false,
-    // this.file,
     this.sizeBytes,
-    // this.assetEntity,
   });
 }
 
@@ -67,7 +60,6 @@ class ImageAsset extends MediaAsset {
     required super.modifiedDateTime,
     required super.mediaType,
     required super.format,
-    // required super.storageLocation,
   });
 }
 
@@ -82,7 +74,6 @@ class VideoAsset extends MediaAsset {
     required super.modifiedDateTime,
     required super.mediaType,
     required super.format,
-    // required super.storageLocation,
     required this.duration,
   });
 }

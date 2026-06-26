@@ -19,10 +19,6 @@ abstract class IGalleryRepository {
 
   // write operations
   Future<bool> createAlbum(String albumName, List<MediaAsset> mediaAssets);
-  Future<bool> moveMediaToAlbum(
-    List<MediaAsset> mediaAssets,
-    String targetAlbumId,
-  );
   Future<bool> moveMediaToTrash(List<MediaAsset> mediaAssets);
 
   /// Get metadata of all images and videos

@@ -2,7 +2,7 @@ import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_image_search/src/utils/media_processing.dart';
+import 'package:mobile_image_search/src/core/utils/media_processing.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
@@ -103,26 +103,6 @@ class AndroidGalleryRepository implements IGalleryRepository {
     List<MediaAsset> mediaAssets,
   ) async {
     return await _galleryDataSource.createAlbum(albumName, mediaAssets);
-  }
-
-  /// Move multiple images or videos to a specific album
-  @override
-  Future<bool> moveMediaToAlbum(
-    List<MediaAsset> mediaAssets,
-    String targetAlbumId,
-  ) async {
-    try {
-      bool isSuccess = false;
-
-      isSuccess = await _galleryDataSource.moveMediaToAlbum(
-        mediaAssets: mediaAssets,
-        targetAlbumId: targetAlbumId,
-      );
-
-      return isSuccess;
-    } catch (e) {
-      rethrow;
-    }
   }
 
   @override

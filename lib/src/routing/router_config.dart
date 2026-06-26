@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_image_search/src/common_widgets/settings_screen.dart';
-import 'package:mobile_image_search/src/constants/route_constant.dart';
+import 'package:mobile_image_search/src/core/constants/route_constant.dart';
 import 'package:mobile_image_search/src/common_widgets/nested_navigation_widget.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/album_opened_screen.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/album_screen.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/main_gallery_screen.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/full_media_view_screen.dart';
-import 'package:mobile_image_search/src/feature/gallery/presentation/trash_screen.dart';
-import 'package:mobile_image_search/src/feature/search/presentation/image_search_screen.dart';
+import 'package:mobile_image_search/src/feature/gallery/views/album_opened_screen.dart';
+import 'package:mobile_image_search/src/feature/gallery/views/album_screen.dart';
+import 'package:mobile_image_search/src/feature/gallery/views/main_gallery_screen.dart';
+import 'package:mobile_image_search/src/feature/gallery/views/full_media_view_screen.dart';
+import 'package:mobile_image_search/src/feature/gallery/views/trash_screen.dart';
+import 'package:mobile_image_search/src/feature/evaluation/presentation/evaluation_screen.dart';
 import 'package:mobile_image_search/src/shared/domain/model/album.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
@@ -115,14 +115,6 @@ final topLevelNavigationRouter = GoRouter(
       },
     ),
 
-    // search by caption screen
-    GoRoute(
-      path: RouteConstants.searchByCaptionResultView,
-      builder: (context, state) {
-        return ImageSearchScreen();
-      },
-    ),
-
     // album view screen
     GoRoute(
       path: RouteConstants.albumView,
@@ -130,6 +122,14 @@ final topLevelNavigationRouter = GoRouter(
         final extra = state.extra as Map<String, dynamic>?;
         final album = extra?['album'] as Album;
         return AlbumOpenedScreen(currentAlbum: album);
+      },
+    ),
+
+    // model evaluation (developer tool)
+    GoRoute(
+      path: RouteConstants.evaluation,
+      builder: (context, state) {
+        return const EvaluationScreen();
       },
     ),
   ],

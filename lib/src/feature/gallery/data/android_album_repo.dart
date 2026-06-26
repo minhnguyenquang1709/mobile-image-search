@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/rendering.dart';
 import 'package:mobile_image_search/objectbox.g.dart';
 import 'package:mobile_image_search/src/core/platform_image_method_channel.dart';
@@ -6,19 +8,23 @@ import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_re
 import 'package:mobile_image_search/src/shared/domain/interface/album_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/album.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
-import 'package:mobile_image_search/src/utils/media_processing.dart';
+import 'package:mobile_image_search/src/shared/domain/model/move_progress.dart';
+import 'package:mobile_image_search/src/core/utils/media_processing.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class AndroidAlbumRepository implements IAlbumRepository {
-  final PlatformChannelClient _platformChannelClient;
-  final ObjectBoxClient _objectBoxClient;
+  final PlatformChannelService _platformChannelClient;
+  final ObjectBoxService _objectBoxClient;
 
-  /// Directory in Android device where the app-created albums will be stored
-  final String _appAlbumDir = "/storage/emulated/0/Pictures/SmartGallery";
+  /// Directory in Android device where the app-created albums will be stored.
+  ///
+  /// Must match the root native uses in `createAlbum` and the move's
+  /// RELATIVE_PATH (both DCIM), so album existence checks line up.
+  final String _appAlbumDir = "/storage/emulated/0/DCIM";
 
   AndroidAlbumRepository({
-    required PlatformChannelClient platformChannelClient,
-    required ObjectBoxClient objectBoxClient,
+    required PlatformChannelService platformChannelClient,
+    required ObjectBoxService objectBoxClient,
   }) : _objectBoxClient = objectBoxClient,
        _platformChannelClient = platformChannelClient;
 
@@ -66,32 +72,155 @@ class AndroidAlbumRepository implements IAlbumRepository {
     return visibleAlbums;
   }
 
-  @override
-  Future<List<MediaAsset>> getMediaAssetsInAlbum({
-    required String albumId,
-    int page = 0,
-    int limit = 100,
-  }) async {
+  /// Resolve the destination folder (MediaStore RELATIVE_PATH) for [album].
+  ///
+  /// For an existing album we read the folder of one of its assets so the move
+  /// lands in the SAME bucket (otherwise a second folder with the same name is
+  /// created). For a freshly created/empty album we fall back to the app
+  /// convention `DCIM/<title>` (matching native `createAlbum`).
+  Future<String> _resolveAlbumRelativePath(Album album) async {
     try {
-      final AssetPathEntity targetAlbum = await AssetPathEntity.fromId(albumId);
+      final AssetPathEntity path = await AssetPathEntity.fromId(album.id);
+      final assets = await path.getAssetListPaged(page: 0, size: 1);
+      if (assets.isNotEmpty) {
+        final AssetEntity sample = assets.first;
 
-      final List<AssetEntity> assetEntities = await targetAlbum
-          .getAssetListPaged(page: 0, size: 100);
+        // MediaStore RELATIVE_PATH (e.g. "Pictures/A/" or "DCIM/A/")
+        final String? relativePath = sample.relativePath;
+        if (relativePath != null && relativePath.isNotEmpty) {
+          return relativePath;
+        }
 
-      final List<MediaAsset> mediaAssets = assetEntities.map((asset) {
-        return toMediaAsset(asset);
-      }).toList();
-
-      return mediaAssets;
+        // fallback: derive it from the file's absolute directory
+        final file = await sample.file;
+        if (file != null) {
+          final String dir = file.parent.path; // /storage/emulated/0/Pictures/A
+          const String prefix = "/storage/emulated/0/";
+          if (dir.startsWith(prefix)) {
+            return dir.substring(prefix.length); // Pictures/A
+          }
+        }
+      }
     } catch (e) {
-      rethrow;
+      debugPrint(
+        "[AndroidAlbumRepository] Could not resolve album path, defaulting to DCIM: $e",
+      );
     }
+    return "DCIM/${album.title}";
   }
 
+  /// Move [assets] into [album]: native copies each file
+  /// (streaming progress), then we run a single batch delete of the originals
+  /// with user consent. Progress is surfaced through a broadcast stream.
   @override
-  Future<void> moveAssetsToAlbum(String albumId, List<String> assetIds) {
-    // TODO: implement moveAssetsToAlbum
-    throw UnimplementedError();
+  Stream<MoveProgress> moveAssetsToAlbum(Album album, List<MediaAsset> assets) {
+    final StreamController<MoveProgress> controller =
+        StreamController<MoveProgress>.broadcast();
+
+    // resolve the destination folder first, then start the native copy stream
+    _runMove(controller, album, assets);
+
+    return controller.stream;
+  }
+
+  Future<void> _runMove(
+    StreamController<MoveProgress> controller,
+    Album album,
+    List<MediaAsset> assets,
+  ) async {
+    final String relativePath = await _resolveAlbumRelativePath(album);
+
+    final int total = assets.length;
+    // copies created so far (new MediaStore ids), in the same order as [assets]
+    final List<int> newAssetIds = [];
+
+    final stream = _platformChannelClient.moveMediaToAlbumStream(
+      relativePath: relativePath,
+      assets: assets,
+    );
+
+    late final StreamSubscription subscription;
+    subscription = stream.listen(
+      (event) async {
+        final Map<dynamic, dynamic> map = event as Map<dynamic, dynamic>;
+        final String state = map['state'] as String;
+
+        if (state == 'copying') {
+          final int index = map['index'] as int;
+          newAssetIds.add(map['newAssetId'] as int);
+          controller.add(
+            MoveProgress(
+              total: total,
+              processed: index + 1,
+              isMoving: true,
+              state: MoveState.copying,
+              currentAssetId: map['assetId']?.toString(),
+            ),
+          );
+        } else if (state == 'copied') {
+          // copies done — now ask the user to confirm deleting the originals
+          controller.add(
+            MoveProgress(
+              total: total,
+              processed: total,
+              isMoving: true,
+              state: MoveState.awaitingConsent,
+            ),
+          );
+
+          try {
+            final bool deleted = await _platformChannelClient
+                .confirmDeleteOriginals(assets, newAssetIds);
+            controller.add(
+              MoveProgress(
+                total: total,
+                processed: total,
+                isMoving: false,
+                state: deleted ? MoveState.done : MoveState.denied,
+              ),
+            );
+          } catch (e) {
+            debugPrint("[AndroidAlbumRepository] Delete consent failed: $e");
+            // PERMISSION_DENIED (copies rolled back natively) or other failure
+            controller.add(
+              MoveProgress(
+                total: total,
+                processed: total,
+                isMoving: false,
+                state: MoveState.denied,
+              ),
+            );
+          }
+
+          await subscription.cancel();
+          await controller.close();
+        } else if (state == 'error') {
+          debugPrint("[AndroidAlbumRepository] Move error: ${map['message']}");
+          controller.add(
+            MoveProgress(
+              total: total,
+              processed: (map['index'] as int?) ?? 0,
+              isMoving: false,
+              state: MoveState.error,
+            ),
+          );
+          await subscription.cancel();
+          await controller.close();
+        }
+      },
+      onError: (e) async {
+        debugPrint("[AndroidAlbumRepository] Move stream error: $e");
+        controller.add(
+          MoveProgress(
+            total: total,
+            processed: 0,
+            isMoving: false,
+            state: MoveState.error,
+          ),
+        );
+        await controller.close();
+      },
+    );
   }
 
   @override
