@@ -55,12 +55,21 @@ class SearchViewModel extends ChangeNotifier {
 
   /// Re-run the active mode's search with the current query + criteria.
   void _rerun() {
-    if (mode == SearchMode.semantic) {
-      if (currentTextQuery.trim().isEmpty) return;
+    final bool hasQuery = currentTextQuery.trim().isNotEmpty;
+
+    // semantic search needs a phrase; with one, run it
+    if (mode == SearchMode.semantic && hasQuery) {
       searchByEnglishPhrase(currentTextQuery);
-    } else {
-      // filename mode runs even with an empty query (lists all matching filters)
+      return;
+    }
+
+    // otherwise (filename mode, or a filter-only search with no phrase) scan
+    // device media and apply the criteria. Nothing to do with neither set.
+    if (hasQuery || criteria.isActive) {
       runFilenameSearch(currentTextQuery);
+    } else {
+      searchResults.clear();
+      notifyListeners();
     }
   }
 
@@ -90,9 +99,8 @@ class SearchViewModel extends ChangeNotifier {
           .generateTextEmbedding(query);
 
       // perform vector search
-      final List<String> assetIds = await _imageEmbeddingRepository.vectorSearch(
-        queryVector,
-      );
+      final List<String> assetIds = await _imageEmbeddingRepository
+          .vectorSearch(queryVector);
 
       // a newer search superseded this one
       if (gen != _searchGeneration) return;
@@ -111,7 +119,7 @@ class SearchViewModel extends ChangeNotifier {
         }
       }
 
-      // date/type filters are cross-cutting — apply to semantic results too
+      // date/type filters are cross-cutting - apply to semantic results too
       searchResults.retainWhere(criteria.matches);
     } finally {
       if (gen == _searchGeneration) {

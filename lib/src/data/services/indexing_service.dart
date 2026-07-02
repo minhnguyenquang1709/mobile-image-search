@@ -41,8 +41,7 @@ class IndexingService {
 
   /// Start the indexing process for all gallery media assets.
   ///
-  /// The diffing, encoding and DB writes all happen in the worker isolate;
-  /// here we only request the run and mark it as started.
+  /// Just triggers the worker isolate to start indexing. The progress is reported via [progressStream].
   Future<void> indexGallery() async {
     if (isIndexing) {
       debugPrint(

@@ -4,4 +4,9 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Debug-only: the model evaluation tool reads a dataset folder from public
+         storage, which needs "All files access". Kept out of the release manifest
+         so it never ships to Google Play (Play disallows this permission). -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
 </manifest>

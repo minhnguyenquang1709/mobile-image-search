@@ -88,10 +88,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
 
                   if (_vm.isRunning) _buildProgress(),
                   if (_vm.error != null)
-                    Text(
-                      _vm.error!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
+                    Text(_vm.error!, style: const TextStyle(color: Colors.red)),
                   if (_vm.report != null) _buildReport(_vm.report!),
                 ],
               ),
@@ -121,7 +118,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Results — ${r.datasetName}',
+          'Results - ${r.datasetName}',
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
@@ -131,10 +128,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         _summaryTable(r),
         const SizedBox(height: 16),
 
-        const Text(
-          'Per-query',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        const Text('Per-query', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         _perQueryTable(r),
 
@@ -177,7 +171,10 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
         row('Embedding load', '${r.embeddingLoadMs} ms'),
         row('First query warmup', '${r.firstQueryWarmupMs} ms'),
         row('Search total', '${r.totalSearchMs} ms'),
-        row('Search / query', '${r.meanSearchMsPerQuery.toStringAsFixed(1)} ms'),
+        row(
+          'Search / query',
+          '${r.meanSearchMsPerQuery.toStringAsFixed(1)} ms',
+        ),
         row('  ↳ encode text', '${r.meanEncodeTextMs.toStringAsFixed(1)} ms'),
         row('  ↳ ANN query', '${r.meanAnnQueryMs.toStringAsFixed(1)} ms'),
         const Divider(),

@@ -68,6 +68,17 @@ final topLevelNavigationRouter = GoRouter(
               builder: (context, state) {
                 return AlbumScreen();
               },
+              routes: [
+                // opened album - nested so it keeps the shell's bottom bar
+                GoRoute(
+                  path: 'view',
+                  builder: (context, state) {
+                    final extra = state.extra as Map<String, dynamic>?;
+                    final album = extra?['album'] as Album;
+                    return AlbumOpenedScreen(currentAlbum: album);
+                  },
+                ),
+              ],
             ),
           ],
         ),
@@ -112,16 +123,6 @@ final topLevelNavigationRouter = GoRouter(
       path: RouteConstants.settings,
       builder: (context, state) {
         return SettingsScreen();
-      },
-    ),
-
-    // album view screen
-    GoRoute(
-      path: RouteConstants.albumView,
-      builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
-        final album = extra?['album'] as Album;
-        return AlbumOpenedScreen(currentAlbum: album);
       },
     ),
 

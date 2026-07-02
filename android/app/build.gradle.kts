@@ -34,6 +34,15 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // R8 is on for release; without keep rules it strips the
+            // ai.onnxruntime classes the native code resolves by name,
+            // crashing model inference (GetMethodID java_class == null).
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

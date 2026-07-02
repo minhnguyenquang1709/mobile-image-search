@@ -55,10 +55,9 @@ EMediaFormat getMediaFormatFromTitle(String title) {
 }
 
 bool isSameMedia(MediaAsset metadata1, MediaAsset metadata2) {
-  return true;
-  // return metadata1.title == metadata2.title &&
-  //     metadata1.createDateTime == metadata2.createDateTime &&
-  //     metadata1.modifiedDateTime == metadata2.modifiedDateTime &&
-  //     metadata1.mediaType == metadata2.mediaType &&
-  //     metadata1.duration == metadata2.duration;
+  // return true;
+  return metadata1.title == metadata2.title &&
+      metadata1.createDateTime == metadata2.createDateTime &&
+      metadata1.modifiedDateTime == metadata2.modifiedDateTime &&
+      metadata1.mediaType == metadata2.mediaType;
 }

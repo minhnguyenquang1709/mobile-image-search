@@ -2,6 +2,9 @@ class EmptyQueryException implements Exception {
   final String cause;
 
   EmptyQueryException(this.cause);
+
+  @override
+  String toString() => cause;
 }
 
 class MediaAssetNotFoundException implements Exception {
@@ -14,6 +17,9 @@ class OutOfVocabularyException implements Exception {
   final String word;
 
   OutOfVocabularyException(this.word);
+
+  @override
+  String toString() => '"$word" is not a recognized English word.';
 }
 
 class QueryTooLongException implements Exception {
@@ -21,4 +27,7 @@ class QueryTooLongException implements Exception {
   final int maxTokenCount;
 
   QueryTooLongException(this.tokenCount, this.maxTokenCount);
+
+  @override
+  String toString() => 'Your search phrase is too long.';
 }

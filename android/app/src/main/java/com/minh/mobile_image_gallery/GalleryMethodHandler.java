@@ -6,11 +6,14 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.UriPermission;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 
 import androidx.annotation.NonNull;
@@ -38,10 +41,16 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
 
     private MethodChannel.Result pendingResult;
 
-    // delete-consent flow for a move: the result to reply to, plus the copies we
-    // created so we can roll them back if the user denies the delete.
+    // delete-consent flow for a move: the result to reply to, plus the copies
+    // created so they can be rolled back if the user denies the delete. SAF copies
+    // carry a doc Uri (rolled back via DocumentsContract); MediaStore copies a null
     private MethodChannel.Result pendingMoveResult;
     private List<Uri> pendingMoveCopies;
+    private List<String> pendingMoveDocUris;
+
+    // SAF folder-grant flow: the result to reply to + the asked folder
+    private MethodChannel.Result pendingFolderResult;
+    private String pendingFolderRelativePath;
 
     public GalleryMethodHandler(Activity activity) {
         this.activity = activity;
@@ -56,9 +65,6 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
             case MethodNames.createAlbum:
                 createAlbum(call, result);
                 break;
-            case "checkAlbumExistence":
-                checkAlbumExistence(call, result);
-                break;
             case MethodNames.permanentlyDelete:
                 permanentlyDeleteMedia(call, result);
                 break;
@@ -67,6 +73,12 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
                 break;
             case MethodNames.confirmDeleteOriginals:
                 confirmDeleteOriginals(call, result);
+                break;
+            case MethodNames.ensureFolderAccess:
+                ensureFolderAccess(call, result);
+                break;
+            case MethodNames.deleteAlbumDirectory:
+                deleteAlbumDirectory(call, result);
                 break;
             default:
                 result.notImplemented();
@@ -79,36 +91,15 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
 
         executor.execute(() -> {
             try {
+                // No mkdirs() - MediaStore creates the DCIM/<title> bucket lazily on the
+                // first move. We just compute the BUCKET_ID it will assign for the DB record.
                 File dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
                 File newAlbumDir = new File(dcimDir, albumTitle);
-
-                if (!newAlbumDir.exists()) {
-                    boolean created = newAlbumDir.mkdirs();
-                    if (!created) {
-                        mainHandler.post(() -> result.error("CREATE_FAILED", "Failed to create directory", null));
-                        return;
-                    }
-                }
 
                 String bucketId = String.valueOf(newAlbumDir.getAbsolutePath().toLowerCase().hashCode());
                 mainHandler.post(() -> result.success(bucketId));
             } catch (Exception e) {
                 mainHandler.post(() -> result.error("CREATE_ERROR", e.getMessage(), null));
-            }
-        });
-    }
-
-    private void checkAlbumExistence(MethodCall call, MethodChannel.Result result) {
-        String appAlbumDir = call.argument("appAlbumDir");
-        String albumName = call.argument("albumName");
-
-        executor.execute(() -> {
-            try {
-                File albumDir = new File(appAlbumDir, albumName);
-                boolean exists = albumDir.exists() && albumDir.isDirectory();
-                mainHandler.post(() -> result.success(exists));
-            } catch (Exception e) {
-                mainHandler.post(() -> result.error("CHECK_ERROR", e.getMessage(), null));
             }
         });
     }
@@ -122,8 +113,14 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
      */
     private void permanentlyDeleteMedia(MethodCall call, MethodChannel.Result result) {
         List<String> assetIdList = call.argument("assetIds");
-        if (assetIdList == null || assetIdList.isEmpty()) {
-            result.error("INVALID_ARGS", "assetIds list is empty or null", null);
+        // optional [{assetId, mediaType}]
+        // Uris (assetIds alone assume images, which fails for videos)
+        List<java.util.Map<String, Object>> mediaList = call.argument("mediaList");
+
+        boolean hasAssetIds = assetIdList != null && !assetIdList.isEmpty();
+        boolean hasMediaList = mediaList != null && !mediaList.isEmpty();
+        if (!hasAssetIds && !hasMediaList) {
+            result.error("INVALID_ARGS", "no assetIds / mediaList provided", null);
             return;
         }
 
@@ -136,8 +133,16 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
 
         try {
             List<Uri> uris = new ArrayList<>();
-            for (String assetId : assetIdList) {
-                uris.add(getUriFromAssetId(assetId));
+            if (hasMediaList) {
+                for (java.util.Map<String, Object> media : mediaList) {
+                    long id = ((Number) media.get("assetId")).longValue();
+                    int mediaType = ((Number) media.get("mediaType")).intValue();
+                    uris.add(getUriFromAssetId(id, mediaType));
+                }
+            } else {
+                for (String assetId : assetIdList) {
+                    uris.add(getUriFromAssetId(assetId));
+                }
             }
 
             PendingIntent pendingIntent = MediaStore.createDeleteRequest(contentResolver, uris);
@@ -172,13 +177,17 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
 
         this.pendingMoveResult = result;
 
-        // remember the created copies so we can roll them back on denial
+        // remember the created copies so can roll them back on denial. SAF copies
+        // also carry a doc Uri (deleted via DocumentsContract instead of MediaStore).
         this.pendingMoveCopies = new ArrayList<>();
+        this.pendingMoveDocUris = new ArrayList<>();
         if (newMediaList != null) {
             for (java.util.Map<String, Object> media : newMediaList) {
                 long newId = ((Number) media.get("assetId")).longValue();
                 int mediaType = ((Number) media.get("mediaType")).intValue();
                 this.pendingMoveCopies.add(getUriFromAssetId(newId, mediaType));
+                Object docUri = media.get("docUri");
+                this.pendingMoveDocUris.add(docUri != null ? docUri.toString() : null);
             }
         }
 
@@ -200,6 +209,64 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
             result.error("DELETE_FAILED", e.getMessage(), null);
             this.pendingMoveResult = null;
             this.pendingMoveCopies = null;
+            this.pendingMoveDocUris = null;
+        }
+    }
+
+    /**
+     * Ensure a persisted SAF write grant for the folder at relativePath. Returns
+     * the
+     * granted tree Uri string, or replies null if the user cancels / picks another
+     * folder.
+     */
+    private void ensureFolderAccess(MethodCall call, MethodChannel.Result result) {
+        String relativePath = call.argument("relativePath");
+        if (relativePath == null || relativePath.isEmpty()) {
+            result.error("INVALID_ARGS", "relativePath is empty or null", null);
+            return;
+        }
+
+        // normalize: drop leading/trailing slashes (RELATIVE_PATH is e.g. "folder/")
+        String normalized = relativePath;
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+
+        String documentId = "primary:" + normalized;
+        Uri targetTreeUri = DocumentsContract.buildTreeDocumentUri(
+                "com.android.externalstorage.documents", documentId);
+
+        // already granted: reuse the persisted permission, no prompt
+        for (UriPermission perm : contentResolver.getPersistedUriPermissions()) {
+            if (perm.isWritePermission() && perm.getUri().equals(targetTreeUri)) {
+                result.success(targetTreeUri.toString());
+                return;
+            }
+        }
+
+        // not granted: launch the folder picker, reply in handleActivityResult
+        this.pendingFolderResult = result;
+        this.pendingFolderRelativePath = normalized;
+
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // pre-point the picker at the target folder. DocumentsUI navigates a
+            // *document* Uri (not a bare tree Uri), so build it from the tree.
+            Uri initialUri = DocumentsContract.buildDocumentUriUsingTree(targetTreeUri, documentId);
+            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri);
+        }
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try {
+            activity.startActivityForResult(intent, RequestCodes.SAF_TREE_REQUEST_CODE);
+        } catch (RuntimeException e) {
+            result.error("SAF_FAILED", e.getMessage(), null);
+            this.pendingFolderResult = null;
+            this.pendingFolderRelativePath = null;
         }
     }
 
@@ -218,6 +285,48 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
 
             } catch (Exception e) {
                 mainHandler.post(() -> result.error("DELETE_ALBUM_FAILED", e.getMessage(), null));
+            }
+        });
+    }
+
+    /**
+     * Try to delete the album directory granted as [treeUri] (SAF). Only deletes
+     * it when empty, any leftover child (a non-media file/folder) -> leave the
+     * folder.
+     * The caller deletes the media via MediaStore first, so an empty directory
+     * here means it held only media. Replies true if deleted, false if left.
+     */
+    private void deleteAlbumDirectory(MethodCall call, MethodChannel.Result result) {
+        String treeUriStr = call.argument("treeUri");
+        if (treeUriStr == null || treeUriStr.isEmpty()) {
+            result.error("INVALID_ARGS", "treeUri is empty or null", null);
+            return;
+        }
+
+        executor.execute(() -> {
+            try {
+                Uri treeUri = Uri.parse(treeUriStr);
+                String docId = DocumentsContract.getTreeDocumentId(treeUri);
+                Uri dirDocUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
+                Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId);
+
+                boolean hasChild = false;
+                try (Cursor cursor = contentResolver.query(childrenUri,
+                        new String[] { DocumentsContract.Document.COLUMN_DOCUMENT_ID },
+                        null, null, null)) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        hasChild = true; // leftover non-media file -> leave the directory
+                    }
+                }
+
+                boolean deleted = false;
+                if (!hasChild) {
+                    deleted = DocumentsContract.deleteDocument(contentResolver, dirDocUri);
+                }
+                final boolean res = deleted;
+                mainHandler.post(() -> result.success(res));
+            } catch (Exception e) {
+                mainHandler.post(() -> result.error("DELETE_DIR_FAILED", e.getMessage(), null));
             }
         });
     }
@@ -281,15 +390,23 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
         } else if (requestCode == RequestCodes.MOVE_DELETE_REQUEST_CODE) {
             if (pendingMoveResult != null) {
                 if (resultCode == Activity.RESULT_OK) {
-                    // originals deleted by the system — move complete
+                    // originals deleted by the system - move complete
                     pendingMoveResult.success(true);
                 } else {
-                    // user denied: roll back the copies we created (app owns them,
-                    // no consent needed) so no duplicates are left behind
+                    // user denied: roll back the copies.
+                    // SAF copies go through DocumentsContract; the
+                    // rest are app-owned MediaStore items (no consent needed).
                     if (pendingMoveCopies != null) {
-                        for (Uri copy : pendingMoveCopies) {
+                        for (int i = 0; i < pendingMoveCopies.size(); i++) {
+                            String docUri = (pendingMoveDocUris != null && i < pendingMoveDocUris.size())
+                                    ? pendingMoveDocUris.get(i)
+                                    : null;
                             try {
-                                contentResolver.delete(copy, null, null);
+                                if (docUri != null) {
+                                    DocumentsContract.deleteDocument(contentResolver, Uri.parse(docUri));
+                                } else {
+                                    contentResolver.delete(pendingMoveCopies.get(i), null, null);
+                                }
                             } catch (Exception ignored) {
                             }
                         }
@@ -298,7 +415,51 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
                 }
                 pendingMoveResult = null;
                 pendingMoveCopies = null;
+                pendingMoveDocUris = null;
+            }
+        } else if (requestCode == RequestCodes.SAF_TREE_REQUEST_CODE) {
+            if (pendingFolderResult != null) {
+                if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+                    Uri treeUri = data.getData();
+                    try {
+                        contentResolver.takePersistableUriPermission(treeUri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    } catch (Exception ignored) {
+                    }
+
+                    // verify the user granted the target folder (last segment)
+                    String treeDocId = DocumentsContract.getTreeDocumentId(treeUri);
+                    String grantedName = lastSegment(treeDocId);
+                    String requestedName = lastSegment(pendingFolderRelativePath);
+                    if (grantedName.equals(requestedName)) {
+                        pendingFolderResult.success(treeUri.toString());
+                    } else {
+                        // user picked a different folder - Dart treats null as denied
+                        // TODO: show a clearer message to the user
+                        pendingFolderResult.success(null);
+                    }
+                } else {
+                    pendingFolderResult.success(null);
+                }
+                pendingFolderResult = null;
+                pendingFolderRelativePath = null;
             }
         }
+    }
+
+    /**
+     * Last path segment of a document id / relative path.
+     */
+    private String lastSegment(String value) {
+        if (value == null) {
+            return "";
+        }
+        int slash = value.lastIndexOf('/');
+        if (slash >= 0) {
+            return value.substring(slash + 1);
+        }
+        int colon = value.lastIndexOf(':');
+        return colon >= 0 ? value.substring(colon + 1) : value;
     }
 }

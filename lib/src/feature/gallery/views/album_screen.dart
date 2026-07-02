@@ -113,46 +113,22 @@ class _AlbumScreenState extends State<AlbumScreen> {
         return AlertDialog(
           title: Text('Delete Album "${album.title}"?'),
           content: const Text(
-            'This will remove the album from the app. '
-            'Would you also like to delete the physical media files in this album?',
+            'This permanently deletes the photos and videos in this album. '
+            'The folder is removed too if it has no other files.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                try {
-                  await _albumVM.deleteAlbum(album.id, deleteAssets: true);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Album ${album.title} removed')),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
-                  }
-                }
-              },
-              child: const Text('Remove Album Only'),
-            ),
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(context).pop();
                 try {
-                  await _albumVM.deleteAlbum(album.id, deleteAssets: true);
+                  await _albumVM.deleteAlbum(album.id);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Album ${album.title} and assets deleted',
-                        ),
-                      ),
+                      SnackBar(content: Text('Album ${album.title} deleted')),
                     );
                   }
                 } catch (e) {
@@ -164,7 +140,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Delete Album & Media'),
+              child: const Text('Delete'),
             ),
           ],
         );
@@ -264,7 +240,8 @@ class _AlbumScreenState extends State<AlbumScreen> {
               final Album album = _albumVM.albums[index];
               return ListTile(
                 title: Text(album.title),
-                subtitle: Text("ID: ${album.id}"),
+                // distinguish albums with the same name
+                subtitle: Text(album.path ?? "ID: ${album.id}"),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, color: Colors.grey),
                   onPressed: () => _confirmDeleteAlbum(album),

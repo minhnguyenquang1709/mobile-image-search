@@ -25,14 +25,20 @@ class QueryValidator {
       throw EmptyQueryException('Search query must not be empty.');
     }
 
-    final words = normalized.split(' ');
+    // split into words, dropping punctuation stuck to their edges (e.g. "cat,")
+    final words = normalized
+        .split(' ')
+        .map((w) => w.replaceAll(RegExp(r'^[^a-z0-9]+|[^a-z0-9]+$'), ''))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    if (words.isEmpty) {
+      throw EmptyQueryException('Search query must not be empty.');
+    }
 
-    // 2. OOV check — each word is split into BPE subwords; every subword must
-    //    exist in the vocabulary (mirrors what tokenizeText does internally)
+    // 2. OOV check, BPE can encode any string into in-vocab subwords, so
+    //    checking subwords never catches gibberish ("abc", "wrefwertyhju6r").
     for (final word in words) {
-      final subWords = _bpeTokenizer.applyBPE(word);
-      final hasUnknown = subWords.any((sw) => !_bpeTokenizer.isInVocab(sw));
-      if (hasUnknown) {
+      if (!_isRecognizedWord(word)) {
         throw OutOfVocabularyException(word);
       }
     }
@@ -53,5 +59,22 @@ class QueryValidator {
     if (meaningfulCount > maxPayload) {
       throw QueryTooLongException(meaningfulCount, maxPayload);
     }
+  }
+
+  /// Whether [word] looks like a real word rather than gibberish.
+  ///
+  /// Common words are a single whole-word vocab token (`dog</w>`). Longer real
+  /// words split into a few multi-character subwords ("operation" -> "oper",
+  /// "ation"), while gibberish fragments down to single characters, so
+  /// reject only when a subword is a lone character.
+  bool _isRecognizedWord(String word) {
+    if (_bpeTokenizer.isInVocab('$word</w>')) return true;
+
+    final subWords = _bpeTokenizer.applyBPE(word);
+    for (final sw in subWords) {
+      final core = sw.replaceAll('</w>', '');
+      if (core.length < 2) return false;
+    }
+    return true;
   }
 }

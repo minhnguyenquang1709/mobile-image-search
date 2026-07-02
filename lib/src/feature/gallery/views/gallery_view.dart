@@ -7,10 +7,9 @@ import 'package:mobile_image_search/src/core/constants/theme_constant.dart';
 import 'package:mobile_image_search/src/core/utils/debug.dart';
 import 'package:mobile_image_search/src/feature/gallery/viewmodels/album_viewmodel.dart';
 import 'package:mobile_image_search/src/feature/gallery/viewmodels/gallery_viewmodel.dart';
+import 'package:mobile_image_search/src/feature/gallery/viewmodels/selection_viewmodel.dart';
 import 'package:mobile_image_search/src/feature/gallery/viewmodels/trash_viewmodel.dart';
-import 'package:mobile_image_search/src/feature/gallery/views/album_picker_sheet.dart';
 import 'package:mobile_image_search/src/service_locator.dart';
-import 'package:mobile_image_search/src/shared/domain/model/album.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/shared/domain/model/move_progress.dart';
 
@@ -29,10 +28,7 @@ class _GalleryViewState extends State<GalleryView> {
   final GalleryViewModel _galleryVM = ServiceLocator.galleryViewModel;
   final TrashViewModel _trashVM = ServiceLocator.trashViewModel;
   final AlbumViewModel _albumVM = ServiceLocator.albumViewModel;
-
-  // Selection is UI logic, so it lives in the view's state, not the viewmodel.
-  final Set<String> _selectedAssetIds = {};
-  bool get _isSelectionMode => _selectedAssetIds.isNotEmpty;
+  final SelectionViewModel _selectionVM = ServiceLocator.selectionViewModel;
 
   @override
   void initState() {
@@ -85,123 +81,13 @@ class _GalleryViewState extends State<GalleryView> {
     );
   }
 
-  // Selection
-  void _toggleSelectMedia(String assetId) {
-    setState(() {
-      if (_selectedAssetIds.contains(assetId)) {
-        _selectedAssetIds.remove(assetId);
-      } else {
-        _selectedAssetIds.add(assetId);
-      }
-    });
-  }
-
-  void _clearSelection() {
-    setState(() => _selectedAssetIds.clear());
-  }
-
-  Future<void> _moveSelectedToTrash() async {
-    if (_selectedAssetIds.isEmpty) return;
-
-    // find the full MediaAsset objects for selected IDs
-    final selectedMediaAssets = _galleryVM.mediaAssets
-        .where((a) => _selectedAssetIds.contains(a.assetId))
-        .toList();
-    if (selectedMediaAssets.isEmpty) return;
-
-    // The move-to-trash operation lives in TrashViewModel.
-    try {
-      await _trashVM.moveToTrash(selectedMediaAssets);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error moving to trash: $e')));
-      }
-    }
-    _clearSelection();
-  }
-
-  Future<void> _moveSelectedToAlbum() async {
-    if (_selectedAssetIds.isEmpty) return;
-
-    // find the full MediaAsset objects for selected IDs
-    final selectedMediaAssets = _galleryVM.mediaAssets
-        .where((a) => _selectedAssetIds.contains(a.assetId))
-        .toList();
-    if (selectedMediaAssets.isEmpty) return;
-
-    // let the user pick (or create) the destination album
-    final Album? album = await showAlbumPickerSheet(context, _albumVM);
-    if (album == null) return;
-
-    try {
-      await _albumVM.moveAssetsToAlbum(album, selectedMediaAssets);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error moving to album: $e')));
-      }
-    }
-    // old ids are now stale (copies got new ids); just clear the selection.
-    _clearSelection();
-  }
-
   void _showDebugMenu() {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Debug Menu'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Select an action:'),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.maxFinite,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ElevatedButton(
-                      onPressed: _isSelectionMode
-                          ? () {
-                              Navigator.of(context).pop();
-                              _moveSelectedToTrash();
-                            }
-                          : null,
-                      child: Text(
-                        "Move to Trash (${_selectedAssetIds.length})",
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: _isSelectionMode
-                          ? () {
-                              Navigator.of(context).pop();
-                              _moveSelectedToAlbum();
-                            }
-                          : null,
-                      child: Text(
-                        "Move to Album (${_selectedAssetIds.length})",
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: _isSelectionMode
-                          ? () {
-                              Navigator.of(context).pop();
-                              _clearSelection();
-                            }
-                          : null,
-                      child: const Text("Clear Selection"),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          content: const Text('Developer tools'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -349,17 +235,17 @@ class _GalleryViewState extends State<GalleryView> {
               key: ValueKey(mediaAsset.assetId),
             );
 
-            final isSelected = _selectedAssetIds.contains(mediaAsset.assetId);
+            final isSelected = _selectionVM.isSelected(mediaAsset);
             final selectionOverlay = GestureDetector(
               child: Container(
                 color: isSelected
                     ? Colors.blue.withAlpha(100)
                     : Colors.transparent,
               ),
-              onLongPress: () => _toggleSelectMedia(mediaAsset.assetId),
+              onLongPress: () => _selectionVM.toggle(mediaAsset),
               onTap: () {
-                if (_isSelectionMode) {
-                  _toggleSelectMedia(mediaAsset.assetId);
+                if (_selectionVM.isActive) {
+                  _selectionVM.toggle(mediaAsset);
                 } else {
                   context.push(
                     RouteConstants.mediaView,
@@ -382,7 +268,7 @@ class _GalleryViewState extends State<GalleryView> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_galleryVM, _trashVM, _albumVM]),
+      listenable: Listenable.merge([_galleryVM, _trashVM, _albumVM, _selectionVM]),
       builder: (context, _) {
         // Show loading spinner if initial load is in progress and no data yet
         if (_galleryVM.isLoading && _galleryVM.mediaAssets.isEmpty) {

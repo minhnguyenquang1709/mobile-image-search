@@ -112,7 +112,7 @@ class _MediaMetadataSheetState extends State<MediaMetadataSheet> {
     final file = await assetEntity.file;
     final size = await file?.length();
 
-    // relativePath is like "DCIM/A/" — the album is the last folder segment.
+    // relativePath is like "DCIM/A/" - the album is the last folder segment.
     String? albumName;
     final relativePath = assetEntity.relativePath;
     if (relativePath != null && relativePath.isNotEmpty) {

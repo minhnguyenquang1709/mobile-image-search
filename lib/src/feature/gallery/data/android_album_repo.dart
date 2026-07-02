@@ -16,12 +16,6 @@ class AndroidAlbumRepository implements IAlbumRepository {
   final PlatformChannelService _platformChannelClient;
   final ObjectBoxService _objectBoxClient;
 
-  /// Directory in Android device where the app-created albums will be stored.
-  ///
-  /// Must match the root native uses in `createAlbum` and the move's
-  /// RELATIVE_PATH (both DCIM), so album existence checks line up.
-  final String _appAlbumDir = "/storage/emulated/0/DCIM";
-
   AndroidAlbumRepository({
     required PlatformChannelService platformChannelClient,
     required ObjectBoxService objectBoxClient,
@@ -66,40 +60,60 @@ class AndroidAlbumRepository implements IAlbumRepository {
       // filter out albums that all assets are in trash
       final bool isAlbumTrashed = trashedAlbumIds.contains(album.id);
       if (!isAlbumTrashed) {
-        visibleAlbums.add(Album(id: album.id, title: album.name));
+        // resolve the directory path so same-named albums can be told apart
+        final String? path = await _resolvePathForAssetPath(album);
+        visibleAlbums.add(Album(id: album.id, title: album.name, path: path));
       }
     }
     return visibleAlbums;
   }
 
-  /// Resolve the destination folder (MediaStore RELATIVE_PATH) for [album].
+  /// Read the directory path (MediaStore RELATIVE_PATH) of an album by sampling
+  /// one of its assets. Returns null if it can't be resolved.
   ///
-  /// For an existing album we read the folder of one of its assets so the move
-  /// lands in the SAME bucket (otherwise a second folder with the same name is
-  /// created). For a freshly created/empty album we fall back to the app
-  /// convention `DCIM/<title>` (matching native `createAlbum`).
-  Future<String> _resolveAlbumRelativePath(Album album) async {
+  /// TODO: optimize, one query per album is slow; consider a native batch query.
+  Future<String?> _resolvePathForAssetPath(AssetPathEntity path) async {
     try {
-      final AssetPathEntity path = await AssetPathEntity.fromId(album.id);
       final assets = await path.getAssetListPaged(page: 0, size: 1);
       if (assets.isNotEmpty) {
         final AssetEntity sample = assets.first;
-
-        // MediaStore RELATIVE_PATH (e.g. "Pictures/A/" or "DCIM/A/")
         final String? relativePath = sample.relativePath;
         if (relativePath != null && relativePath.isNotEmpty) {
           return relativePath;
         }
-
         // fallback: derive it from the file's absolute directory
         final file = await sample.file;
         if (file != null) {
-          final String dir = file.parent.path; // /storage/emulated/0/Pictures/A
+          final String dir = file.parent.path;
           const String prefix = "/storage/emulated/0/";
-          if (dir.startsWith(prefix)) {
-            return dir.substring(prefix.length); // Pictures/A
-          }
+          return dir.startsWith(prefix) ? dir.substring(prefix.length) : dir;
         }
+      }
+    } catch (e) {
+      debugPrint(
+        "[AndroidAlbumRepository] Could not resolve path for ${path.name}: $e",
+      );
+    }
+    return null;
+  }
+
+  /// Resolve the destination folder (MediaStore RELATIVE_PATH) for [album].
+  ///
+  /// For an existing album  read the folder of one of its assets so the move
+  /// lands in the SAME bucket (otherwise a second folder with the same name is
+  /// created). For a freshly created/empty album  fall back to the app
+  /// convention `DCIM/<title>` (matching native `createAlbum`).
+  Future<String> _resolveAlbumRelativePath(Album album) async {
+    // already resolved when the album list was built, reuse it
+    if (album.path != null && album.path!.isNotEmpty) {
+      return album.path!;
+    }
+
+    try {
+      final AssetPathEntity path = await AssetPathEntity.fromId(album.id);
+      final String? relativePath = await _resolvePathForAssetPath(path);
+      if (relativePath != null && relativePath.isNotEmpty) {
+        return relativePath;
       }
     } catch (e) {
       debugPrint(
@@ -109,8 +123,18 @@ class AndroidAlbumRepository implements IAlbumRepository {
     return "DCIM/${album.title}";
   }
 
+  /// Whether MediaStore.insert() can write into [relativePath]'s top-level folder.
+  /// Non-standard folders (e.g. "mid_math_problem/") must go through SAF instead.
+  bool _isMediaStoreWritable(String relativePath) {
+    final String primary = relativePath
+        .split('/')
+        .firstWhere((s) => s.isNotEmpty, orElse: () => '');
+    const allowed = {'DCIM'};
+    return allowed.contains(primary);
+  }
+
   /// Move [assets] into [album]: native copies each file
-  /// (streaming progress), then we run a single batch delete of the originals
+  /// (streaming progress), then  run a single batch delete of the originals
   /// with user consent. Progress is surfaced through a broadcast stream.
   @override
   Stream<MoveProgress> moveAssetsToAlbum(Album album, List<MediaAsset> assets) {
@@ -129,15 +153,58 @@ class AndroidAlbumRepository implements IAlbumRepository {
     List<MediaAsset> assets,
   ) async {
     final String relativePath = await _resolveAlbumRelativePath(album);
-
     final int total = assets.length;
-    // copies created so far (new MediaStore ids), in the same order as [assets]
-    final List<int> newAssetIds = [];
-
-    final stream = _platformChannelClient.moveMediaToAlbumStream(
-      relativePath: relativePath,
-      assets: assets,
+    debugPrint(
+      "[AndroidAlbumRepository] Move dest: album='${album.title}' "
+      "(id=${album.id}) -> relativePath='$relativePath'",
     );
+
+    if (_isMediaStoreWritable(relativePath)) {
+      // standard media folder, MediaStore can insert directly, no prompt
+      final stream = _platformChannelClient.moveMediaToAlbumStream(
+        relativePath: relativePath,
+        assets: assets,
+      );
+      _attachMoveListener(controller, stream, assets, total);
+    } else {
+      // non-standard folder, needs a one-time SAF grant before  can write
+      final String? treeUri = await _platformChannelClient.ensureFolderAccess(
+        relativePath,
+      );
+      if (treeUri == null) {
+        controller.add(
+          MoveProgress(
+            total: total,
+            processed: 0,
+            isMoving: false,
+            state: MoveState.denied,
+          ),
+        );
+        await controller.close();
+        return;
+      }
+
+      final stream = _platformChannelClient.moveMediaToAlbumSafStream(
+        treeUri: treeUri,
+        assets: assets,
+      );
+      _attachMoveListener(controller, stream, assets, total);
+    }
+  }
+
+  /// Forward native copy events ([stream]) to [controller], then run the
+  /// originals-delete consent once copies are done. Shared by the MediaStore and
+  /// SAF move paths (their event contract is identical).
+  void _attachMoveListener(
+    StreamController<MoveProgress> controller,
+    Stream<dynamic> stream,
+    List<MediaAsset> assets,
+    int total,
+  ) {
+    // copies created so far (new MediaStore ids) + their SAF doc Uri (null for
+    // MediaStore copies), in the same order as [assets]
+    final List<int> newAssetIds = [];
+    final List<String?> docUris = [];
 
     late final StreamSubscription subscription;
     subscription = stream.listen(
@@ -148,6 +215,7 @@ class AndroidAlbumRepository implements IAlbumRepository {
         if (state == 'copying') {
           final int index = map['index'] as int;
           newAssetIds.add(map['newAssetId'] as int);
+          docUris.add(map['docUri'] as String?);
           controller.add(
             MoveProgress(
               total: total,
@@ -158,7 +226,7 @@ class AndroidAlbumRepository implements IAlbumRepository {
             ),
           );
         } else if (state == 'copied') {
-          // copies done — now ask the user to confirm deleting the originals
+          // copies done, now ask the user to confirm deleting the originals
           controller.add(
             MoveProgress(
               total: total,
@@ -170,7 +238,7 @@ class AndroidAlbumRepository implements IAlbumRepository {
 
           try {
             final bool deleted = await _platformChannelClient
-                .confirmDeleteOriginals(assets, newAssetIds);
+                .confirmDeleteOriginals(assets, newAssetIds, docUris);
             controller.add(
               MoveProgress(
                 total: total,
@@ -258,21 +326,12 @@ class AndroidAlbumRepository implements IAlbumRepository {
     }
   }
 
-  /// Check
+  /// Whether an album with [albumName] already exists in the app database.
   ///
-  /// - if a directory in the [_appAlbumDir] with the same name already exists on the platform
-  ///
-  /// - if an album with the same name already exists in the database
+  /// DB is the source of truth,  no longer probe public storage (that needed
+  /// All-files access).
   Future<bool> isAlbumExist(String albumName) async {
     try {
-      // check directory
-      final bool? doesDirExist = await _platformChannelClient
-          .invokeMethod<bool>('checkAlbumExistence', {
-            'appAlbumDir': _appAlbumDir,
-            'albumName': albumName,
-          });
-
-      // check database entry
       final albumBox = _objectBoxClient.store.box<ObjectBoxAlbum>();
       final existingAlbum = albumBox
           .query(ObjectBoxAlbum_.title.equals(albumName))
@@ -284,11 +343,7 @@ class AndroidAlbumRepository implements IAlbumRepository {
         );
         return true;
       }
-
-      if (doesDirExist == null) {
-        throw Exception("Failed to check album existence");
-      }
-      return doesDirExist;
+      return false;
     } catch (e) {
       rethrow;
     }
@@ -403,17 +458,21 @@ class AndroidAlbumRepository implements IAlbumRepository {
     debugPrint("Reverted move to trash for ${internalIds.length} items");
   }
 
-  /// Delete the album with the given BUCKET_ID.
+  /// Permanently delete the album with the given BUCKET_ID.
   ///
-  /// - create TrashEntry for each media asset in the album
-  ///
-  /// - create trash entry for album in app database
+  /// 1. permanently delete its image/video files via MediaStore (user consent)
+  /// 2. try to delete the directory itself, left in place if it still holds
+  ///    non-media files, deleted (via SAF) if media was all it contained
+  /// 3. remove the album's app-database record
   @override
   Future<void> deleteAlbum(String albumId, {bool deleteAssets = false}) async {
     try {
-      // get all media assets in the album
       final AssetPathEntity album = await AssetPathEntity.fromId(albumId);
 
+      // resolve the directory path now, while the album still has assets
+      final String? relativePath = await _resolvePathForAssetPath(album);
+
+      // gather all media in the album (ids + types)
       bool hasMore = true;
       int page = 0;
       final List<MediaAsset> albumMediaAssets = [];
@@ -421,33 +480,54 @@ class AndroidAlbumRepository implements IAlbumRepository {
         final List<AssetEntity> currentPageAssetList = await album
             .getAssetListPaged(page: page, size: 200);
 
-        albumMediaAssets.addAll(
-          currentPageAssetList.map((asset) => toMediaAsset(asset)).toList(),
-        );
-
         if (currentPageAssetList.isEmpty) {
           hasMore = false;
+        } else {
+          albumMediaAssets.addAll(
+            currentPageAssetList.map((asset) => toMediaAsset(asset)),
+          );
+          page++;
         }
-        page++;
       }
 
-      // create TrashEntry for each media asset
-      try {
-        if (albumMediaAssets.isNotEmpty) {
-          await moveToTrash(albumMediaAssets);
+      // 1. permanently delete the media (system consent dialog)
+      if (albumMediaAssets.isNotEmpty) {
+        final bool deleted = await _platformChannelClient
+            .permanentlyDeleteAlbumMedia(albumMediaAssets);
+        if (!deleted) {
+          debugPrint(
+            "[AndroidAlbumRepository] Album media deletion denied; aborting",
+          );
+          return;
         }
-      } catch (e) {
-        await revertMoveToTrash(albumMediaAssets);
       }
 
-      // create album trash entry in database
-      final albumTrashBox = _objectBoxClient.store
-          .box<ObjectBoxAlbumTrashEntry>();
-      final ObjectBoxAlbumTrashEntry albumTrashEntry = ObjectBoxAlbumTrashEntry(
-        albumId: albumId,
-        trashedAt: DateTime.now(),
-      );
-      await albumTrashBox.putAsync(albumTrashEntry);
+      // 2. try to remove the now media-free directory (needs a SAF grant)
+      if (relativePath != null && relativePath.isNotEmpty) {
+        final String? treeUri = await _platformChannelClient.ensureFolderAccess(
+          relativePath,
+        );
+        if (treeUri != null) {
+          final bool dirDeleted = await _platformChannelClient
+              .deleteAlbumDirectory(treeUri);
+          debugPrint(
+            "[AndroidAlbumRepository] Album directory deleted: $dirDeleted",
+          );
+        }
+      }
+
+      // 3. remove the album's database record
+      final albumBox = _objectBoxClient.store.box<ObjectBoxAlbum>();
+      final query = albumBox
+          .query(ObjectBoxAlbum_.platformId.equals(albumId))
+          .build();
+      final dbAlbums = query.find();
+      query.close();
+      if (dbAlbums.isNotEmpty) {
+        await albumBox.removeManyAsync(
+          dbAlbums.map((a) => a.objectBoxId).toList(),
+        );
+      }
     } catch (e) {
       rethrow;
     }

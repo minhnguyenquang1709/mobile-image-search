@@ -14,6 +14,7 @@ import 'package:mobile_image_search/src/feature/evaluation/data/evaluation_servi
 import 'package:mobile_image_search/src/feature/evaluation/presentation/evaluation_viewmodel.dart';
 import 'package:mobile_image_search/src/feature/gallery/viewmodels/album_viewmodel.dart';
 import 'package:mobile_image_search/src/feature/gallery/viewmodels/gallery_viewmodel.dart';
+import 'package:mobile_image_search/src/feature/gallery/viewmodels/selection_viewmodel.dart';
 import 'package:mobile_image_search/src/feature/search/domain/query_validator.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/album_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
@@ -54,6 +55,7 @@ class ServiceLocator {
   static late final TrashViewModel trashViewModel;
   static late final GalleryViewModel galleryViewModel;
   static late final AlbumViewModel albumViewModel;
+  static late final SelectionViewModel selectionViewModel;
 
   static Future<void> init() async {
     debugPrint("[ServiceLocator] Initializing...");
@@ -90,10 +92,13 @@ class ServiceLocator {
       mediaAssetRepo: mediaAssetRepository,
     );
 
+    // shared multi-select state (gallery grid + opened albums)
+    selectionViewModel = SelectionViewModel();
+
     // background indexing
     backgroundWorkerService = BackgroundWorkerService();
 
-    // asset extraction — centralized in AssetLoader
+    // asset extraction - centralized in AssetLoader
     debugPrint('[ServiceLocator] Extracting bundled assets...');
     final assetLoader = AssetLoader();
     await assetLoader.extractAll();
@@ -141,10 +146,6 @@ class ServiceLocator {
     );
 
     // search
-    // searchService = SearchService(
-    //   objectBoxClient: objectBoxClient,
-    //   bgWorkerClient: backgroundWorkerDataSource,
-    // );
     imageEmbeddingRepository = ImageEmbeddingRepository(
       objectBoxClient: objectBoxService,
       bgWorkerClient: backgroundWorkerService,

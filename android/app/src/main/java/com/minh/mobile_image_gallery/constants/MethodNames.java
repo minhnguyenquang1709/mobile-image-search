@@ -7,4 +7,6 @@ public class MethodNames {
     public static final String permanentlyDelete = "permanentlyDelete";
     public static final String deleteAlbum = "deleteAlbum";
     public static final String confirmDeleteOriginals = "confirmDeleteOriginals";
+    public static final String ensureFolderAccess = "ensureFolderAccess";
+    public static final String deleteAlbumDirectory = "deleteAlbumDirectory";
 }

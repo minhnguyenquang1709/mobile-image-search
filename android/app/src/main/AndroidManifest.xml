@@ -11,10 +11,13 @@
     <!-- WRITE / DELETE -->
     <!-- Android 10- (SDK <= 29) -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
-    <!-- Android 11+ (SDK >= 30): only need READ, user interact with system popup to allow -->
+    <!-- Android 11+ (SDK >= 30): only need READ, the system delete/move popup grants write. -->
 
-    <!-- Prevent system popup -->
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <!-- NOTE: MANAGE_EXTERNAL_STORAGE ("All files access") is intentionally NOT declared
+         here. Google Play does not permit it for this app category, and delete/move use
+         MediaStore.createDeleteRequest (scoped-storage compliant). The dev-only model
+         evaluation tool, which reads a public dataset folder, declares it in the debug
+         manifest (android/app/src/debug/AndroidManifest.xml) so it never ships to Play. -->
 
 
     <application

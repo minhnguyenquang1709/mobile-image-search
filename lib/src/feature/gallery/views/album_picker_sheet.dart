@@ -26,10 +26,7 @@ Future<Album?> showAlbumPickerSheet(
                   padding: EdgeInsets.all(16),
                   child: Text(
                     'Move to album',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
                 ListTile(
@@ -70,11 +67,8 @@ Future<Album?> showAlbumPickerSheet(
 }
 
 /// Prompt for a new album name, create it, and return it (title is enough for
-/// the move — native builds the folder path from the name).
-Future<Album?> _promptNewAlbum(
-  BuildContext context,
-  AlbumViewModel albumVM,
-) {
+/// the move - native builds the folder path from the name).
+Future<Album?> _promptNewAlbum(BuildContext context, AlbumViewModel albumVM) {
   final TextEditingController titleController = TextEditingController();
 
   return showDialog<Album>(

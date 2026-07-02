@@ -212,9 +212,8 @@ class BackgroundWorkerService {
           "[BackgroundWorkerService] Received image encoding request for assetId: ${message.assetId}",
         );
         try {
-          final imageEmbedding = await onnxRuntimeService.encodeImageCenterCrop(
-            message.imageBytes,
-          );
+          final imageEmbedding = await onnxRuntimeService
+              .encodeImageLetterboxing(message.imageBytes);
           workerConfig.mainSendPort.send(
             ImageEncodingResult.success(
               message.taskId,

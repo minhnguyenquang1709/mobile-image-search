@@ -1,7 +1,4 @@
 // Pure retrieval-quality metrics.
-//
-// Filenames are compared by basename, case-insensitive, so a ranked path like
-// `/data/foo/Cat.JPG` matches a ground-truth entry `cat.jpg`.
 
 String _normalize(String filename) {
   final int slash = filename.lastIndexOf(RegExp(r'[\\/]'));
