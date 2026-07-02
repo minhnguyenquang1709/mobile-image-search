@@ -13,7 +13,6 @@ import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/shared/domain/model/move_progress.dart';
 
-/// The date-grouped grid of device media
 class GalleryView extends StatefulWidget {
   const GalleryView({super.key});
 
@@ -112,7 +111,6 @@ class _GalleryViewState extends State<GalleryView> {
     );
   }
 
-  /// A small banner showing "move to album" progress, mirroring IndexingCard.
   Widget _buildMoveBanner() {
     final MoveProgress p = _albumVM.moveProgress;
     if (p.state == MoveState.idle) return const SizedBox.shrink();
@@ -180,6 +178,13 @@ class _GalleryViewState extends State<GalleryView> {
       return DailyMediaGroup(datetime: entry.key, mediaAssets: entry.value);
     }).toList();
 
+    groups.sort((a, b) => b.datetime.compareTo(a.datetime));
+    for (final group in groups) {
+      group.mediaAssets.sort(
+        (a, b) => b.createDateTime.compareTo(a.createDateTime),
+      );
+    }
+
     return groups;
   }
 
@@ -190,12 +195,14 @@ class _GalleryViewState extends State<GalleryView> {
   ) {
     final slivers = <Widget>[];
 
-    // Filter out trashed media
     List<MediaAsset> filteredMediaAssets = mediaAssetsToDisplay
-        .where((asset) => !filteredOutAssetIds.contains(asset.assetId))
+        .where(
+          (asset) =>
+              !filteredOutAssetIds.contains(asset.assetId) &&
+              asset.title != UIConfig.albumCoverFileName,
+        )
         .toList();
 
-    // Group by date
     final mediaGroups = _groupMediaByDate(filteredMediaAssets);
 
     if (mediaGroups.isEmpty) {
@@ -268,11 +275,37 @@ class _GalleryViewState extends State<GalleryView> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([_galleryVM, _trashVM, _albumVM, _selectionVM]),
+      listenable: Listenable.merge([
+        _galleryVM,
+        _trashVM,
+        _albumVM,
+        _selectionVM,
+      ]),
       builder: (context, _) {
-        // Show loading spinner if initial load is in progress and no data yet
         if (_galleryVM.isLoading && _galleryVM.mediaAssets.isEmpty) {
           return const Center(child: CircularProgressIndicator());
+        }
+
+        // user refused gallery access
+        if (_galleryVM.permissionDenied) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Gallery access is needed to show your photos and videos.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _loadGalleryData,
+                  child: const Text('Grant access'),
+                ),
+              ],
+            ),
+          );
         }
 
         final fullScreenImageList = Flex(
@@ -303,7 +336,7 @@ class _GalleryViewState extends State<GalleryView> {
                 ),
               ),
             ),
-            // Loading indicator at the bottom during pagination
+
             if (_galleryVM.isLoading)
               const Padding(
                 padding: EdgeInsets.all(16),
@@ -319,13 +352,9 @@ class _GalleryViewState extends State<GalleryView> {
         return Stack(
           children: [
             fullScreenImageList,
-            // move-to-album progress banner
-            Positioned(
-              top: 8,
-              left: 16,
-              right: 16,
-              child: _buildMoveBanner(),
-            ),
+            // progress banner
+            Positioned(top: 8, left: 16, right: 16, child: _buildMoveBanner()),
+
             // debug button
             if (isDebugOrProfileMode)
               Positioned(
@@ -338,7 +367,6 @@ class _GalleryViewState extends State<GalleryView> {
                   child: const Icon(Icons.bug_report),
                 ),
               ),
-            // scroll-to-top button
             ValueListenableBuilder<bool>(
               valueListenable: _showTopButton,
               builder: (context, visible, _) {

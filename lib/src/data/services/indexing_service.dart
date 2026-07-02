@@ -9,6 +9,8 @@ import 'package:mobile_image_search/src/shared/domain/model/indexing_progress.da
 /// The whole indexing pipeline (device read, diffing, encoding, DB writes) runs
 /// inside the worker isolate. This service just kicks it off and relays the
 /// progress the worker reports back, so the UI isolate stays free.
+///
+/// TODO: simplify to only BackgroundWorkerService
 class IndexingService {
   final BackgroundWorkerService _workerIsolateClient;
 

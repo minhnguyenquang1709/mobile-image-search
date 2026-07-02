@@ -81,7 +81,6 @@ abstract class UIConfig {
   // common
   static const double appBarHeight = 50;
 
-  // Home Screen UI
   static const double gridViewGutter = 5;
   static const int thumbnailWidth = 100;
   static const int thumbnailHeight = 100;
@@ -92,10 +91,11 @@ abstract class UIConfig {
   static const double imageGroupSpacing = 15;
   static const double homeScreenScrollbarThumbMinHeight = 40;
 
-  // Image Search Screen UI
   static const double searchButtonIconHeight = 50;
   static const double searchBarHeight = 50;
 
-  // number of assets fetched per page while scanning for filename search
   static const int filenameScanPageSize = 200;
+
+  // placeholder image
+  static const String albumCoverFileName = "sig_album_cover.png";
 }

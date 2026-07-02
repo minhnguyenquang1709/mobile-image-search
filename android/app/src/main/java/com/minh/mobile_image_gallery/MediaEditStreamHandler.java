@@ -18,10 +18,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import io.flutter.plugin.common.EventChannel;
 
@@ -42,7 +40,7 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
 
     @Override
     public void onListen(Object arguments, EventChannel.EventSink eventSink) {
-        // run on main thread
+        // main thread
         this.eventSink = eventSink;
         this.mainThreadHandler = new Handler(Looper.getMainLooper());
         this.cancelled = false;
@@ -87,7 +85,7 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
                 return new String[] {
                         cursor.getString(0), // DISPLAY_NAME
                         cursor.getString(1), // MIME_TYPE
-                        dateTaken > 0 ? String.valueOf(dateTaken) : null // DATE_TAKEN (ms)
+                        dateTaken > 0 ? String.valueOf(dateTaken) : null // DATE_TAKEN
                 };
             }
         } catch (Exception e) {
@@ -104,8 +102,10 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
         return ContentUris.withAppendedId(baseUri, assetId);
     }
 
-    /** The collection a new copy is inserted into, per media type. */
-    private Uri getDestCollectionUri(int mediaType) {
+    /**
+     * The collection a new copy is inserted into, per media type.
+     */
+    private Uri getDestinationCollectionUri(int mediaType) {
         return mediaType == 1
                 ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                 : MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
@@ -122,15 +122,13 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
     }
 
     /**
-     * Copy each file into the album folder (one progress event per file). The
-     * originals are NOT deleted here - after all copies are done the Dart side
-     * runs a single batch delete with user consent (see GalleryMethodHandler).
+     * Copy each file into the album folder (one progress event per file).
      */
-    private void move(String relativePath, List<Map<String, Object>> mediaList) {
+    private void move(String destinationRelativePath, List<Map<String, Object>> mediaList) {
         executorService.execute(() -> {
             final int total = mediaList.size();
 
-            // OS version check - RELATIVE_PATH / IS_PENDING require Android 11 (R)
+            // app supports android 11+
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
                 Map<String, Object> error = new HashMap<>();
                 error.put("state", "error");
@@ -142,11 +140,8 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
             }
 
             ContentResolver resolver = this.activity.getContentResolver();
-            // destination folder is resolved in Dart to the album's existing
-            // bucket (e.g. "Pictures/A/") -> avoid duplicate folder
-            final String destRelativePath = relativePath;
 
-            // copies created so far,allow rollback
+            // track created copies, allow rollback
             List<Uri> createdCopies = new ArrayList<>();
 
             for (int i = 0; i < total; i++) {
@@ -167,29 +162,28 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
                     String mimeType = info[1];
                     String dateTaken = info[2];
 
-                    // insert the destination item as pending while streaming bytes
                     ContentValues values = new ContentValues();
                     values.put(MediaStore.MediaColumns.DISPLAY_NAME, displayName);
                     if (mimeType != null) {
                         values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
                     }
-                    values.put(MediaStore.MediaColumns.RELATIVE_PATH, destRelativePath);
-                    // DATE_TAKEN is what PhotoManager groups by - copy it or the moved
-                    // item jumps to "today". DATE_ADDED resets on insert (expected).
+                    values.put(MediaStore.MediaColumns.RELATIVE_PATH, destinationRelativePath);
+
                     if (dateTaken != null) {
                         values.put(MediaStore.MediaColumns.DATE_TAKEN, Long.parseLong(dateTaken));
                     }
                     values.put(MediaStore.MediaColumns.IS_PENDING, 1);
 
-                    Uri destUri = resolver.insert(getDestCollectionUri(mediaType), values);
+                    // create new row in MediaStore db
+                    Uri destUri = resolver.insert(getDestinationCollectionUri(mediaType), values);
                     if (destUri == null) {
                         throw new Exception("Failed to create destination item");
                     }
                     createdCopies.add(destUri);
 
-                    // stream the bytes (buffered, never read the whole file into memory)
-                    try (InputStream in = resolver.openInputStream(srcUri);
-                            OutputStream out = resolver.openOutputStream(destUri)) {
+                    try {
+                        InputStream in = resolver.openInputStream(srcUri);
+                        OutputStream out = resolver.openOutputStream(destUri);
                         if (in == null || out == null) {
                             throw new Exception("Failed to open streams");
                         }
@@ -200,6 +194,10 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
                                 return;
                             out.write(buffer, 0, len);
                         }
+                        in.close();
+                        out.close();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
 
                     // publish the copy
@@ -249,10 +247,7 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
     }
 
     /**
-     * SAF variant of move: write each copy into the user-granted [treeUri]
-     * via DocumentsContract instead of using MediaStore. Re-scan media so
-     * PhotoManager sees it and
-     * get its new MediaStore id.
+     * Use SAF in case moving to folder that app does not own
      */
     private void moveSaf(Uri treeUri, List<Map<String, Object>> mediaList) {
         executorService.execute(() -> {
@@ -273,14 +268,14 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
             // parent document under the granted tree, where copies are created
             String treeDocId = DocumentsContract.getTreeDocumentId(treeUri);
             Uri parentDocUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId);
-            // absolute folder path, for the media scan (e.g.
-            // /storage/emulated/0/mid_math_problem)
+
+            // absolute folder path
             String relativeDir = treeDocId.startsWith("primary:")
                     ? treeDocId.substring("primary:".length())
                     : treeDocId;
             String absoluteDir = "/storage/emulated/0/" + relativeDir;
 
-            // docs created so far, allow roll back this run on a mid-copy error
+            // created docs, allow roll back
             List<Uri> createdDocs = new ArrayList<>();
 
             for (int i = 0; i < total; i++) {
@@ -309,10 +304,9 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
                     }
                     createdDocs.add(destDoc);
 
-                    // stream the bytes (buffered, never read the whole file into memory).
-                    // a verbatim copy preserves EXIF/metadata so DATE_TAKEN survives the scan.
-                    try (InputStream in = resolver.openInputStream(srcUri);
-                            OutputStream out = resolver.openOutputStream(destDoc)) {
+                    try {
+                        InputStream in = resolver.openInputStream(srcUri);
+                        OutputStream out = resolver.openOutputStream(destDoc);
                         if (in == null || out == null) {
                             throw new Exception("Failed to open streams");
                         }
@@ -323,6 +317,10 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
                                 return;
                             out.write(buffer, 0, len);
                         }
+                        in.close();
+                        out.close();
+                    } catch (Exception e) {
+                        throw new RuntimeException("Stream error");
                     }
 
                     // register with MediaStore so PhotoManager sees it + to get the new id
@@ -338,7 +336,7 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
                     emitEvent(event);
                 } catch (Exception e) {
                     e.printStackTrace();
-                    // roll back the copies made in this run so don't leave duplicates
+                    // roll back the copies
                     for (Uri doc : createdDocs) {
                         try {
                             DocumentsContract.deleteDocument(resolver, doc);
@@ -368,12 +366,11 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
     }
 
     /**
-     * Media-scan [path] and return the new MediaStore id (blocks until the scan
-     * finishes). Returns -1 if the scan reports no Uri.
+     * Media-scan and return the new MediaStore id
      */
     private long scanAndGetId(String path) {
         final long[] holder = { -1L };
-        final CountDownLatch latch = new CountDownLatch(1);
+        final boolean[] isFinished = { false };
         MediaScannerConnection.scanFile(activity, new String[] { path }, null, (scannedPath, uri) -> {
             if (uri != null) {
                 try {
@@ -381,11 +378,18 @@ public class MediaEditStreamHandler implements EventChannel.StreamHandler {
                 } catch (Exception ignored) {
                 }
             }
-            latch.countDown();
+            isFinished[0] = true;
         });
-        try {
-            latch.await(10, TimeUnit.SECONDS);
-        } catch (InterruptedException ignored) {
+
+        // wait for scan finish
+        int secondsWaited = 0;
+        while (!isFinished[0] && secondsWaited < 10) {
+            try {
+                Thread.sleep(1000); // Wait for 1 second
+                secondsWaited++;
+            } catch (InterruptedException e) {
+                break;
+            }
         }
         return holder[0];
     }

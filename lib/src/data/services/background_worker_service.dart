@@ -243,10 +243,6 @@ class BackgroundWorkerService {
     });
   }
 
-  /// Runs the whole indexing pipeline inside the worker isolate: read device
-  /// media, diff against the indexed DB, delete stale entries, then encode +
-  /// store embeddings. Progress is reported back to the main isolate via
-  /// [mainSendPort] as [IndexingProgress] messages.
   static Future<void> _runGalleryIndexing(
     Store store,
     OnnxService onnxDataSource,
@@ -444,7 +440,7 @@ class BackgroundWorkerService {
     _messageController.close();
   }
 
-  /// Receive image data, send to worker isolate for encoding, and return the resulting embedding
+  /// receive image data, send to worker isolate for encoding, and return the resulting embedding
   Future<Float32List> encodeImage(
     String assetId,
     String title,

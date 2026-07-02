@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_interface.dart';
+import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -26,6 +27,10 @@ class GalleryViewModel extends ChangeNotifier {
   bool isLoading = false;
   bool hasMore = true;
   int _currentPage = 0;
+
+  bool permissionDenied = false;
+
+  bool _indexingStarted = false;
 
   List<MediaAsset> get mediaAssets => List.unmodifiable(_allMediaAssets);
 
@@ -62,8 +67,10 @@ class GalleryViewModel extends ChangeNotifier {
     try {
       final hasPermission = await _galleryRepo.requestGalleryAccess();
       if (!hasPermission) {
-        throw Exception('Gallery access permission denied');
+        permissionDenied = true;
+        return;
       }
+      permissionDenied = false;
 
       final newImages = await _mediaAssetRepo.fetchPage(
         page: 0,
@@ -78,6 +85,11 @@ class GalleryViewModel extends ChangeNotifier {
       debugPrint(
         "[GalleryViewModel] Initial load complete: ${_allMediaAssets.length} images",
       );
+
+      if (!_indexingStarted) {
+        _indexingStarted = true;
+        ServiceLocator.indexingService.indexGallery();
+      }
     } catch (e) {
       debugPrint("[GalleryViewModel] Error loading gallery: $e");
       rethrow;

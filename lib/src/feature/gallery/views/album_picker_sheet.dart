@@ -90,9 +90,9 @@ Future<Album?> _promptNewAlbum(BuildContext context, AlbumViewModel albumVM) {
             onPressed: () async {
               final title = titleController.text.trim();
               if (title.isEmpty) return;
-              await albumVM.createAlbum(title);
+              final Album createdAlbum = await albumVM.createAlbum(title);
               if (context.mounted) {
-                Navigator.of(context).pop(Album(id: title, title: title));
+                Navigator.of(context).pop(createdAlbum);
               }
             },
             child: const Text('Create'),

@@ -20,12 +20,15 @@ class ImageEmbeddingRepository implements IImageEmbeddingRepository {
   }
 
   @override
-  Future<List<String>> vectorSearch(Float32List queryVector) async {
+  Future<List<String>> vectorSearch(
+    Float32List queryVector, {
+    int limit = 100,
+  }) async {
     final searchQuery = imageEmbeddingBox
         .query(
           ObjectBoxImageEmbedding_.embedding.nearestNeighborsF32(
             queryVector,
-            100,
+            limit,
           ),
         )
         .build();

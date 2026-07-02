@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/widgets.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
+import 'package:mobile_image_search/src/shared/domain/model/media_details.dart';
 
 /// CRUD operations for media asset data
 abstract class IMediaAssetRepository {
@@ -8,9 +11,6 @@ abstract class IMediaAssetRepository {
     required int pageSize,
   });
 
-  /// Like [fetchPage] but pushes an explicit capture-date range down to the
-  /// device query. Only the range is pushable; other filters are applied later
-  /// in memory.
   Future<List<MediaAsset>> fetchPageFiltered({
     required int page,
     required int pageSize,
@@ -18,8 +18,6 @@ abstract class IMediaAssetRepository {
     DateTime? rangeEnd,
   });
 
-  /// Like [fetchPage] but reads a single album instead of the root
-  /// album.
   Future<List<MediaAsset>> fetchAlbumPage({
     required String albumId,
     required int page,
@@ -29,4 +27,10 @@ abstract class IMediaAssetRepository {
   Future<MediaAsset> getMediaAssetById(String assetId);
 
   ImageProvider thumbnailProviderFor(String assetId);
+
+  Future<ImageProvider> fullResolutionProviderFor(String assetId);
+
+  Future<File> getVideoFile(String assetId);
+
+  Future<MediaDetails> getMediaDetails(String assetId);
 }

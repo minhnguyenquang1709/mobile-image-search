@@ -107,10 +107,14 @@ class _AlbumOpenedScreenState extends State<AlbumOpenedScreen> {
   }
 
   Widget _buildMediaGrid() {
-    // Filter out trashed items
+    // Filter out trashed items and the album-cover placeholder
     final trashedAssetIds = _trashVM.trashedAssetIds;
     final filteredAssets = _albumVM.currentAlbumAssets
-        .where((asset) => !trashedAssetIds.contains(asset.assetId))
+        .where(
+          (asset) =>
+              !trashedAssetIds.contains(asset.assetId) &&
+              asset.title != UIConfig.albumCoverFileName,
+        )
         .toList();
 
     return SliverGrid.builder(

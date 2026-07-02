@@ -19,8 +19,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // indexing status
             const IndexingCard(),
-
-            // similarity threshold settings
           ],
         ),
       ),

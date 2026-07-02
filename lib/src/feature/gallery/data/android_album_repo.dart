@@ -10,6 +10,7 @@ import 'package:mobile_image_search/src/shared/domain/model/album.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/shared/domain/model/move_progress.dart';
 import 'package:mobile_image_search/src/core/utils/media_processing.dart';
+import 'package:mobile_image_search/src/core/utils/exceptions.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 class AndroidAlbumRepository implements IAlbumRepository {
@@ -293,37 +294,43 @@ class AndroidAlbumRepository implements IAlbumRepository {
 
   @override
   Future<Album> createAlbum(String albumTitle, [String? description]) async {
-    try {
-      // check existing album with the same name
-      if (await isAlbumExist(albumTitle)) {
-        debugPrint(
-          "[AndroidAlbumRepository] Album with name '$albumTitle' already exists",
-        );
-        throw Exception("Album with the same name already exists");
-      }
-
-      // create folder on platform first
-      final Map<String, dynamic> params = {'albumTitle': albumTitle};
-      final String? newAlbumBucketId = await _platformChannelClient
-          .invokeMethod<String>("createAlbum", params);
-      if (newAlbumBucketId == null) {
-        throw Exception("Failed to create album on platform");
-      }
-
-      // then create objectbox entry
-      final albumBox = _objectBoxClient.store.box<ObjectBoxAlbum>();
-      final ObjectBoxAlbum newObjectBoxAlbum = ObjectBoxAlbum(
-        title: albumTitle,
-        description: description,
-        platformId: newAlbumBucketId,
+    // reject a name already used by a device album or an app record
+    final List<Album> deviceAlbums = await getAlbums();
+    final bool existsOnDevice = deviceAlbums.any(
+      (a) => a.title.toLowerCase() == albumTitle.toLowerCase(),
+    );
+    if (existsOnDevice || await isAlbumExist(albumTitle)) {
+      throw InvalidAlbumNameException(
+        "An album named '$albumTitle' already exists.",
       );
-      final newAlbumId = await albumBox.putAsync(newObjectBoxAlbum);
-
-      // Return a temporary Album object (empty directories are not indexed by Android MediaStore)
-      return Album(id: newAlbumId.toString(), title: albumTitle);
-    } catch (e) {
-      rethrow;
     }
+
+    // create the real folder on the platform (drops a placeholder cover in it
+    // so the folder is listed as an album). Replies bucketId + relativePath.
+    final Map<String, dynamic> params = {'albumTitle': albumTitle};
+    final result = await _platformChannelClient
+        .invokeMethod<Map<dynamic, dynamic>>("createAlbum", params);
+    if (result == null || result["bucketId"] == null) {
+      throw Exception("Failed to create album on device");
+    }
+    final String bucketId = result["bucketId"].toString();
+    final String? relativePath = result["relativePath"]?.toString();
+
+    // save the app database record
+    final albumBox = _objectBoxClient.store.box<ObjectBoxAlbum>();
+    final ObjectBoxAlbum newObjectBoxAlbum = ObjectBoxAlbum(
+      title: albumTitle,
+      description: description,
+      platformId: bucketId,
+    );
+    await albumBox.putAsync(newObjectBoxAlbum);
+
+    return Album(
+      id: bucketId,
+      title: albumTitle,
+      path: relativePath,
+      description: description,
+    );
   }
 
   /// Whether an album with [albumName] already exists in the app database.

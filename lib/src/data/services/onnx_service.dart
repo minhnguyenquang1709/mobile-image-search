@@ -1,12 +1,8 @@
-import 'dart:developer';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:mobile_image_search/src/core/constants/config_constant.dart';
-import 'package:mobile_image_search/src/core/utils/debug.dart';
 import 'package:flutter_onnxruntime/flutter_onnxruntime.dart';
 import 'package:mobile_image_search/src/domain/bpe_tokenizer.dart';
-import 'package:path_provider/path_provider.dart';
 
 /// This class abstracts the interaction with AI models
 ///

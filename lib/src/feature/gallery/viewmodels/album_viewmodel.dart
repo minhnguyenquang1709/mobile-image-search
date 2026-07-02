@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_interface.dart';
+import 'package:mobile_image_search/src/feature/gallery/domain/album_form_validator.dart';
 import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/album_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/album.dart';
@@ -13,12 +14,15 @@ import 'package:mobile_image_search/src/shared/domain/model/move_progress.dart';
 class AlbumViewModel extends ChangeNotifier {
   final IAlbumRepository _albumRepo;
   final IMediaAssetRepository _mediaAssetRepo;
+  final AlbumFormValidator _albumFormValidator;
 
   AlbumViewModel({
     required IAlbumRepository albumRepo,
     required IMediaAssetRepository mediaAssetRepo,
+    required AlbumFormValidator albumFormValidator,
   }) : _albumRepo = albumRepo,
-       _mediaAssetRepo = mediaAssetRepo;
+       _mediaAssetRepo = mediaAssetRepo,
+       _albumFormValidator = albumFormValidator;
 
   static const int _pageSize = 40;
 
@@ -40,7 +44,6 @@ class AlbumViewModel extends ChangeNotifier {
   bool get isLoadingAssets => _isLoadingAssets;
   bool get hasMoreAssets => _hasMoreAssets;
 
-  // "Move to album" progress (copy → delete-consent), surfaced to the UI.
   MoveProgress _moveProgress = MoveProgress.idle();
   MoveProgress get moveProgress => _moveProgress;
 
@@ -93,7 +96,7 @@ class AlbumViewModel extends ChangeNotifier {
     if (_isLoadingAssets || !_hasMoreAssets || _currentAlbumId == null) return;
 
     _isLoadingAssets = true;
-    notifyListeners(); // Optionally notify to show the trailing loading indicator
+    notifyListeners();
 
     try {
       final nextPage = _currentPage + 1;
@@ -120,27 +123,26 @@ class AlbumViewModel extends ChangeNotifier {
     }
   }
 
-  // album creation
-  /// Creates a new album with the given name.
-  /// This create a record in database.
-  Future<void> createAlbum(String albumName, [String? description]) async {
-    // business rule
-    if (albumName.trim().isEmpty) throw Exception("Album title cannot be empty");
+  Future<Album> createAlbum(String albumName, [String? description]) async {
+    _albumFormValidator.validate(albumName, description);
 
-    try {
-      final newAlbum = await _albumRepo.createAlbum(albumName, description);
-      _albums.add(newAlbum);
-      notifyListeners();
-      debugPrint("[AlbumViewModel] Created new album: ${newAlbum.title}");
-    } catch (e) {
-      debugPrint("[AlbumViewModel] Error creating album: $e");
-    }
+    final newAlbum = await _albumRepo.createAlbum(
+      albumName.trim(),
+      description,
+    );
+    _albums.add(newAlbum);
+    _albums.sort(
+      (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+    );
+    notifyListeners();
+    debugPrint("[AlbumViewModel] Created new album: ${newAlbum.title}");
+    return newAlbum;
   }
 
   Future<void> deleteAlbum(String albumId, {bool deleteAssets = false}) async {
     try {
       await _albumRepo.deleteAlbum(albumId, deleteAssets: deleteAssets);
-      // reload albums list after deletion
+      // reload album list
       await loadAlbums();
     } catch (e) {
       debugPrint("[AlbumViewModel] Error deleting album: $e");
@@ -148,12 +150,6 @@ class AlbumViewModel extends ChangeNotifier {
     }
   }
 
-  /// Move [assets] into [album] (copy then delete originals with consent),
-  /// relaying per-file progress to the UI.
-  ///
-  /// On success the album list is refreshed and a re-index is triggered: the
-  /// copies get NEW MediaStore ids, so their embeddings must be rebuilt
-  /// (the indexing pipeline diffs device vs DB and indexes the new ids).
   Future<void> moveAssetsToAlbum(Album album, List<MediaAsset> assets) async {
     if (assets.isEmpty) return;
 
@@ -165,12 +161,10 @@ class AlbumViewModel extends ChangeNotifier {
 
       if (progress.state == MoveState.done) {
         await loadAlbums();
-        // copies have new asset ids → rebuild embeddings
         await ServiceLocator.indexingService.indexGallery();
       }
     }
 
-    // reset the banner once the stream completes
     _moveProgress = MoveProgress.idle();
     notifyListeners();
   }

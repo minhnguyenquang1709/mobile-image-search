@@ -44,10 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# AI models
-assets/openclip/
-assets/images/
-
 # docs
 docs/
 

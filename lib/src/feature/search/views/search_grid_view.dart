@@ -21,14 +21,27 @@ class _SearchGridViewState extends State<SearchGridView> {
   final TrashViewModel _trashVM = ServiceLocator.trashViewModel;
   final ScrollController _scrollController = ScrollController();
 
-  // Selection is UI logic, so it lives in the view's state, not the viewmodel.
   final Set<String> _selectedAssetIds = {};
   bool get _isSelectionMode => _selectedAssetIds.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // fetch more results when scrolled near the bottom
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      _searchViewModel.loadMoreResults();
+    }
   }
 
   void _toggleSelectMedia(String assetId) {
@@ -54,7 +67,6 @@ class _SearchGridViewState extends State<SearchGridView> {
         .toList();
     if (selectedMediaAssets.isEmpty) return;
 
-    // The move-to-trash operation lives in TrashViewModel.
     try {
       await _trashVM.moveToTrash(selectedMediaAssets);
     } catch (e) {
@@ -139,6 +151,20 @@ class _SearchGridViewState extends State<SearchGridView> {
         return Stack(
           children: [
             grid,
+            // loading indicator while fetching more results
+            if (_searchViewModel.isLoadingMore)
+              const Positioned(
+                bottom: 16,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
             // selection action bar
             if (_isSelectionMode)
               Positioned(
@@ -151,7 +177,9 @@ class _SearchGridViewState extends State<SearchGridView> {
                     ElevatedButton.icon(
                       onPressed: _moveSelectedToTrash,
                       icon: const Icon(Icons.delete_outline),
-                      label: Text("Move to Trash (${_selectedAssetIds.length})"),
+                      label: Text(
+                        "Move to Trash (${_selectedAssetIds.length})",
+                      ),
                     ),
                     ElevatedButton(
                       onPressed: _clearSelection,

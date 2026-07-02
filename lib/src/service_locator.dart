@@ -7,6 +7,7 @@ import 'package:mobile_image_search/src/feature/gallery/data/android_album_repo.
 import 'package:mobile_image_search/src/feature/gallery/data/android_gallery_repository.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/android_trash_repo.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source.dart';
+import 'package:mobile_image_search/src/feature/gallery/domain/album_form_validator.dart';
 import 'package:mobile_image_search/src/data/interfaces/trash_repository_interface.dart';
 import 'package:mobile_image_search/src/data/services/indexing_service.dart';
 import 'package:mobile_image_search/src/data/services/background_worker_service.dart';
@@ -87,10 +88,8 @@ class ServiceLocator {
       objectBoxClient: objectBoxService,
     );
     await albumRepository.syncAlbums();
-    albumViewModel = AlbumViewModel(
-      albumRepo: albumRepository,
-      mediaAssetRepo: mediaAssetRepository,
-    );
+    // albumViewModel is constructed later, after queryValidator is ready
+    // (the album create form validates its description like a search phrase)
 
     // shared multi-select state (gallery grid + opened albums)
     selectionViewModel = SelectionViewModel();
@@ -138,6 +137,13 @@ class ServiceLocator {
       mergesExtractedPath: assetLoader.mergesPath,
     );
     queryValidator = QueryValidator(bpeTokenizer: bpeTokenizer);
+
+    // album (form validates its description like a search phrase)
+    albumViewModel = AlbumViewModel(
+      albumRepo: albumRepository,
+      mediaAssetRepo: mediaAssetRepository,
+      albumFormValidator: AlbumFormValidator(queryValidator: queryValidator),
+    );
 
     // gallery
     galleryViewModel = GalleryViewModel(

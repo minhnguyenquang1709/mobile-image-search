@@ -32,46 +32,63 @@ class _AlbumScreenState extends State<AlbumScreen> {
   void _showCreateAlbumDialog() {
     final TextEditingController titleController = TextEditingController();
     final TextEditingController descriptionController = TextEditingController();
+    String? errorText;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Create New Album'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: 'Album Title *'),
-                autofocus: true,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Create New Album'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Album Title *',
+                    ),
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (Optional)',
+                    ),
+                  ),
+                  if (errorText != null) ...[
+                    const SizedBox(height: 12),
+                    Text(errorText!, style: const TextStyle(color: Colors.red)),
+                  ],
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (Optional)',
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final title = titleController.text.trim();
-                if (title.isNotEmpty) {
-                  final desc = descriptionController.text.trim();
-                  _albumVM.createAlbum(title, desc.isEmpty ? null : desc);
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Create'),
-            ),
-          ],
+                ElevatedButton(
+                  onPressed: () async {
+                    final navigator = Navigator.of(context);
+                    final title = titleController.text.trim();
+                    final desc = descriptionController.text.trim();
+                    try {
+                      await _albumVM.createAlbum(
+                        title,
+                        desc.isEmpty ? null : desc,
+                      );
+                      navigator.pop();
+                    } catch (e) {
+                      setDialogState(() => errorText = "$e");
+                    }
+                  },
+                  child: const Text('Create'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -167,14 +184,6 @@ class _AlbumScreenState extends State<AlbumScreen> {
                     ElevatedButton(
                       onPressed: () {
                         Navigator.of(context).pop();
-                        _showCreateAlbumDialog();
-                      },
-                      child: const Text('Create New Album'),
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
                         _clearObjectBoxImageEmbedding();
                       },
                       style: ElevatedButton.styleFrom(
@@ -258,13 +267,26 @@ class _AlbumScreenState extends State<AlbumScreen> {
           );
         },
       ),
-      floatingActionButton: isDebugOrProfileMode
-          ? FloatingActionButton(
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isDebugOrProfileMode) ...[
+            FloatingActionButton.small(
+              heroTag: 'debugMenu',
               onPressed: _showDebugMenu,
               tooltip: 'Debug menu',
               child: const Icon(Icons.bug_report),
-            )
-          : null,
+            ),
+            const SizedBox(height: 12),
+          ],
+          FloatingActionButton(
+            heroTag: 'createAlbum',
+            onPressed: _showCreateAlbumDialog,
+            tooltip: 'Create album',
+            child: const Icon(Icons.add),
+          ),
+        ],
+      ),
     );
   }
 }

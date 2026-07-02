@@ -12,10 +12,9 @@ class PlatformChannelService {
   static const String _eventChannelName =
       'com.minh.mobile_image_gallery/media_event_channel';
 
-  // method channel with unique name to avoid conflicts with other plugins
   static const MethodChannel _methodChannel = MethodChannel(_channelName);
 
-  // event channel for streamed operations (e.g. per-file move progress)
+  // event channel for streamed operations
   static const EventChannel _eventChannel = EventChannel(_eventChannelName);
 
   Future<int> getBatteryLevel() async {
@@ -64,11 +63,6 @@ class PlatformChannelService {
     }
   }
 
-  /// Start copying [assets] into the album folder at MediaStore [relativePath]
-  /// and stream per-file progress events from
-  /// native (see MediaEditStreamHandler).
-  ///
-  /// Each event is a Map with a "state" key: "copying" | "copied" | "error".
   Stream<dynamic> moveMediaToAlbumStream({
     required String relativePath,
     required List<MediaAsset> assets,
@@ -87,10 +81,6 @@ class PlatformChannelService {
     });
   }
 
-  /// Ensure the app has a persisted SAF write grant for the folder at
-  /// [relativePath] (used to move into non-standard folders not allowed by
-  /// MediaStore). Returns the granted tree Uri string, or null if the user
-  /// cancelled or picked a different folder.
   Future<String?> ensureFolderAccess(String relativePath) async {
     try {
       return await _methodChannel.invokeMethod<String>('ensureFolderAccess', {
@@ -102,9 +92,6 @@ class PlatformChannelService {
     }
   }
 
-  /// Same event contract as [moveMediaToAlbumStream] but writes via SAF into the
-  /// granted [treeUri] instead of MediaStore. Each "copying" event also carries a
-  /// "docUri" (the SAF document) so the originals-delete rollback can undo it.
   Stream<dynamic> moveMediaToAlbumSafStream({
     required String treeUri,
     required List<MediaAsset> assets,
@@ -123,13 +110,6 @@ class PlatformChannelService {
     });
   }
 
-  /// Ask the user to confirm deleting the original [assets] after their copies
-  /// were created. [newAssetIds] are the created copies (same order as [assets]),
-  /// passed so native can roll them back if the user denies. [docUris] holds the
-  /// SAF document Uri per copy (null for MediaStore copies) so SAF copies are
-  /// rolled back through SAF.
-  ///
-  /// Returns true if the originals were deleted, throws PERMISSION_DENIED if not.
   Future<bool> confirmDeleteOriginals(
     List<MediaAsset> assets,
     List<int> newAssetIds, [
@@ -152,9 +132,6 @@ class PlatformChannelService {
     return result;
   }
 
-  /// Permanently delete the album's [assets] via MediaStore (shows the system
-  /// delete-consent dialog). Sends media types so video Uris are built correctly.
-  /// Returns true if the user confirmed, false/throws otherwise.
   Future<bool> permanentlyDeleteAlbumMedia(List<MediaAsset> assets) async {
     final assetIds = assets.map((a) => a.assetId).toList();
     final mediaList = assets.map((a) {
@@ -171,8 +148,6 @@ class PlatformChannelService {
     return result;
   }
 
-  /// Try to delete the album directory granted as [treeUri] (SAF). Returns true
-  /// if it was deleted, false if it was left in place (non-media files remain).
   Future<bool> deleteAlbumDirectory(String treeUri) async {
     try {
       final bool result = await _methodChannel.invokeMethod(

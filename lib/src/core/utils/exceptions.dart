@@ -31,3 +31,12 @@ class QueryTooLongException implements Exception {
   @override
   String toString() => 'Your search phrase is too long.';
 }
+
+class InvalidAlbumNameException implements Exception {
+  final String message;
+
+  InvalidAlbumNameException(this.message);
+
+  @override
+  String toString() => message;
+}

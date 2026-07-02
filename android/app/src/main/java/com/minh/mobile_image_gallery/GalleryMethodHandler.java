@@ -4,10 +4,12 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.UriPermission;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -22,8 +24,11 @@ import com.minh.mobile_image_gallery.constants.MethodNames;
 import com.minh.mobile_image_gallery.constants.RequestCodes;
 
 import java.io.File;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -33,6 +38,9 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 
 public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
+    // placeholder image so MediaStore recognizes it as an album
+    private static final String PLACEHOLDER_NAME = "sig_album_cover.png";
+
     private final Activity activity;
     private final ContentResolver contentResolver;
     private final Logger logger = Logger.getLogger("GalleryMethodHandler");
@@ -41,14 +49,11 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
 
     private MethodChannel.Result pendingResult;
 
-    // delete-consent flow for a move: the result to reply to, plus the copies
-    // created so they can be rolled back if the user denies the delete. SAF copies
-    // carry a doc Uri (rolled back via DocumentsContract); MediaStore copies a null
-    private MethodChannel.Result pendingMoveResult;
-    private List<Uri> pendingMoveCopies;
+    private MethodChannel.Result pendingMoveResult; // response to Dart call
+    private List<Uri> pendingMoveCopies; // for rollback if user denies original file deletion
     private List<String> pendingMoveDocUris;
 
-    // SAF folder-grant flow: the result to reply to + the asked folder
+    // SAF folder-grant
     private MethodChannel.Result pendingFolderResult;
     private String pendingFolderRelativePath;
 
@@ -86,18 +91,55 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
         }
     }
 
+    /**
+     * Create a new folder in DCIM
+     */
     private void createAlbum(MethodCall call, MethodChannel.Result result) {
         String albumTitle = call.argument("albumTitle");
 
         executor.execute(() -> {
             try {
-                // No mkdirs() - MediaStore creates the DCIM/<title> bucket lazily on the
-                // first move. We just compute the BUCKET_ID it will assign for the DB record.
+                String relativePath = "DCIM/" + albumTitle;
+
                 File dcimDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
                 File newAlbumDir = new File(dcimDir, albumTitle);
-
                 String bucketId = String.valueOf(newAlbumDir.getAbsolutePath().toLowerCase().hashCode());
-                mainHandler.post(() -> result.success(bucketId));
+
+                Map<String, Object> res = new HashMap<>();
+                res.put("bucketId", bucketId);
+                res.put("relativePath", relativePath);
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    ContentValues values = new ContentValues();
+                    values.put(MediaStore.MediaColumns.DISPLAY_NAME, PLACEHOLDER_NAME);
+                    values.put(MediaStore.MediaColumns.MIME_TYPE, "image/png");
+                    values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath);
+                    values.put(MediaStore.MediaColumns.IS_PENDING, 1);
+
+                    Uri collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+                    Uri itemUri = contentResolver.insert(collection, values);
+                    if (itemUri == null) {
+                        throw new Exception("Failed to create album folder");
+                    }
+
+                    // placeholder 1x1 transparent png
+                    Bitmap bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
+                    try (OutputStream out = contentResolver.openOutputStream(itemUri)) {
+                        if (out == null) {
+                            throw new Exception("Failed to open placeholder stream");
+                        }
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+                    }
+                    bitmap.recycle();
+
+                    ContentValues done = new ContentValues();
+                    done.put(MediaStore.MediaColumns.IS_PENDING, 0);
+                    contentResolver.update(itemUri, done, null, null);
+
+                    res.put("coverAssetId", String.valueOf(ContentUris.parseId(itemUri)));
+                }
+
+                mainHandler.post(() -> result.success(res));
             } catch (Exception e) {
                 mainHandler.post(() -> result.error("CREATE_ERROR", e.getMessage(), null));
             }
@@ -107,13 +149,9 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
     /**
      * Permanently delete media assets given their asset IDs, remove them from
      * device storage.
-     * 
-     * @param call
-     * @param result
      */
     private void permanentlyDeleteMedia(MethodCall call, MethodChannel.Result result) {
         List<String> assetIdList = call.argument("assetIds");
-        // optional [{assetId, mediaType}]
         // Uris (assetIds alone assume images, which fails for videos)
         List<java.util.Map<String, Object>> mediaList = call.argument("mediaList");
 
@@ -145,7 +183,10 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
                 }
             }
 
-            PendingIntent pendingIntent = MediaStore.createDeleteRequest(contentResolver, uris);
+            PendingIntent pendingIntent = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                pendingIntent = MediaStore.createDeleteRequest(contentResolver, uris);
+            }
             activity.startIntentSenderForResult(pendingIntent.getIntentSender(),
                     RequestCodes.DELETE_REQUEST_CODE, null, 0, 0, 0);
         } catch (IntentSender.SendIntentException | RuntimeException e) {
@@ -156,7 +197,7 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
 
     /**
      * Batch-delete the ORIGINAL media after a move, with user consent.
-     *
+     * <p>
      * Args:
      * - assetIds: original ids to delete (List<String>)
      * - newMediaList: the copies just created [{assetId, mediaType}] (for rollback)
@@ -214,10 +255,7 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
     }
 
     /**
-     * Ensure a persisted SAF write grant for the folder at relativePath. Returns
-     * the
-     * granted tree Uri string, or replies null if the user cancels / picks another
-     * folder.
+     * Ensure app has permission to write to target directory
      */
     private void ensureFolderAccess(MethodCall call, MethodChannel.Result result) {
         String relativePath = call.argument("relativePath");
@@ -226,7 +264,7 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
             return;
         }
 
-        // normalize: drop leading/trailing slashes (RELATIVE_PATH is e.g. "folder/")
+        // normalize path
         String normalized = relativePath;
         while (normalized.startsWith("/")) {
             normalized = normalized.substring(1);
@@ -239,22 +277,21 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
         Uri targetTreeUri = DocumentsContract.buildTreeDocumentUri(
                 "com.android.externalstorage.documents", documentId);
 
-        // already granted: reuse the persisted permission, no prompt
-        for (UriPermission perm : contentResolver.getPersistedUriPermissions()) {
-            if (perm.isWritePermission() && perm.getUri().equals(targetTreeUri)) {
+        // reuse already granted permission
+        for (UriPermission permission : contentResolver.getPersistedUriPermissions()) {
+            if (permission.isWritePermission() && permission.getUri().equals(targetTreeUri)) {
                 result.success(targetTreeUri.toString());
                 return;
             }
         }
 
-        // not granted: launch the folder picker, reply in handleActivityResult
+        // launch the folder picker
         this.pendingFolderResult = result;
         this.pendingFolderRelativePath = normalized;
 
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // pre-point the picker at the target folder. DocumentsUI navigates a
-            // *document* Uri (not a bare tree Uri), so build it from the tree.
+            // put the picker at the target folder, user dont have to navigate manually
             Uri initialUri = DocumentsContract.buildDocumentUriUsingTree(targetTreeUri, documentId);
             intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri);
         }
@@ -272,9 +309,6 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
 
     /**
      * Delete the target directory (album) given its BUCKET_ID.
-     *
-     * @param call
-     * @param result
      */
     private void deleteAlbum(MethodCall call, MethodChannel.Result result) {
         String albumId = call.argument("albumId");
@@ -290,11 +324,8 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
     }
 
     /**
-     * Try to delete the album directory granted as [treeUri] (SAF). Only deletes
-     * it when empty, any leftover child (a non-media file/folder) -> leave the
-     * folder.
-     * The caller deletes the media via MediaStore first, so an empty directory
-     * here means it held only media. Replies true if deleted, false if left.
+     * Delete the album directory granted using SAF.
+     * Delete when empty.
      */
     private void deleteAlbumDirectory(MethodCall call, MethodChannel.Result result) {
         String treeUriStr = call.argument("treeUri");
@@ -312,7 +343,7 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
 
                 boolean hasChild = false;
                 try (Cursor cursor = contentResolver.query(childrenUri,
-                        new String[] { DocumentsContract.Document.COLUMN_DOCUMENT_ID },
+                        new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID},
                         null, null, null)) {
                     if (cursor != null && cursor.moveToFirst()) {
                         hasChild = true; // leftover non-media file -> leave the directory
@@ -369,7 +400,9 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
         }
     }
 
-    /** Build a content Uri for a known media type (1 = video, else image). */
+    /**
+     * Build a content Uri for a known media type (1 = video, else image).
+     */
     private Uri getUriFromAssetId(long assetId, int mediaType) {
         Uri baseUri = mediaType == 1
                 ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -394,8 +427,6 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
                     pendingMoveResult.success(true);
                 } else {
                     // user denied: roll back the copies.
-                    // SAF copies go through DocumentsContract; the
-                    // rest are app-owned MediaStore items (no consent needed).
                     if (pendingMoveCopies != null) {
                         for (int i = 0; i < pendingMoveCopies.size(); i++) {
                             String docUri = (pendingMoveDocUris != null && i < pendingMoveDocUris.size())
@@ -428,15 +459,14 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
                     } catch (Exception ignored) {
                     }
 
-                    // verify the user granted the target folder (last segment)
+                    // verify the user granted the target folder
                     String treeDocId = DocumentsContract.getTreeDocumentId(treeUri);
                     String grantedName = lastSegment(treeDocId);
                     String requestedName = lastSegment(pendingFolderRelativePath);
                     if (grantedName.equals(requestedName)) {
                         pendingFolderResult.success(treeUri.toString());
                     } else {
-                        // user picked a different folder - Dart treats null as denied
-                        // TODO: show a clearer message to the user
+                        // user picked wrong folder
                         pendingFolderResult.success(null);
                     }
                 } else {
@@ -449,7 +479,7 @@ public class GalleryMethodHandler implements MethodChannel.MethodCallHandler {
     }
 
     /**
-     * Last path segment of a document id / relative path.
+     * Last path segment of a document id/relative path.
      */
     private String lastSegment(String value) {
         if (value == null) {

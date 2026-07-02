@@ -3,13 +3,10 @@ import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 enum SearchMode { semantic, filename }
 
-/// filter = date constraints + file types
 @immutable
 class FilterCriteria {
-  /// lower bound on the capture date
   final DateTime? startDate;
 
-  /// upper bound on the capture date
   final DateTime? endDate;
 
   final int? year;
@@ -32,8 +29,6 @@ class FilterCriteria {
     this.formats = const {},
   });
 
-  /// Whether any constraint is set (drives whether to show the search view and
-  /// whether the date range can be pushed down to the device query)
   bool get isActive =>
       startDate != null ||
       endDate != null ||
@@ -42,7 +37,6 @@ class FilterCriteria {
       daysOfWeek.isNotEmpty ||
       formats.isNotEmpty;
 
-  /// Whether [asset] satisfies every set constraint (unset constraints skipped)
   bool matches(MediaAsset asset) {
     final DateTime date = asset.createDateTime;
 
