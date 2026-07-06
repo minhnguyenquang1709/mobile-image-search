@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_image_search/src/common_widgets/scrollbar_no_track_tap_down.dart';
 import 'package:mobile_image_search/src/common_widgets/thumbnail_widget.dart';
 import 'package:mobile_image_search/src/core/constants/config_constant.dart';
 import 'package:mobile_image_search/src/core/constants/route_constant.dart';
@@ -83,7 +84,7 @@ class _AlbumOpenedScreenState extends State<AlbumOpenedScreen> {
         direction: Axis.vertical,
         children: [
           Expanded(
-            child: RawScrollbar(
+            child: InteractiveThumbScrollbar(
               controller: _scrollController,
               thumbVisibility: true,
               child: Padding(
@@ -96,7 +97,8 @@ class _AlbumOpenedScreenState extends State<AlbumOpenedScreen> {
               ),
             ),
           ),
-          if (_albumVM.isLoadingAssets && _albumVM.currentAlbumAssets.isNotEmpty)
+          if (_albumVM.isLoadingAssets &&
+              _albumVM.currentAlbumAssets.isNotEmpty)
             const Padding(
               padding: EdgeInsets.all(12.0),
               child: Center(child: CircularProgressIndicator()),

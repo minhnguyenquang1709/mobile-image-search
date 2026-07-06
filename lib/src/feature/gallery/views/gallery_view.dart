@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_image_search/src/common_widgets/scrollbar_no_track_tap_down.dart';
 import 'package:mobile_image_search/src/common_widgets/thumbnail_widget.dart';
 import 'package:mobile_image_search/src/core/constants/config_constant.dart';
 import 'package:mobile_image_search/src/core/constants/route_constant.dart';
@@ -312,14 +313,15 @@ class _GalleryViewState extends State<GalleryView> {
           direction: Axis.vertical,
           children: [
             Expanded(
-              child: RawScrollbar(
+              child: InteractiveThumbScrollbar(
                 controller: _scrollController,
                 thumbVisibility: true,
                 thumbColor: CustomColors.primary,
+                shape: StadiumBorder(side: BorderSide(width: 2.0)),
                 thickness: 20,
-                radius: const Radius.circular(40),
+                // radius: const Radius.circular(40),
                 minThumbLength: UIConfig.homeScreenScrollbarThumbMinHeight,
-                interactive: false,
+                interactive: true,
                 crossAxisMargin: UIConfig.gridViewGutter,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(

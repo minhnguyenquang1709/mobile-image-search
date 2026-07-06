@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_image_search/src/common_widgets/scrollbar_no_track_tap_down.dart';
 import 'package:mobile_image_search/src/common_widgets/thumbnail_widget.dart';
 import 'package:mobile_image_search/src/feature/gallery/viewmodels/trash_viewmodel.dart';
 import 'package:mobile_image_search/src/service_locator.dart';
@@ -148,7 +149,7 @@ class _TrashScreenState extends State<TrashScreen> {
           }
 
           return SafeArea(
-            child: RawScrollbar(
+            child: InteractiveThumbScrollbar(
               controller: _scrollController,
               thumbVisibility: true,
               child: Padding(
