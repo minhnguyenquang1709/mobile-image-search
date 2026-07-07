@@ -8,7 +8,7 @@
 
 This project is developed as a **University Graduation Thesis**.
 
-Traditional mobile galleries rely on metadata (date, location) for searching. Cloud solutions (like Google Photos) offer semantic search but compromise privacy by uploading user data. **Semantic Gallery** bridges this gap by running the entire AI pipeline locally on the device.
+Traditional mobile galleries rely on metadata (date, location, filename, etc.) for searching. Cloud solutions (like Google Photos) offer semantic search but compromise privacy by uploading user data. **Semantic Gallery** bridges this gap by running the entire AI pipeline locally on the device.
 
 Users can search for _"a cat sleeping on the sofa"_ or _"sunset at the beach"_, and the app will retrieve relevant images from the phone's gallery without internet access.
 
@@ -24,15 +24,17 @@ Users can search for _"a cat sleeping on the sofa"_ or _"sunset at the beach"_, 
 
 ### Mobile Application
 
-to be finalized
+Flutter
 
 ### Artificial Intelligence
 
-to be finalized
+OpenCLIP ViT-B-16 model
+
+ONNX runtime
 
 ### Data & Storage
 
-to be finalized
+ObjectBox vector database
 
 
 
@@ -70,5 +72,5 @@ to be finalized
 
 ## 📧 Contact
 
-**Nguyen Quang Minh** - [Your Email]
+**Nguyen Quang Minh** - minhnguyenquang2004vn@gmail.com
 **University** - [University of Science and Technology of Hanoi (USTH)](https://usth.edu.vn/)
