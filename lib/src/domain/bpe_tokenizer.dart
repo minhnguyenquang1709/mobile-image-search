@@ -24,7 +24,7 @@ class BpeTokenizer {
     if (_isInitialized) return;
 
     try {
-      // 1. initialize Vocabulary
+      // vocabulary
       final vocabFile = File(vocabExtractedPath);
       final mergesFile = File(mergesExtractedPath);
       // final vocabString = await rootBundle.loadString(
@@ -34,7 +34,7 @@ class BpeTokenizer {
       final Map<String, dynamic> vocabMap = json.decode(vocabString);
       _vocab = vocabMap.map((key, value) => MapEntry(key, value as int));
 
-      // 2. initialize BPE Ranks
+      // BPE ranks
       // final mergesString = await rootBundle.loadString(
       //   '${Model.tokenizerDir}/merges.txt',
       // );
@@ -69,7 +69,7 @@ class BpeTokenizer {
     List<int> tokens = [];
     tokens.add(startTokenId);
 
-    // 1. preprocess
+    // preprocess
     final cleanText = text.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
     if (cleanText.isEmpty) {
       return _padTokens(tokens);
@@ -77,7 +77,7 @@ class BpeTokenizer {
 
     final List<String> words = cleanText.split(' ');
 
-    // 2. process each word
+    // process each word
     for (String word in words) {
       // extract sub-words using BPE
       final List<String> subWords = applyBPE(word);
@@ -92,32 +92,29 @@ class BpeTokenizer {
       if (tokens.length >= contextLength - 1) break;
     }
 
-    // 3. Truncate
+    // truncate
     if (tokens.length > contextLength - 1) {
       tokens = tokens.sublist(0, contextLength - 1);
     }
 
-    // 4. End Token
+    // add end token
     tokens.add(endTokenId);
 
-    // 5. Padding
+    // padding
     return _padTokens(tokens);
   }
 
-  /// Returns true if [subWord] exists in the BPE vocabulary.
+  /// check subword in vocabulary
   bool isInVocab(String subWord) => _vocab.containsKey(subWord);
 
-  /// BPE algo implementation
   List<String> applyBPE(String word) {
     final String wordWithEnd = "$word</w>";
 
     List<String> chars = [];
-    // separate into array of chars, with ${lastChar}</w> as single character
     for (int i = 0; i < wordWithEnd.length; i++) {
       if (wordWithEnd.startsWith("</w>", i)) {
-        // chars.add("</w>");
         chars[i - 1] = '${chars[i - 1]}</w>';
-        i += 4; // skip </w>. example: "dog" -> ["d", "o", "g</w>"]
+        i += 4; // skip </w>
       } else {
         chars.add(wordWithEnd[i]);
       }
@@ -125,11 +122,10 @@ class BpeTokenizer {
 
     // merge loop
     while (true) {
-      if (chars.length < 2) break; // stop condition
+      if (chars.length < 2) break;
 
       int minRank = 999999;
       int bestIdxToMerge = -1;
-      // String bestPair = "";
 
       // find best pair to merge base on BPE ranks
       for (int i = 0; i < chars.length - 1; i++) {
@@ -140,7 +136,6 @@ class BpeTokenizer {
           if (rank < minRank) {
             minRank = rank;
             bestIdxToMerge = i;
-            // bestPair = pair;
           }
         }
       }
@@ -148,7 +143,7 @@ class BpeTokenizer {
       // end when no more pairs to merge
       if (bestIdxToMerge == -1) break;
 
-      // Merge
+      // merge
       final List<String> newChars = [];
       for (int i = 0; i < chars.length; i++) {
         if (i == bestIdxToMerge) {

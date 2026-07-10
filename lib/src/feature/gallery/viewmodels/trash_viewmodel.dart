@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mobile_image_search/src/core/utils/exceptions.dart';
 import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_interface.dart';
@@ -39,7 +38,7 @@ class TrashViewModel extends ChangeNotifier {
       );
     } catch (e) {
       debugPrint("[TrashViewModel] Error loading from database: $e");
-      throw Exception("Failed to load trash entries: $e");
+      rethrow;
     }
   }
 
