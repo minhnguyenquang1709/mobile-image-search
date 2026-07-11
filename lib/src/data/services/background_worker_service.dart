@@ -256,6 +256,7 @@ class BackgroundWorkerService {
       total: 0,
       processed: 0,
       isIndexing: true,
+      phase: EIndexingPhase.fetchingMedia,
     );
     mainSendPort.send(progress);
 
@@ -302,6 +303,9 @@ class BackgroundWorkerService {
           assetEntities.addAll(assets);
         }
       }
+
+      progress = progress.copyWith(phase: EIndexingPhase.diffing);
+      mainSendPort.send(progress);
 
       debugPrint(
         "[BackgroundWorkerService] Get all indexed media from database...",
@@ -367,12 +371,15 @@ class BackgroundWorkerService {
         total: assetsToIndex.length,
         processed: 0,
         isIndexing: true,
+        phase: EIndexingPhase.indexing,
       );
       mainSendPort.send(progress);
 
       final ThumbnailOption thumbnailOption = ThumbnailOption(
         size: ThumbnailSize.square(Model.specs.imageSize),
       );
+
+      // indexing loop
       for (final assetEntity in assetsToIndex) {
         // get asset entity
 
@@ -393,6 +400,8 @@ class BackgroundWorkerService {
             thumbnailBytes,
           );
 
+          await Future.delayed(Duration.zero);
+
           // save to database
           final imageEmbedding = ObjectBoxImageEmbedding(
             assetId: assetEntity.id,
@@ -404,6 +413,7 @@ class BackgroundWorkerService {
             mediaModifiedAt: assetEntity.modifiedDateTime,
           );
           await imageEmbeddingBox.putAsync(imageEmbedding);
+          await Future.delayed(Duration.zero);
           debugPrint(
             "[BackgroundWorkerService] Saved embedding for ${assetEntity.id} to database",
           );
@@ -413,6 +423,7 @@ class BackgroundWorkerService {
             isIndexing: true,
           );
           mainSendPort.send(progress);
+          await Future.delayed(Duration.zero);
         } catch (e) {
           debugPrint(
             "[BackgroundWorkerService] Error generating/saving embedding for ${assetEntity.id} ${assetEntity.title}: $e",

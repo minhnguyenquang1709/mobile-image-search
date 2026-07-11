@@ -69,7 +69,7 @@ class OnnxService {
 
       List<OrtProvider> availableProviders = [];
       for (final provider in [
-        // OrtProvider.NNAPI, // error
+        OrtProvider.NNAPI,
         OrtProvider.CORE_ML,
         OrtProvider.XNNPACK,
         OrtProvider.CPU,
@@ -212,37 +212,23 @@ class OnnxService {
         dstY: yOffset,
       );
 
-      // convert to CHW (channels, height, width) and normalize
-      final Float32List imageInputData = Float32List(
-        1 * 3 * paddedImage.width * paddedImage.height,
+      // convert to CHW (channels, height, width) and normalize.
+      // read the whole image once as a flat RGB buffer instead of getPixel per
+      // pixel, which allocates a Pixel object each call.
+      final Uint8List pixels = paddedImage.getBytes(
+        order: img.ChannelOrder.rgb,
       );
+      final int height = paddedImage.height;
+      final int width = paddedImage.width;
+
+      final Float32List imageInputData = Float32List(1 * 3 * height * width);
       int idx = 0;
       final List<double> mean = Model.specs.mean;
       final List<double> std = Model.specs.std;
       for (int c = 0; c < 3; c++) {
-        for (int h = 0; h < paddedImage.height; h++) {
-          for (int w = 0; w < paddedImage.width; w++) {
-            final pixel = paddedImage.getPixel(
-              w,
-              h,
-            ); // need another method, getPixel returns a new Pixel object, expensive
-            final int pixelValue;
-            switch (c) {
-              case 0:
-                pixelValue = pixel.r.toInt();
-                break;
-
-              case 1:
-                pixelValue = pixel.g.toInt();
-                break;
-
-              case 2:
-                pixelValue = pixel.b.toInt();
-                break;
-
-              default:
-                pixelValue = 0;
-            }
+        for (int h = 0; h < height; h++) {
+          for (int w = 0; w < width; w++) {
+            final int pixelValue = pixels[(h * width + w) * 3 + c];
             imageInputData[idx++] = (pixelValue / 255.0 - mean[c]) / std[c];
           }
         }

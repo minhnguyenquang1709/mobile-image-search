@@ -54,6 +54,7 @@ class IndexingService {
     debugPrint("[IndexingService] Requesting background gallery indexing...");
     _currentIndexingProgress = _currentIndexingProgress.copyWith(
       isIndexing: true,
+      phase: EIndexingPhase.fetchingMedia,
     );
     _indexingProgressStreamController.add(_currentIndexingProgress);
 

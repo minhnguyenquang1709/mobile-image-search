@@ -6,6 +6,8 @@ import 'package:mobile_image_search/src/shared/domain/model/media_details.dart';
 
 /// CRUD operations for media asset data
 abstract class IMediaAssetRepository {
+  Future<bool> requestGalleryAccess();
+
   Future<List<MediaAsset>> fetchPage({
     required int page,
     required int pageSize,

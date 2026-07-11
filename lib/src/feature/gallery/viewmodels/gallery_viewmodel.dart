@@ -2,20 +2,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_interface.dart';
 import 'package:mobile_image_search/src/service_locator.dart';
-import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 /// ViewModel for Gallery Screen
 class GalleryViewModel extends ChangeNotifier {
-  final IGalleryRepository _galleryRepo;
   final IMediaAssetRepository _mediaAssetRepo;
 
-  GalleryViewModel({
-    required IGalleryRepository galleryRepo,
-    required IMediaAssetRepository mediaAssetRepo,
-  }) : _galleryRepo = galleryRepo,
-       _mediaAssetRepo = mediaAssetRepo {
+  GalleryViewModel({required IMediaAssetRepository mediaAssetRepo})
+    : _mediaAssetRepo = mediaAssetRepo {
     _init();
   }
 
@@ -65,7 +60,7 @@ class GalleryViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final hasPermission = await _galleryRepo.requestGalleryAccess();
+      final hasPermission = await _mediaAssetRepo.requestGalleryAccess();
       if (!hasPermission) {
         permissionDenied = true;
         return;

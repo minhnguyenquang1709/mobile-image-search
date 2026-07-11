@@ -4,9 +4,7 @@ import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_i
 import 'package:mobile_image_search/src/data/repositories/image_embedding_repository.dart';
 import 'package:mobile_image_search/src/data/repositories/media_asset_repository.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/android_album_repo.dart';
-import 'package:mobile_image_search/src/feature/gallery/data/android_gallery_repository.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/android_trash_repo.dart';
-import 'package:mobile_image_search/src/feature/gallery/data/gallery_data_source.dart';
 import 'package:mobile_image_search/src/feature/gallery/domain/album_form_validator.dart';
 import 'package:mobile_image_search/src/data/interfaces/trash_repository_interface.dart';
 import 'package:mobile_image_search/src/data/services/indexing_service.dart';
@@ -18,7 +16,6 @@ import 'package:mobile_image_search/src/feature/gallery/viewmodels/gallery_viewm
 import 'package:mobile_image_search/src/feature/gallery/viewmodels/selection_viewmodel.dart';
 import 'package:mobile_image_search/src/feature/search/domain/query_validator.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/album_repository_interface.dart';
-import 'package:mobile_image_search/src/shared/domain/interface/gallery_repository_interface.dart';
 import 'package:mobile_image_search/src/feature/gallery/viewmodels/trash_viewmodel.dart';
 import 'package:mobile_image_search/src/feature/indexing/data/objectbox_store_repository.dart';
 import 'package:mobile_image_search/src/domain/bpe_tokenizer.dart';
@@ -29,7 +26,6 @@ import 'package:path_provider/path_provider.dart';
 class ServiceLocator {
   static final ObjectBoxService objectBoxService = ObjectBoxService.instance;
   static late final ITrashRepository trashRepository;
-  static late final IGalleryRepository galleryRepository;
   static late final IAlbumRepository albumRepository;
   static late final PlatformChannelService platformChannelService;
   static late final IndexingService indexingService;
@@ -65,10 +61,13 @@ class ServiceLocator {
 
     await objectBoxService.init();
 
-    // Gallery
-    final mediaPlatformChannel = PlatformChannelService();
-    final galleryDataSource = GalleryDataSource(mediaPlatformChannel);
-    galleryRepository = AndroidGalleryRepository(galleryDataSource);
+    backgroundWorkerService = BackgroundWorkerService();
+
+    // repositories init
+    imageEmbeddingRepository = ImageEmbeddingRepository(
+      objectBoxClient: objectBoxService,
+      bgWorkerClient: backgroundWorkerService,
+    );
 
     // Trash
     platformChannelService = PlatformChannelService();
@@ -79,6 +78,7 @@ class ServiceLocator {
     trashViewModel = TrashViewModel(
       trashRepo: trashRepository,
       mediaAssetRepo: mediaAssetRepository,
+      imageEmbeddingRepo: imageEmbeddingRepository,
     );
     await trashViewModel.loadFromDatabase();
 
@@ -93,9 +93,6 @@ class ServiceLocator {
 
     // shared multi-select state (gallery grid + opened albums)
     selectionViewModel = SelectionViewModel();
-
-    // background indexing
-    backgroundWorkerService = BackgroundWorkerService();
 
     // asset extraction - centralized in AssetLoader
     debugPrint('[ServiceLocator] Extracting bundled assets...');
@@ -146,16 +143,9 @@ class ServiceLocator {
     );
 
     // gallery
-    galleryViewModel = GalleryViewModel(
-      galleryRepo: galleryRepository,
-      mediaAssetRepo: mediaAssetRepository,
-    );
+    galleryViewModel = GalleryViewModel(mediaAssetRepo: mediaAssetRepository);
 
-    // search
-    imageEmbeddingRepository = ImageEmbeddingRepository(
-      objectBoxClient: objectBoxService,
-      bgWorkerClient: backgroundWorkerService,
-    );
+    // search ViewModel
     searchViewModel = SearchViewModel(
       imageEmbeddingRepository: imageEmbeddingRepository,
       mediaAssetRepo: mediaAssetRepository,

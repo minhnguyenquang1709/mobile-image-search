@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:mobile_image_search/src/core/utils/exceptions.dart';
+import 'package:mobile_image_search/src/data/interfaces/image_embedding_repository_interface.dart';
 import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_interface.dart';
 import 'package:mobile_image_search/src/data/interfaces/trash_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
@@ -9,12 +10,15 @@ import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 class TrashViewModel extends ChangeNotifier {
   final ITrashRepository _trashRepo;
   final IMediaAssetRepository _mediaAssetRepo;
+  final IImageEmbeddingRepository _imageEmbeddingRepo;
 
   TrashViewModel({
     required ITrashRepository trashRepo,
     required IMediaAssetRepository mediaAssetRepo,
+    required IImageEmbeddingRepository imageEmbeddingRepo,
   }) : _trashRepo = trashRepo,
-       _mediaAssetRepo = mediaAssetRepo;
+       _mediaAssetRepo = mediaAssetRepo,
+       _imageEmbeddingRepo = imageEmbeddingRepo;
 
   final Set<String> _trashedAssetIds = {};
   Set<String> get trashedAssetIds => Set.unmodifiable(_trashedAssetIds);
@@ -100,8 +104,12 @@ class TrashViewModel extends ChangeNotifier {
     );
 
     try {
+      // remove trash entries & media files from device storage
       await _trashRepo.deletePermanently(assetIds);
       _trashedAssetIds.removeAll(assetIds);
+
+      // remove corresponding embedding from db
+
       notifyListeners();
       debugPrint("[TrashViewModel] Successfully deleted items");
     } catch (e) {

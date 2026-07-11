@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mobile_image_search/src/core/constants/config_constant.dart';
 import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_interface.dart';
@@ -8,6 +9,7 @@ import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_details.dart';
 import 'package:mobile_image_search/src/core/utils/exceptions.dart';
 import 'package:mobile_image_search/src/core/utils/media_processing.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 
@@ -17,6 +19,81 @@ class MediaAssetRepository implements IMediaAssetRepository {
       HashMap<String, AssetEntity>();
 
   HashMap<String, AssetEntity> get assetEntityCache => _assetEntityCache;
+
+  @override
+  Future<bool> requestGalleryAccess() async {
+    if (Platform.isAndroid) {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      final int sdkInt = androidInfo.version.sdkInt;
+
+      if (sdkInt < 33) {
+        final storagePermission = await Permission.storage.status;
+        if (storagePermission.isGranted) {
+          return true;
+        }
+        if (storagePermission.isDenied) {
+          final status = await Permission.storage.request();
+          return status.isGranted;
+        }
+        if (storagePermission.isPermanentlyDenied ||
+            storagePermission.isRestricted) {
+          await openAppSettings();
+          final newStatus = await Permission.storage.status;
+          return newStatus.isGranted;
+        }
+        return false;
+      }
+
+      final statuses = await [Permission.photos, Permission.videos].request();
+      final photosGranted = statuses[Permission.photos]?.isGranted ?? false;
+      final videosGranted = statuses[Permission.videos]?.isGranted ?? false;
+      if (photosGranted && videosGranted) {
+        return true;
+      }
+      if (statuses[Permission.photos]!.isPermanentlyDenied ||
+          statuses[Permission.videos]!.isPermanentlyDenied) {
+        await openAppSettings();
+        return await _checkGalleryPermission();
+      }
+      return false;
+    }
+
+    if (Platform.isIOS) {
+      final photoStorage = await Permission.photos.status;
+      if (photoStorage.isGranted) {
+        return true;
+      }
+      if (photoStorage.isDenied) {
+        final status = await Permission.photos.request();
+        return status.isGranted;
+      }
+      if (photoStorage.isPermanentlyDenied || photoStorage.isRestricted) {
+        await openAppSettings();
+        final newStatus = await Permission.photos.status;
+        return newStatus.isGranted;
+      }
+    }
+
+    return false;
+  }
+
+  Future<bool> _checkGalleryPermission() async {
+    if (Platform.isAndroid) {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      final int sdkInt = androidInfo.version.sdkInt;
+
+      if (sdkInt < 33) {
+        return await Permission.storage.isGranted;
+      }
+      return await Permission.photos.isGranted &&
+          await Permission.videos.isGranted;
+    } else if (Platform.isIOS) {
+      return await Permission.photos.isGranted;
+    }
+    throw UnsupportedError(
+      'Unsupported platform. The supported platforms are Android and iOS.',
+    );
+  }
 
   FilterOptionGroup _buildFilterOptions({
     DateTime? rangeStart,

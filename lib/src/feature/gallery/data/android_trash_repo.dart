@@ -15,7 +15,7 @@ class AndroidTrashRepository implements ITrashRepository {
     required ObjectBoxService objectBoxStoreClient,
     required PlatformChannelService methodChannel,
   }) : _objectBoxClient = objectBoxStoreClient,
-       this._methodChannel = methodChannel;
+       _methodChannel = methodChannel;
 
   /// Send message to native platform to permanently delete media assets
   @override
