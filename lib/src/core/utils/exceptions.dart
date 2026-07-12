@@ -19,7 +19,7 @@ class OutOfVocabularyException implements Exception {
   OutOfVocabularyException(this.word);
 
   @override
-  String toString() => '"$word" is not a recognized English word.';
+  String toString() => '"$word" is not a recognized word in model vocabulary.';
 }
 
 class QueryTooLongException implements Exception {
