@@ -33,5 +33,7 @@ abstract class IAlbumRepository {
   /// - Android: delete both the album entry in database and corresponding directory
   ///
   /// - iOS: TBD
-  Future<void> deleteAlbum(String albumId, {bool deleteAssets = false});
+  ///
+  /// Returns the ids of the media that were permanently deleted.
+  Future<List<String>> deleteAlbum(String albumId, {bool deleteAssets = false});
 }

@@ -471,8 +471,14 @@ class AndroidAlbumRepository implements IAlbumRepository {
   /// 2. try to delete the directory itself, left in place if it still holds
   ///    non-media files, deleted (via SAF) if media was all it contained
   /// 3. remove the album's app-database record
+  ///
+  /// Returns the ids of the media that were permanently deleted so the caller
+  /// can clean up their embeddings and trash entries.
   @override
-  Future<void> deleteAlbum(String albumId, {bool deleteAssets = false}) async {
+  Future<List<String>> deleteAlbum(
+    String albumId, {
+    bool deleteAssets = false,
+  }) async {
     try {
       final AssetPathEntity album = await AssetPathEntity.fromId(albumId);
 
@@ -497,7 +503,7 @@ class AndroidAlbumRepository implements IAlbumRepository {
         }
       }
 
-      // 1. permanently delete the media (system consent dialog)
+      // permanently delete the media (system consent dialog)
       if (albumMediaAssets.isNotEmpty) {
         final bool deleted = await _platformChannelClient
             .permanentlyDeleteAlbumMedia(albumMediaAssets);
@@ -505,11 +511,11 @@ class AndroidAlbumRepository implements IAlbumRepository {
           debugPrint(
             "[AndroidAlbumRepository] Album media deletion denied; aborting",
           );
-          return;
+          return [];
         }
       }
 
-      // 2. try to remove the now media-free directory (needs a SAF grant)
+      // try to remove the now media-free directory (needs a SAF grant)
       if (relativePath != null && relativePath.isNotEmpty) {
         final String? treeUri = await _platformChannelClient.ensureFolderAccess(
           relativePath,
@@ -523,7 +529,7 @@ class AndroidAlbumRepository implements IAlbumRepository {
         }
       }
 
-      // 3. remove the album's database record
+      // remove the album's database record
       final albumBox = _objectBoxClient.store.box<ObjectBoxAlbum>();
       final query = albumBox
           .query(ObjectBoxAlbum_.platformId.equals(albumId))
@@ -535,6 +541,8 @@ class AndroidAlbumRepository implements IAlbumRepository {
           dbAlbums.map((a) => a.objectBoxId).toList(),
         );
       }
+
+      return albumMediaAssets.map((asset) => asset.assetId).toList();
     } catch (e) {
       rethrow;
     }

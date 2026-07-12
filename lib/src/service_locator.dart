@@ -139,6 +139,8 @@ class ServiceLocator {
     albumViewModel = AlbumViewModel(
       albumRepo: albumRepository,
       mediaAssetRepo: mediaAssetRepository,
+      imageEmbeddingRepo: imageEmbeddingRepository,
+      trashRepo: trashRepository,
       albumFormValidator: AlbumFormValidator(queryValidator: queryValidator),
     );
 

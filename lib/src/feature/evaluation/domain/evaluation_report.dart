@@ -29,8 +29,7 @@ class QueryEvalResult {
   };
 }
 
-/// Full report of a single evaluation run: retrieval quality + latency +
-/// resource footprint.
+/// Retrieval quality + latency + resource footprint.
 class EvaluationReport {
   final String datasetName;
   final int imageCount;

@@ -1,12 +1,16 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:mobile_image_search/src/data/interfaces/image_embedding_repository_interface.dart';
 import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_interface.dart';
+import 'package:mobile_image_search/src/data/interfaces/trash_repository_interface.dart';
 import 'package:mobile_image_search/src/feature/gallery/domain/album_form_validator.dart';
 import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/interface/album_repository_interface.dart';
 import 'package:mobile_image_search/src/shared/domain/model/album.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 import 'package:mobile_image_search/src/shared/domain/model/move_progress.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 /// ViewModel for Albums
 ///
@@ -14,15 +18,38 @@ import 'package:mobile_image_search/src/shared/domain/model/move_progress.dart';
 class AlbumViewModel extends ChangeNotifier {
   final IAlbumRepository _albumRepo;
   final IMediaAssetRepository _mediaAssetRepo;
+  final IImageEmbeddingRepository _imageEmbeddingRepo;
+  final ITrashRepository _trashRepo;
   final AlbumFormValidator _albumFormValidator;
 
   AlbumViewModel({
     required IAlbumRepository albumRepo,
     required IMediaAssetRepository mediaAssetRepo,
+    required IImageEmbeddingRepository imageEmbeddingRepo,
+    required ITrashRepository trashRepo,
     required AlbumFormValidator albumFormValidator,
   }) : _albumRepo = albumRepo,
        _mediaAssetRepo = mediaAssetRepo,
-       _albumFormValidator = albumFormValidator;
+       _imageEmbeddingRepo = imageEmbeddingRepo,
+       _trashRepo = trashRepo,
+       _albumFormValidator = albumFormValidator {
+    PhotoManager.addChangeCallback(_onPhotoManagerChange);
+    PhotoManager.startChangeNotify();
+  }
+
+  @override
+  void dispose() {
+    PhotoManager.removeChangeCallback(_onPhotoManagerChange);
+    super.dispose();
+  }
+
+  // reload the opened album when device media changes (e.g. after media in it
+  // was permanently deleted) so the view drops assets that no longer exist.
+  Future<void> _onPhotoManagerChange(MethodCall call) async {
+    if (_currentAlbumId == null) return;
+    debugPrint("[AlbumViewModel] Device gallery changed, reloading album...");
+    await loadAlbumDetailsInitial(_currentAlbumId!);
+  }
 
   static const int _pageSize = 40;
 
@@ -141,7 +168,15 @@ class AlbumViewModel extends ChangeNotifier {
 
   Future<void> deleteAlbum(String albumId, {bool deleteAssets = false}) async {
     try {
-      await _albumRepo.deleteAlbum(albumId, deleteAssets: deleteAssets);
+      final List<String> deletedAssetIds = await _albumRepo.deleteAlbum(
+        albumId,
+        deleteAssets: deleteAssets,
+      );
+      // the album's media is gone, clean up their embeddings and trash entries
+      if (deletedAssetIds.isNotEmpty) {
+        await _imageEmbeddingRepo.deleteImageEmbeddings(deletedAssetIds);
+        await _trashRepo.removeTrashEntries(deletedAssetIds);
+      }
       // reload album list
       await loadAlbums();
     } catch (e) {
@@ -167,18 +202,6 @@ class AlbumViewModel extends ChangeNotifier {
 
     _moveProgress = MoveProgress.idle();
     notifyListeners();
-  }
-
-  /// Drop the given assets from the opened album after they were permanently deleted from the device.
-  void removeAssets(Iterable<String> assetIds) {
-    final Set<String> ids = assetIds.toSet();
-    if (ids.isEmpty) return;
-
-    final int before = _currentAlbumAssets.length;
-    _currentAlbumAssets.removeWhere((a) => ids.contains(a.assetId));
-    if (_currentAlbumAssets.length != before) {
-      notifyListeners();
-    }
   }
 
   ImageProvider thumbnailProviderFor(String assetId) {

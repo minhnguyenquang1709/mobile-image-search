@@ -3,7 +3,6 @@ import 'package:mobile_image_search/src/core/utils/exceptions.dart';
 import 'package:mobile_image_search/src/data/interfaces/image_embedding_repository_interface.dart';
 import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_interface.dart';
 import 'package:mobile_image_search/src/data/interfaces/trash_repository_interface.dart';
-import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 /// ViewModel for Trash Screen
@@ -107,13 +106,13 @@ class TrashViewModel extends ChangeNotifier {
     try {
       // remove trash entries & media files from device storage
       await _trashRepo.deletePermanently(assetIds);
-      _trashedAssetIds.removeAll(assetIds);
 
-      // remove corresponding embedding from db
+      // remove corresponding embeddings; the embedding repository broadcasts the
+      // deletion so the search results drop these assets on their own.
       await _imageEmbeddingRepo.deleteImageEmbeddings(assetIds);
 
-      ServiceLocator.searchViewModel.removeAssets(assetIds);
-      ServiceLocator.albumViewModel.removeAssets(assetIds);
+      _trashedAssetIds.removeAll(assetIds);
+      trashedMediaAssets.removeWhere((a) => assetIds.contains(a.assetId));
 
       notifyListeners();
       debugPrint("[TrashViewModel] Successfully deleted items");

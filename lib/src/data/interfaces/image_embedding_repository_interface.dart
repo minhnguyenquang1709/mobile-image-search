@@ -5,4 +5,7 @@ abstract class IImageEmbeddingRepository {
   Future<Float32List> generateImageEmbedding(String assetId);
   Future<Float32List> generateTextEmbedding(String text);
   Future<void> deleteImageEmbeddings(List<String> assetIds);
+
+  // emits the deleted asset ids to update UI
+  Stream<List<String>> get embeddingsDeleted;
 }

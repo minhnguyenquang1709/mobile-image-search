@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:mobile_image_search/objectbox.g.dart';
@@ -10,6 +11,13 @@ class ImageEmbeddingRepository implements IImageEmbeddingRepository {
   final ObjectBoxService _objectBoxClient;
   late final Box<ObjectBoxImageEmbedding> imageEmbeddingBox;
   late final BackgroundWorkerService _bgWorkerService;
+
+  final StreamController<List<String>> _embeddingsDeletedController =
+      StreamController<List<String>>.broadcast();
+
+  @override
+  Stream<List<String>> get embeddingsDeleted =>
+      _embeddingsDeletedController.stream;
 
   ImageEmbeddingRepository({
     required ObjectBoxService objectBoxClient,
@@ -50,12 +58,17 @@ class ImageEmbeddingRepository implements IImageEmbeddingRepository {
 
   @override
   Future<void> deleteImageEmbeddings(List<String> assetIds) async {
+    if (assetIds.isEmpty) return;
+
     final query = imageEmbeddingBox
         .query(ObjectBoxImageEmbedding_.assetId.oneOf(assetIds))
         .build();
     final embeddingsToDelete = query.find();
+    query.close();
     await imageEmbeddingBox.removeManyAsync(
       embeddingsToDelete.map((e) => e.id).toList(),
     );
+
+    _embeddingsDeletedController.add(List<String>.from(assetIds));
   }
 }

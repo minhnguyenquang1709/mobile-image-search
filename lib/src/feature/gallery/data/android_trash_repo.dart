@@ -100,6 +100,24 @@ class AndroidTrashRepository implements ITrashRepository {
   }
 
   @override
+  Future<void> removeTrashEntries(List<String> assetIds) async {
+    if (assetIds.isEmpty) return;
+
+    final trashEntryBox = _objectBoxClient.store.box<ObjectBoxTrashEntry>();
+    final entries = trashEntryBox
+        .query(ObjectBoxTrashEntry_.assetId.oneOf(assetIds))
+        .build()
+        .find();
+
+    if (entries.isEmpty) return;
+
+    await trashEntryBox.removeManyAsync(entries.map((e) => e.id).toList());
+    debugPrint(
+      "[AndroidTrashRepository] Removed ${entries.length} orphaned trash entries",
+    );
+  }
+
+  @override
   Future<void> restoreFromTrash(List<String> assetIds) async {
     debugPrint("[AndroidTrashRepository] Restoring assetIds: $assetIds");
 

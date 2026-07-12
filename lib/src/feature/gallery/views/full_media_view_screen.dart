@@ -190,7 +190,7 @@ class _MediaMetadataSheetState extends State<MediaMetadataSheet> {
                   'File size',
                   details?.sizeBytes != null
                       ? formatFileSize(details!.sizeBytes!)
-                      : '—',
+                      : '-',
                 ),
                 if (details?.albumName != null)
                   _buildRow('Album', details!.albumName!),

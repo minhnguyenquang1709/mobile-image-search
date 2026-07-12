@@ -207,7 +207,7 @@ class _EvaluationScreenState extends State<EvaluationScreen> {
                 DataCell(Text(q.r5.toStringAsFixed(2))),
                 DataCell(Text(q.r10.toStringAsFixed(2))),
                 DataCell(Text(q.rr.toStringAsFixed(2))),
-                DataCell(Text(q.firstHitRank == 0 ? '—' : '${q.firstHitRank}')),
+                DataCell(Text(q.firstHitRank == 0 ? '-' : '${q.firstHitRank}')),
               ],
             ),
         ],

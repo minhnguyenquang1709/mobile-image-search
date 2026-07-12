@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mobile_image_search/src/core/constants/config_constant.dart';
@@ -12,13 +14,39 @@ class SearchViewModel extends ChangeNotifier {
   final IImageEmbeddingRepository _imageEmbeddingRepository;
   final QueryValidator _queryValidator;
 
+  late final StreamSubscription<List<String>> _embeddingsDeletedSub;
+
   SearchViewModel({
     required IMediaAssetRepository mediaAssetRepo,
     required IImageEmbeddingRepository imageEmbeddingRepository,
     required QueryValidator queryValidator,
   }) : _mediaAssetRepo = mediaAssetRepo,
        _imageEmbeddingRepository = imageEmbeddingRepository,
-       _queryValidator = queryValidator;
+       _queryValidator = queryValidator {
+    _embeddingsDeletedSub = _imageEmbeddingRepository.embeddingsDeleted.listen(
+      _onEmbeddingsDeleted,
+    );
+  }
+
+  @override
+  void dispose() {
+    _embeddingsDeletedSub.cancel();
+    super.dispose();
+  }
+
+  /// Drop results whose embeddings were removed from the index (e.g. after the
+  /// asset was permanently deleted). Keeps results consistent without a re-query.
+  void _onEmbeddingsDeleted(List<String> assetIds) {
+    final Set<String> ids = assetIds.toSet();
+    if (ids.isEmpty) return;
+
+    final int before = searchResults.length;
+    searchResults.removeWhere((a) => ids.contains(a.assetId));
+    _addedIds.removeAll(ids);
+    if (searchResults.length != before) {
+      notifyListeners();
+    }
+  }
 
   // state
   String currentTextQuery = "";
@@ -250,15 +278,6 @@ class SearchViewModel extends ChangeNotifier {
     _addedIds.clear();
     hasMoreResults = false;
     _currentSearchIndex++;
-    notifyListeners();
-  }
-
-  void removeAssets(Iterable<String> assetIds) {
-    final Set<String> ids = assetIds.toSet();
-    if (ids.isEmpty) return;
-
-    searchResults.removeWhere((a) => ids.contains(a.assetId));
-    _addedIds.removeAll(ids);
     notifyListeners();
   }
 

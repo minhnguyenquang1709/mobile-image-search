@@ -250,7 +250,9 @@ class _AlbumScreenState extends State<AlbumScreen> {
               return ListTile(
                 title: Text(album.title),
                 // distinguish albums with the same name
-                subtitle: Text(album.path ?? "ID: ${album.id}"),
+                subtitle: isDebugOrProfileMode
+                    ? Text("${album.path}\nBUCKET_ID: ${album.id}")
+                    : Text(album.path ?? "ID: ${album.id}"),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, color: Colors.grey),
                   onPressed: () => _confirmDeleteAlbum(album),
