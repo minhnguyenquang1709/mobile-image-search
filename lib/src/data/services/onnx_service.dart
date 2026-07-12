@@ -69,7 +69,7 @@ class OnnxService {
 
       List<OrtProvider> availableProviders = [];
       for (final provider in [
-        OrtProvider.NNAPI,
+        // OrtProvider.NNAPI,
         OrtProvider.CORE_ML,
         OrtProvider.XNNPACK,
         OrtProvider.CPU,
@@ -85,7 +85,19 @@ class OnnxService {
         intraOpNumThreads: 2,
       );
 
-      textEncoder = await ort.createSession(textEncoderPath, options: options);
+      final List<OrtProvider> textEncoderProviders = availableProviders
+          .where((provider) => provider != OrtProvider.NNAPI)
+          .toList();
+      final OrtSessionOptions textEncoderOptions = OrtSessionOptions(
+        providers: textEncoderProviders,
+        interOpNumThreads: 2,
+        intraOpNumThreads: 2,
+      );
+
+      textEncoder = await ort.createSession(
+        textEncoderPath,
+        options: textEncoderOptions,
+      );
       imageEncoder = await ort.createSession(
         imageEncoderPath,
         options: options,
