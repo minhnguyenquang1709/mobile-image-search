@@ -182,6 +182,18 @@ class BackgroundWorkerService {
       bpeVocabExtractedPath: vocabPath,
     );
 
+    // first text inference pays a one-time graph/provider setup cost; run it
+    // here so the user's first search doesn't wait for it.
+    try {
+      final Stopwatch warmUpStopwatch = Stopwatch()..start();
+      await onnxRuntimeService.encodeText("warm up");
+      debugPrint(
+        "[BackgroundWorkerService] Text encoder warm-up: ${warmUpStopwatch.elapsedMilliseconds}ms",
+      );
+    } catch (e) {
+      debugPrint("[BackgroundWorkerService] Text encoder warm-up failed: $e");
+    }
+
     // attach to the main isolate's ObjectBox store so DB reads/writes run here
     final Store store = Store.fromReference(
       getObjectBoxModel(),

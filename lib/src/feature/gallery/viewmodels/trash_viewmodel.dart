@@ -3,6 +3,7 @@ import 'package:mobile_image_search/src/core/utils/exceptions.dart';
 import 'package:mobile_image_search/src/data/interfaces/image_embedding_repository_interface.dart';
 import 'package:mobile_image_search/src/data/interfaces/media_asset_repository_interface.dart';
 import 'package:mobile_image_search/src/data/interfaces/trash_repository_interface.dart';
+import 'package:mobile_image_search/src/service_locator.dart';
 import 'package:mobile_image_search/src/shared/domain/model/media_asset.dart';
 
 /// ViewModel for Trash Screen
@@ -109,6 +110,10 @@ class TrashViewModel extends ChangeNotifier {
       _trashedAssetIds.removeAll(assetIds);
 
       // remove corresponding embedding from db
+      await _imageEmbeddingRepo.deleteImageEmbeddings(assetIds);
+
+      ServiceLocator.searchViewModel.removeAssets(assetIds);
+      ServiceLocator.albumViewModel.removeAssets(assetIds);
 
       notifyListeners();
       debugPrint("[TrashViewModel] Successfully deleted items");

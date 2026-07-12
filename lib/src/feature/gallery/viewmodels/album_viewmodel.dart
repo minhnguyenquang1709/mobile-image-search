@@ -169,6 +169,18 @@ class AlbumViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Drop the given assets from the opened album after they were permanently deleted from the device.
+  void removeAssets(Iterable<String> assetIds) {
+    final Set<String> ids = assetIds.toSet();
+    if (ids.isEmpty) return;
+
+    final int before = _currentAlbumAssets.length;
+    _currentAlbumAssets.removeWhere((a) => ids.contains(a.assetId));
+    if (_currentAlbumAssets.length != before) {
+      notifyListeners();
+    }
+  }
+
   ImageProvider thumbnailProviderFor(String assetId) {
     return _mediaAssetRepo.thumbnailProviderFor(assetId);
   }

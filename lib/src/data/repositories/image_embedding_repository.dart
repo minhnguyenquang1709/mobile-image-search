@@ -47,4 +47,15 @@ class ImageEmbeddingRepository implements IImageEmbeddingRepository {
   Future<Float32List> generateTextEmbedding(String text) async {
     return await _bgWorkerService.encodeText(text);
   }
+
+  @override
+  Future<void> deleteImageEmbeddings(List<String> assetIds) async {
+    final query = imageEmbeddingBox
+        .query(ObjectBoxImageEmbedding_.assetId.oneOf(assetIds))
+        .build();
+    final embeddingsToDelete = query.find();
+    await imageEmbeddingBox.removeManyAsync(
+      embeddingsToDelete.map((e) => e.id).toList(),
+    );
+  }
 }

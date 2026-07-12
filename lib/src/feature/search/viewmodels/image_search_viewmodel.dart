@@ -103,17 +103,27 @@ class SearchViewModel extends ChangeNotifier {
     final int gen = ++_currentSearchIndex;
 
     try {
+      final Stopwatch stopwath = Stopwatch()..start();
+
       // generate embedding for text query
       final Float32List queryVector = await _imageEmbeddingRepository
           .generateTextEmbedding(query);
       _queryVector = queryVector;
+      final int tEncode = stopwath.elapsedMilliseconds;
 
       final List<String> assetIds = await _imageEmbeddingRepository
           .vectorSearch(queryVector, limit: _resultLimit);
+      final int tSearch = stopwath.elapsedMilliseconds - tEncode;
 
       if (gen != _currentSearchIndex) return;
 
       await _resolveRankedIds(assetIds, gen);
+      final int tResolve = stopwath.elapsedMilliseconds - tEncode - tSearch;
+
+      debugPrint(
+        "[SearchViewModel] timings ms: encode=$tEncode search=$tSearch "
+        "resolve=$tResolve | ids=${assetIds.length} results=${searchResults.length}",
+      );
 
       hasMoreResults = assetIds.length >= _resultLimit;
     } finally {
@@ -152,25 +162,30 @@ class SearchViewModel extends ChangeNotifier {
   }
 
   Future<void> _resolveRankedIds(List<String> assetIds, int gen) async {
-    for (int i = _resolvedIdCount; i < assetIds.length; i++) {
-      if (gen != _currentSearchIndex) return;
+    final List<String> newIds = assetIds.sublist(_resolvedIdCount);
 
-      final String assetId = assetIds[i];
-      if (_addedIds.contains(assetId)) continue;
-
-      try {
-        final MediaAsset asset = await _mediaAssetRepo.getMediaAssetById(
-          assetId,
-        );
-        // metadata filter
-        if (criteria.matches(asset)) {
-          searchResults.add(asset);
-          _addedIds.add(assetId);
+    final List<MediaAsset?> resolved = await Future.wait(
+      newIds.map((assetId) async {
+        if (_addedIds.contains(assetId)) return null;
+        try {
+          return await _mediaAssetRepo.getMediaAssetById(assetId);
+        } catch (e) {
+          debugPrint(
+            "[SearchViewModel] Error fetching asset by ID '$assetId': $e",
+          );
+          return null;
         }
-      } catch (e) {
-        debugPrint(
-          "[SearchViewModel] Error fetching asset by ID '$assetId': $e",
-        );
+      }),
+    );
+
+    if (gen != _currentSearchIndex) return;
+
+    for (int i = 0; i < newIds.length; i++) {
+      final MediaAsset? asset = resolved[i];
+      if (asset == null || _addedIds.contains(newIds[i])) continue;
+      if (criteria.matches(asset)) {
+        searchResults.add(asset);
+        _addedIds.add(newIds[i]);
       }
     }
     _resolvedIdCount = assetIds.length;
@@ -235,6 +250,15 @@ class SearchViewModel extends ChangeNotifier {
     _addedIds.clear();
     hasMoreResults = false;
     _currentSearchIndex++;
+    notifyListeners();
+  }
+
+  void removeAssets(Iterable<String> assetIds) {
+    final Set<String> ids = assetIds.toSet();
+    if (ids.isEmpty) return;
+
+    searchResults.removeWhere((a) => ids.contains(a.assetId));
+    _addedIds.removeAll(ids);
     notifyListeners();
   }
 
