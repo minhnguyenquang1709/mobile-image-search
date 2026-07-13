@@ -99,11 +99,6 @@ class AndroidAlbumRepository implements IAlbumRepository {
   }
 
   /// Resolve the destination folder (MediaStore RELATIVE_PATH) for [album].
-  ///
-  /// For an existing album  read the folder of one of its assets so the move
-  /// lands in the SAME bucket (otherwise a second folder with the same name is
-  /// created). For a freshly created/empty album  fall back to the app
-  /// convention `DCIM/<title>` (matching native `createAlbum`).
   Future<String> _resolveAlbumRelativePath(Album album) async {
     // already resolved when the album list was built, reuse it
     if (album.path != null && album.path!.isNotEmpty) {
@@ -124,8 +119,6 @@ class AndroidAlbumRepository implements IAlbumRepository {
     return "DCIM/${album.title}";
   }
 
-  /// Whether MediaStore.insert() can write into [relativePath]'s top-level folder.
-  /// Non-standard folders (e.g. "mid_math_problem/") must go through SAF instead.
   bool _isMediaStoreWritable(String relativePath) {
     final String primary = relativePath
         .split('/')
@@ -134,9 +127,6 @@ class AndroidAlbumRepository implements IAlbumRepository {
     return allowed.contains(primary);
   }
 
-  /// Move [assets] into [album]: native copies each file
-  /// (streaming progress), then  run a single batch delete of the originals
-  /// with user consent. Progress is surfaced through a broadcast stream.
   @override
   Stream<MoveProgress> moveAssetsToAlbum(Album album, List<MediaAsset> assets) {
     final StreamController<MoveProgress> controller =
@@ -193,17 +183,13 @@ class AndroidAlbumRepository implements IAlbumRepository {
     }
   }
 
-  /// Forward native copy events ([stream]) to [controller], then run the
-  /// originals-delete consent once copies are done. Shared by the MediaStore and
-  /// SAF move paths (their event contract is identical).
+  /// Forward native copy events
   void _attachMoveListener(
     StreamController<MoveProgress> controller,
     Stream<dynamic> stream,
     List<MediaAsset> assets,
     int total,
   ) {
-    // copies created so far (new MediaStore ids) + their SAF doc Uri (null for
-    // MediaStore copies), in the same order as [assets]
     final List<int> newAssetIds = [];
     final List<String?> docUris = [];
 
@@ -227,7 +213,7 @@ class AndroidAlbumRepository implements IAlbumRepository {
             ),
           );
         } else if (state == 'copied') {
-          // copies done, now ask the user to confirm deleting the originals
+          // ask the user to confirm deleting the originals
           controller.add(
             MoveProgress(
               total: total,
@@ -333,10 +319,6 @@ class AndroidAlbumRepository implements IAlbumRepository {
     );
   }
 
-  /// Whether an album with [albumName] already exists in the app database.
-  ///
-  /// DB is the source of truth,  no longer probe public storage (that needed
-  /// All-files access).
   Future<bool> isAlbumExist(String albumName) async {
     try {
       final albumBox = _objectBoxClient.store.box<ObjectBoxAlbum>();
@@ -466,14 +448,6 @@ class AndroidAlbumRepository implements IAlbumRepository {
   }
 
   /// Permanently delete the album with the given BUCKET_ID.
-  ///
-  /// 1. permanently delete its image/video files via MediaStore (user consent)
-  /// 2. try to delete the directory itself, left in place if it still holds
-  ///    non-media files, deleted (via SAF) if media was all it contained
-  /// 3. remove the album's app-database record
-  ///
-  /// Returns the ids of the media that were permanently deleted so the caller
-  /// can clean up their embeddings and trash entries.
   @override
   Future<List<String>> deleteAlbum(
     String albumId, {
