@@ -80,7 +80,11 @@ class ServiceLocator {
       mediaAssetRepo: mediaAssetRepository,
       imageEmbeddingRepo: imageEmbeddingRepository,
     );
-    await trashViewModel.loadFromDatabase();
+    try {
+      await trashViewModel.loadFromDatabase();
+    } catch (e) {
+      debugPrint("[ServiceLocator] Failed to load trash, continuing: $e");
+    }
 
     // Album
     albumRepository = AndroidAlbumRepository(

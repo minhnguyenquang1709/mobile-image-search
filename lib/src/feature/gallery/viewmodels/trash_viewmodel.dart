@@ -29,13 +29,37 @@ class TrashViewModel extends ChangeNotifier {
     debugPrint("[TrashViewModel] Loading trashed asset IDs from database...");
     try {
       final entries = await _trashRepo.getAllTrashEntries();
-      _trashedAssetIds.clear();
-      _trashedAssetIds.addAll(entries.map((e) => e.assetId));
-      trashedMediaAssets = await Future.wait(
-        _trashedAssetIds.map((String assetId) {
-          return _mediaAssetRepo.getMediaAssetById(assetId);
-        }).toList(),
+
+      // resolve orphaned media assets
+      final resolved = await Future.wait(
+        entries.map((entry) async {
+          try {
+            return await _mediaAssetRepo.getMediaAssetById(entry.assetId);
+          } catch (e) {
+            debugPrint(
+              "[TrashViewModel] Trashed asset ${entry.assetId} no longer exists: $e",
+            );
+            return null;
+          }
+        }),
       );
+
+      _trashedAssetIds.clear();
+      trashedMediaAssets = [];
+      final List<String> orphanedAssetIds = [];
+
+      for (int i = 0; i < entries.length; i++) {
+        final asset = resolved[i];
+        if (asset == null) {
+          orphanedAssetIds.add(entries[i].assetId);
+          continue;
+        }
+        _trashedAssetIds.add(asset.assetId);
+        trashedMediaAssets.add(asset);
+      }
+
+      await _cleanupOrphanedEntries(orphanedAssetIds);
+
       notifyListeners();
       debugPrint(
         "[TrashViewModel] Loaded ${_trashedAssetIds.length} trashed items",
@@ -46,8 +70,20 @@ class TrashViewModel extends ChangeNotifier {
     }
   }
 
-  /// Move the given media to trash and update the app-wide trashed state so
-  /// gallery/album screens hide them and the trash screen shows them.
+  Future<void> _cleanupOrphanedEntries(List<String> assetIds) async {
+    if (assetIds.isEmpty) return;
+
+    debugPrint(
+      "[TrashViewModel] Removing ${assetIds.length} orphaned trash entries",
+    );
+    try {
+      await _trashRepo.removeTrashEntries(assetIds);
+      await _imageEmbeddingRepo.deleteImageEmbeddings(assetIds);
+    } catch (e) {
+      debugPrint("[TrashViewModel] Error cleaning orphaned entries: $e");
+    }
+  }
+
   Future<void> moveToTrash(List<MediaAsset> mediaAssets) async {
     if (mediaAssets.isEmpty) return;
 
