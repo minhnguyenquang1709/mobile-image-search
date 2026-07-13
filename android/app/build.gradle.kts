@@ -10,11 +10,11 @@ plugins {
 }
 
 // configure Gradle to use the upload key
-// val keystoreProperties = Properties()
-// val keystorePropertiesFile = rootProject.file("key.properties")
-// if (keystorePropertiesFile.exists()) {
-//     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-// }
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
 
 android {
     namespace = "com.minh.mobile_image_gallery"
@@ -41,14 +41,14 @@ android {
     }
 
     // add the signing configuration
-    // signingConfigs {
-    //     create("release") {
-    //         keyAlias = keystoreProperties["keyAlias"] as String
-    //         keyPassword = keystoreProperties["keyPassword"] as String
-    //         storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-    //         storePassword = keystoreProperties["storePassword"] as String
-    //     }
-    // }
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+            storePassword = keystoreProperties["storePassword"] as String
+        }
+    }
 
     buildTypes {
         release {

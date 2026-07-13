@@ -15,9 +15,6 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// Samples whole-process Resident Set Size on a timer and keeps the peak. Process-wide
-/// (includes native ONNX + worker isolate) and sampled, so it is an
-/// approximation, not a precise per-phase attribution.
 class _RssSampler {
   int peak = 0;
   Timer? _timer;
@@ -38,10 +35,7 @@ class _RssSampler {
   }
 }
 
-/// Developer tool: evaluate the CLIP retrieval model on a labelled dataset.
-///
-/// Indexing/search reuse the production encode path (worker isolate) but write
-/// into a separate temporary ObjectBox store so the real index is untouched.
+/// evaluate the CLIP retrieval model on a labelled dataset
 class EvaluationService {
   final BackgroundWorkerService _workerService;
   final String _textEncoderPath;
@@ -61,7 +55,7 @@ class EvaluationService {
        _vocabPath = vocabPath,
        _mergesPath = mergesPath;
 
-  /// filesystem path of the most recently exported report (adb-pullable).
+  /// filesystem path of the most recently exported report
   String? lastReportPath;
 
   static const List<String> _imageExtensions = [
@@ -78,11 +72,8 @@ class EvaluationService {
   }) async {
     void report(EvalProgress progress) => onProgress?.call(progress);
 
-    // 1. load labels + corpus
     report(const EvalProgress(phase: EvalPhase.loading));
 
-    // Reading a dataset from public storage (e.g. /storage/emulated/0/Pictures)
-    // needs "All files access" on Android 11+.
     final PermissionStatus status = await Permission.manageExternalStorage
         .request();
     if (!status.isGranted) {
@@ -100,10 +91,8 @@ class EvaluationService {
       throw Exception("No images found in dataset folder: $datasetDir");
     }
 
-    // warn about ground-truth filenames missing from the folder
     _warnMissingLabels(groundTruth, imageFiles);
 
-    // 2. create a fresh temp eval store
     final Directory supportDir = await getApplicationSupportDirectory();
     final String evalStorePath = p.join(supportDir.path, 'eval_store');
     final Directory evalStoreDir = Directory(evalStorePath);
@@ -113,7 +102,6 @@ class EvaluationService {
 
     Store store = await openStore(directory: evalStorePath);
     try {
-      // 3. indexing phase (measured)
       report(
         EvalProgress(
           phase: EvalPhase.indexing,
@@ -162,7 +150,6 @@ class EvaluationService {
       indexingRss.stop();
       final int totalIndexingMs = indexingWatch.elapsedMilliseconds;
 
-      // 4. embedding-load phase (measured): close + reopen, time getAllAsync
       report(const EvalProgress(phase: EvalPhase.loadingEmbeddings));
       store.close();
       store = await openStore(directory: evalStorePath);
@@ -175,7 +162,6 @@ class EvaluationService {
       final int embeddingLoadMs = loadWatch.elapsedMilliseconds;
       final int indexedCount = allEmbeddings.length;
 
-      // 5. search phase (measured)
       final List<String> queries = groundTruth.queries;
       report(
         EvalProgress(
@@ -186,7 +172,7 @@ class EvaluationService {
       );
       final _RssSampler searchRss = _RssSampler()..start();
 
-      final List<QueryEvalResult> perQuery = [];
+      final List<QueryEvalResult> perQueryResult = [];
       int totalSearchMs = 0;
       int totalEncodeTextMs = 0;
       int totalAnnMs = 0;
@@ -213,7 +199,6 @@ class EvaluationService {
         annQuery.close();
         annWatch.stop();
 
-        // rank by ascending distance (nearest first)
         results.sort((a, b) => a.score.compareTo(b.score));
         final List<String> ranked = results
             .map((r) => r.object.assetId)
@@ -225,7 +210,7 @@ class EvaluationService {
         totalSearchMs +=
             encodeWatch.elapsedMilliseconds + annWatch.elapsedMilliseconds;
 
-        perQuery.add(
+        perQueryResult.add(
           QueryEvalResult(
             query: query,
             rankedTop10: ranked.take(10).toList(),
@@ -248,15 +233,13 @@ class EvaluationService {
 
       searchRss.stop();
 
-      // 6. footprint
       final int modelSizeBytes = _modelSizeBytes();
       final int vectorStoreSizeBytes = _storeSizeBytes(store.directoryPath);
 
-      // 7. aggregate
       final EvaluationReport evaluationReport = _aggregate(
         datasetDir: datasetDir,
         imageCount: imageFiles.length,
-        perQuery: perQuery,
+        perQuery: perQueryResult,
         totalIndexingMs: totalIndexingMs,
         embeddingLoadMs: embeddingLoadMs,
         firstQueryWarmupMs: firstQueryWarmupMs,
@@ -388,8 +371,6 @@ class EvaluationService {
     );
   }
 
-  /// Writes the report JSON to the app external files dir (adb-pullable) and
-  /// returns the written path.
   Future<String> _exportReport(EvaluationReport report) async {
     Directory? baseDir = await getExternalStorageDirectory();
     baseDir ??= await getApplicationSupportDirectory();

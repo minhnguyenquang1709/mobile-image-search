@@ -52,8 +52,6 @@ class BpeTokenizer {
       }
 
       _isInitialized = true;
-
-      for (int i = 0; i < 5; i++) {}
     } catch (e) {
       rethrow;
     }
@@ -86,7 +84,9 @@ class BpeTokenizer {
       for (String subWord in subWords) {
         if (_vocab.containsKey(subWord)) {
           tokens.add(_vocab[subWord]!);
-        } else {}
+        } else {
+          
+        }
       }
 
       if (tokens.length >= contextLength - 1) break;
