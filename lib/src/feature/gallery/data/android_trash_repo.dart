@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:mobile_image_search/objectbox.g.dart';
+import 'package:mobile_image_search/src/core/constants/common_constant.dart';
 import 'package:mobile_image_search/src/core/platform_image_method_channel.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/objectbox_trash_entry.dart';
 import 'package:mobile_image_search/src/feature/gallery/data/trash_model.dart';
@@ -19,14 +20,23 @@ class AndroidTrashRepository implements ITrashRepository {
 
   /// Send message to native platform to permanently delete media assets
   @override
-  Future<void> deletePermanently(List<String> assetIds) async {
+  Future<void> deletePermanently(List<MediaAsset> assets) async {
+    final assetIds = assets.map((a) => a.assetId).toList();
     debugPrint(
       "[AndroidTrashRepository] Permanently deleting assetIds: $assetIds",
     );
     try {
+      final mediaList = assets.map((a) {
+        return {
+          'assetId': int.parse(a.assetId),
+          'mediaType': a.mediaType == EMediaType.video ? 1 : 0,
+        };
+      }).toList();
+
       Map<String, dynamic> args = {
         'opId': 'permanentlyDelete',
         'assetIds': assetIds,
+        'mediaList': mediaList,
       };
       await _methodChannel.callNativeMethod("permanentlyDelete", args);
 

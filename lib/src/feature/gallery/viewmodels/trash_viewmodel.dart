@@ -140,8 +140,12 @@ class TrashViewModel extends ChangeNotifier {
     );
 
     try {
-      // remove trash entries & media files from device storage
-      await _trashRepo.deletePermanently(assetIds);
+      final idSet = assetIds.toSet();
+      final assetsToDelete = trashedMediaAssets
+          .where((a) => idSet.contains(a.assetId))
+          .toList();
+
+      await _trashRepo.deletePermanently(assetsToDelete);
 
       // remove corresponding embeddings; the embedding repository broadcasts the
       // deletion so the search results drop these assets on their own.

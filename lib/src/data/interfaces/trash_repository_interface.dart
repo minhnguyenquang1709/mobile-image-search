@@ -8,7 +8,7 @@ abstract class ITrashRepository {
 
   Future<void> restoreFromTrash(List<String> assetIds);
 
-  Future<void> deletePermanently(List<String> assetIds);
+  Future<void> deletePermanently(List<MediaAsset> assets);
 
   /// Remove only the trash entries for [assetIds], without touching the device
   /// files. Use when the files were already deleted elsewhere.
